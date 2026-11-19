@@ -317,3 +317,35 @@ async def test_real_dsa_graph_seeds_and_traverses(graph_repo: GraphRepository) -
     for c in doc.concepts:
         for p in c.prerequisites:
             assert pos[p] < pos[c.id]
+
+
+# ----------------------------------------------------------------------- chunk seeding
+async def test_seed_chunks_is_idempotent_and_removes_stale_chunks(
+    graph_repo: GraphRepository, isolated_subject: str
+) -> None:
+    from app.content.notes import Chunk
+    from app.graph.seed import seed_chunks
+
+    sid = isolated_subject
+    await seed_subject(graph_repo, doc_for(sid, [("a", "b")]))
+
+    def chunk(concept: str, kind: str, order: int) -> Chunk:
+        return Chunk(
+            id=f"{sid}_{concept}#{kind}",
+            concept_id=f"{sid}_{concept}",
+            subject_id=sid,
+            kind=kind,
+            heading=kind.title(),
+            text=f"{kind} text",
+            order=order,
+            reviewed=False,
+        )
+
+    first = [chunk("a", "overview", 0), chunk("a", "intuition", 1), chunk("b", "overview", 0)]
+    assert await seed_chunks(graph_repo, first) == (3, 0)
+    assert await seed_chunks(graph_repo, first) == (3, 0)
+    got = await graph_repo.get_chunks([f"{sid}_a", f"{sid}_b"])
+    assert len(got) == 3
+    # the 'intuition' section was removed from the note: its chunk must disappear
+    assert await seed_chunks(graph_repo, [first[0], first[2]]) == (2, 1)
+    assert [c.kind for c in await graph_repo.get_chunks([f"{sid}_a"])] == ["overview"]

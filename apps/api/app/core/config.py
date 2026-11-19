@@ -26,6 +26,14 @@ class Settings(BaseSettings):
 
     health_check_timeout_s: float = 3.0
 
+    default_subject_id: str = "dsa"
+
+    # Embeddings: provider "fake" (deterministic, local) or a real provider wired in the LLM layer.
+    # embedding_dim MUST equal the vector(N) column in supabase/migrations.
+    embedding_provider: str = "fake"
+    embedding_model: str = "fake-embedding"
+    embedding_dim: int = 768
+
     @field_validator("allowed_origins", mode="before")
     @classmethod
     def _split_origins(cls, v: object) -> object:

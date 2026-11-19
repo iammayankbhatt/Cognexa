@@ -16,7 +16,12 @@ from urllib.parse import urlparse
 
 from app.core.config import Settings
 from app.db.engine import engine_from_settings, session_factory
-from app.db.repositories import AppSettingsRepository, ConceptMirrorRepository
+from app.content.loader import load_chunks, load_questions
+from app.db.repositories import (
+    AppSettingsRepository,
+    ConceptMirrorRepository,
+    ContentRepository,
+)
 from app.graph.loader import load_subject
 from app.graph.validation import validate_concept_file
 
@@ -45,11 +50,16 @@ async def run(args: argparse.Namespace) -> int:
         async with session_factory(engine)() as session, session.begin():
             _, n_concepts = await ConceptMirrorRepository(session).upsert_from_file(doc)
             inserted = await AppSettingsRepository(session).ensure_defaults()
+            content = ContentRepository(session)
+            n_chunks = await content.upsert_chunks(load_chunks(args.subject))
+            n_questions = await content.upsert_questions(
+                [(doc.subject.id, cid, q) for cid, q in load_questions(args.subject)]
+            )
     finally:
         await engine.dispose()
     print(
         f"Seeded Postgres: subject '{doc.subject.id}', {n_concepts} concepts, "
-        f"{inserted} default setting(s) inserted"
+        f"{inserted} default setting(s) inserted, {n_chunks} chunks, {n_questions} questions"
     )
     return 0
 

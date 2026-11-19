@@ -102,6 +102,16 @@ class GraphRepository:
             rows: list[dict[str, Any]] = await session.execute_read(work)
             return rows
 
+    async def _write(self, query: str, **params: Any) -> list[dict[str, Any]]:
+        async with self._session() as session:
+
+            async def work(tx: AsyncManagedTransaction) -> list[dict[str, Any]]:
+                result = await tx.run(query, **params)
+                return [dict(r) async for r in result]
+
+            rows: list[dict[str, Any]] = await session.execute_write(work)
+            return rows
+
     # ------------------------------------------------------------------ schema
     async def ensure_schema(self) -> None:
         async with self._session() as session:
@@ -406,6 +416,18 @@ class GraphRepository:
                 "MERGE (c)-[:HAS_CHUNK]->(k)",
                 **chunk.model_dump(),
             )
+
+    async def delete_stale_chunks(self, keep_ids_by_concept: dict[str, list[str]]) -> int:
+        """Delete chunks of the given concepts that are not in the keep lists. Returns the count."""
+        if not keep_ids_by_concept:
+            return 0
+        rows = await self._write(
+            "MATCH (c:Concept)-[:HAS_CHUNK]->(k:Chunk) WHERE c.id IN $concepts "
+            "AND NOT k.id IN $keep WITH k, k.id AS id DETACH DELETE k RETURN count(id) AS n",
+            concepts=list(keep_ids_by_concept),
+            keep=[i for ids in keep_ids_by_concept.values() for i in ids],
+        )
+        return int(rows[0]["n"]) if rows else 0
 
     async def wipe(self) -> None:
         """Delete every node and relationship. Destructive: callers must confirm first."""

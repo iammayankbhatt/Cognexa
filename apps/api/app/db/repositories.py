@@ -5,11 +5,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import case, delete, func, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.tables import app_settings, concepts, subjects
+from app.content.models import Question
+from app.content.notes import Chunk
+from app.db.tables import app_settings, concepts, content_chunks, questions, subjects
 from app.graph.models import ConceptFile
 
 # Quota and cap defaults (CLAUDE.md rule 2 / Phase 2 part D). Admin edits survive re-seeding because
@@ -116,3 +118,135 @@ class AppSettingsRepository:
                 set_={"value": stmt.excluded.value, "updated_at": func.now()},
             )
         )
+
+
+class ContentRepository:
+    """Content chunks and the question bank."""
+
+    def __init__(self, session: AsyncSession) -> None:
+        self._s = session
+
+    async def upsert_chunks(self, chunks: list[Chunk]) -> int:
+        """Insert or update chunks. A chunk whose text changed loses its (now stale) embedding.
+        Chunks of the affected concepts that no longer exist in the notes are deleted."""
+        if not chunks:
+            return 0
+        rows = [
+            {
+                "id": c.id,
+                "concept_id": c.concept_id,
+                "subject_id": c.subject_id,
+                "kind": c.kind,
+                "heading": c.heading,
+                "text": c.text,
+                "order": c.order,
+                "reviewed": c.reviewed,
+                "content_hash": c.content_hash,
+            }
+            for c in chunks
+        ]
+        stmt = insert(content_chunks).values(rows)
+        changed = content_chunks.c.content_hash.is_distinct_from(stmt.excluded.content_hash)
+        await self._s.execute(
+            stmt.on_conflict_do_update(
+                index_elements=[content_chunks.c.id],
+                set_={
+                    "concept_id": stmt.excluded.concept_id,
+                    "subject_id": stmt.excluded.subject_id,
+                    "kind": stmt.excluded.kind,
+                    "heading": stmt.excluded.heading,
+                    "text": stmt.excluded.text,
+                    "order": stmt.excluded.order,
+                    "reviewed": stmt.excluded.reviewed,
+                    "content_hash": stmt.excluded.content_hash,
+                    "embedding": case((changed, None), else_=content_chunks.c.embedding),
+                    "embedding_hash": case((changed, None), else_=content_chunks.c.embedding_hash),
+                    "updated_at": func.now(),
+                },
+            )
+        )
+        await self._s.execute(
+            delete(content_chunks).where(
+                content_chunks.c.concept_id.in_({c.concept_id for c in chunks}),
+                content_chunks.c.id.not_in([c.id for c in chunks]),
+            )
+        )
+        return len(rows)
+
+    async def upsert_questions(self, items: list[tuple[str, str, Question]]) -> int:
+        """items = (subject_id, concept_id, question). Questions missing from the files are
+        deactivated (never deleted: quiz history references them)."""
+        if not items:
+            return 0
+        rows = [
+            {
+                "id": q.id,
+                "concept_id": concept_id,
+                "subject_id": subject_id,
+                "type": q.type,
+                "difficulty": q.difficulty,
+                "prompt": q.prompt,
+                "code": q.code,
+                "language": q.language,
+                "options": [o.model_dump() for o in q.options] if q.options else None,
+                "answer": q.answer,
+                "explanation": q.explanation,
+                "rubric": q.rubric.model_dump() if q.rubric else None,
+                "misconception_tag": q.misconception_tag,
+                "diagnoses_prereq": q.diagnoses_prereq,
+                "status": "active",
+                "source": "authored",
+            }
+            for subject_id, concept_id, q in items
+        ]
+        stmt = insert(questions).values(rows)
+        update_cols = {
+            k: getattr(stmt.excluded, k)
+            for k in (
+                "concept_id",
+                "subject_id",
+                "type",
+                "difficulty",
+                "prompt",
+                "code",
+                "language",
+                "options",
+                "answer",
+                "explanation",
+                "rubric",
+                "misconception_tag",
+                "diagnoses_prereq",
+                "status",
+                "source",
+            )
+        }
+        update_cols["updated_at"] = func.now()
+        await self._s.execute(
+            stmt.on_conflict_do_update(index_elements=[questions.c.id], set_=update_cols)
+        )
+        await self._s.execute(
+            update(questions)
+            .where(
+                questions.c.concept_id.in_({r["concept_id"] for r in rows}),
+                questions.c.id.not_in([r["id"] for r in rows]),
+                questions.c.source == "authored",
+            )
+            .values(status="inactive")
+        )
+        return len(rows)
+
+    async def count_chunks(self, subject_id: str) -> int:
+        result = await self._s.execute(
+            select(func.count())
+            .select_from(content_chunks)
+            .where(content_chunks.c.subject_id == subject_id)
+        )
+        return int(result.scalar_one())
+
+    async def count_questions(self, subject_id: str, status: str = "active") -> int:
+        result = await self._s.execute(
+            select(func.count())
+            .select_from(questions)
+            .where(questions.c.subject_id == subject_id, questions.c.status == status)
+        )
+        return int(result.scalar_one())

@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from app.content.notes import Chunk
 from app.graph.models import ConceptFile, GraphEdge
-from app.graph.repository import PREREQUISITE, RELATED, GraphRepository
+from app.graph.repository import PREREQUISITE, RELATED, ChunkRecord, GraphRepository
 from app.graph.validation import validate_concept_file
 
 
@@ -74,3 +75,25 @@ async def seed_subject(
         related_edges=sum(1 for e in edges if e.type == RELATED),
         pruned_edges=pruned,
     )
+
+
+async def seed_chunks(repo: GraphRepository, chunks: list[Chunk]) -> tuple[int, int]:
+    """Create/update Chunk nodes (HAS_CHUNK) and remove stale ones of the same concepts.
+    Returns (upserted, deleted)."""
+    keep: dict[str, list[str]] = {}
+    for c in chunks:
+        await repo.upsert_chunk(
+            ChunkRecord(
+                id=c.id,
+                concept_id=c.concept_id,
+                subject_id=c.subject_id,
+                kind=c.kind,
+                heading=c.heading,
+                text=c.text,
+                order=c.order,
+                reviewed=c.reviewed,
+            )
+        )
+        keep.setdefault(c.concept_id, []).append(c.id)
+    deleted = await repo.delete_stale_chunks(keep)
+    return len(chunks), deleted

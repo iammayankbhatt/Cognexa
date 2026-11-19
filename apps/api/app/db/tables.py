@@ -109,6 +109,9 @@ content_chunks = Table(
     Column("order", Integer, nullable=False, server_default="0"),
     Column("embedding", Vector(EMBEDDING_DIM)),
     Column("reviewed", Boolean, nullable=False, server_default="false"),
+    Column("content_hash", Text),
+    Column("embedding_hash", Text),
+    Column("embedding_model", Text),
     _now(),
     _updated(),
 )
@@ -123,6 +126,7 @@ questions = Table(
     Column("difficulty", SmallInteger, nullable=False),
     Column("prompt", Text, nullable=False),
     Column("code", Text),
+    Column("language", Text, nullable=False, server_default="python"),
     Column("options", JSONB),
     Column("answer", JSONB, nullable=False),
     Column("explanation", Text),

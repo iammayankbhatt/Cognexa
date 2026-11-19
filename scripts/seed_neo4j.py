@@ -16,9 +16,10 @@ import sys
 
 from app.core.config import Settings
 from app.graph.driver import GraphNotConfiguredError, create_driver
+from app.content.loader import load_chunks
 from app.graph.loader import load_subject
 from app.graph.repository import GraphRepository
-from app.graph.seed import InvalidGraphError, seed_subject
+from app.graph.seed import InvalidGraphError, seed_chunks, seed_subject
 
 
 async def run(args: argparse.Namespace) -> int:
@@ -43,6 +44,7 @@ async def run(args: argparse.Namespace) -> int:
             print("Database wiped.")
         doc = load_subject(args.subject)
         result = await seed_subject(repo, doc, prune=args.prune)
+        chunks_up, chunks_del = await seed_chunks(repo, load_chunks(args.subject))
     except InvalidGraphError as exc:
         print("ERROR: concepts.yaml is invalid:")
         for err in exc.errors:
@@ -54,6 +56,7 @@ async def run(args: argparse.Namespace) -> int:
         f"Seeded subject '{args.subject}': {result.concepts} concepts, "
         f"{result.prerequisite_edges} PREREQUISITE_OF, {result.related_edges} RELATED_TO"
         + (f", pruned {result.pruned_edges}" if args.prune else "")
+        + f"; {chunks_up} chunks ({chunks_del} stale removed)"
     )
     return 0
 
