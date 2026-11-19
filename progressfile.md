@@ -200,6 +200,25 @@ Key flows (details in docs/ARCHITECTURE.md once written):
 - Local port clashes (native Postgres on 5432) look like auth failures, so check what owns a port before debugging credentials.
 **Next step:** Phase 2: databases + DSA concept graph.
 
+### Session 2 — 2026-11-19 — Phase 1 follow-ups (branch `phase/01-scaffold`)
+**Goal:** Close LIM-007 (theme contrast), audit running Docker containers, record a Phase 4 limitation.
+**Built:**
+- Neon Noir `--surface #17142A`, `--surface-2 #231E38`, `--border #332C4D`; Titanium Light `--accent #5F6670`. CLAUDE.md section 6 table updated to match `globals.css`.
+- Contrast tests extended (accent as text on bg/surface/surface-2 in all themes; border vs bg >= 1.3:1; surface and surface-2 vs bg >= 1.08:1).
+- BUG-004: `link` variant of Button and Badge switched from `text-primary` to `text-accent`.
+- LIM-007 closed (history kept, struck through); LIM-011 added for Phase 4.
+**Docker audit (`docker ps -a`):** 3 containers. Ours: `cognexa-postgres-1` (pgvector/pgvector:pg16, healthy) and `cognexa-neo4j-1` (neo4j:5, healthy); neither runs Python or uvicorn, and the compose file has no API service, so nothing to remove. **Not ours:** `store-intelligence-api-1` (image `store-intelligence-api`, Python 3.11.15, `uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload`, bind mounts `D:\store-intelligence-fixed\store-intelligence\{data->/app/data, events, videos}`, compose project `store-intelligence`, state Exited (255)). It matches the pattern asked about but belongs to a different project; I did not touch it. No Cognexa bug logged for it.
+**Files touched:** `CLAUDE.md`, `apps/web/src/app/globals.css`, `apps/web/src/components/ui/{button,badge}.tsx`, `apps/web/src/test/contrast.test.ts`, `docs/screenshots/phase1/*`, `progressfile.md`.
+**Commands run & results:** ruff ✅ · mypy ✅ · pytest ✅ (13 passed, live DBs) · eslint ✅ · tsc ✅ · vitest ✅ (69 passed) · `next build` ✅ · Playwright ✅ (7 e2e + 3 screenshot runs) · all 9 screenshots regenerated.
+**Manual verification:** viewed `design-titanium-dark.png` and `design-neon-noir.png` after the change (panels distinct, tokens as specified). Titanium Light was checked by measurement (accent 5.80:1 on white, 5.32 on bg, 4.86 on surface-2) and was not re-inspected visually after the change. The Link-variant fix was verified by computed contrast and the full-page test run, not by closer inspection of the new screenshot.
+**Bugs found this session:** BUG-004
+**Decisions:** none new
+**Human action needed:** none beyond the Session 1 push/PR steps.
+**What we learned:**
+- Checking screenshots by eye for the *dark* theme surfaced a contrast failure (primary used as link text) that the token-pair tests could not see, because they only test pairs we list. Component-level text colours need to be in the pair list or reviewed visually.
+- Brand colours (purple, red) are fine for fills with white text but not as text on near-black; use accent for link-like text.
+**Next step:** Phase 2: databases + DSA concept graph.
+
 ---
 
 ## 7. Bug Log
@@ -213,6 +232,7 @@ Severity: **S1** critical (data loss, security, app down) · **S2** major (featu
 | BUG-001 | 2026-11-19 | 1 | S3 | db / dev env | `/health/deep` reported postgres `error` (password authentication failed) although the container was healthy | Fixed | Phase 1 build commit | `test_health_integration.py::test_postgres_reachable_and_pgvector_available` |
 | BUG-002 | 2026-11-19 | 1 | S3 | backend | App import failed: SQLAlchemy asyncio requires greenlet | Fixed | Phase 1 api commit | every test in `tests/test_health.py` imports the app |
 | BUG-003 | 2026-11-19 | 1 | S2 | frontend | shadcn init imported `cn` from an unvetted npm package; its `bg-muted` / `bg-accent` backgrounds clash with our muted (text) and accent (cyan) tokens | Fixed | Phase 1 web commit | `shared.test.tsx`, `contrast.test.ts`, visual check of `/design` |
+| BUG-004 | 2026-11-19 | 1 | S3 | frontend | `link` variant of Button/Badge used `--primary` as text: 3.54:1 (Neon Noir) and 3.94:1 (Titanium Dark) on `--bg`, below AA | Fixed | `style(web): improve theme surface and accent contrast` | `src/test/contrast.test.ts` (accent text pairs); component uses accent |
 
 ### 7.2 Bug details
 
@@ -267,6 +287,18 @@ Severity: **S1** critical (data loss, security, app down) · **S2** major (featu
 - **Commit:** Phase 1 web commit (`feat(web): next.js app with tailwind and shadcn/ui`)
 - **Lesson / pattern to avoid:** After `npx shadcn add`, re-check for `bg-muted` / `bg-accent` / `text-accent-foreground` and the `cn` import in new files.
 
+#### BUG-004 — Link variant uses primary colour as text (fails AA on dark themes)
+- **Found:** 2026-11-19, Phase 1 follow-up, by Claude Code (visual review of the Titanium Dark screenshot, then measured)
+- **Severity / Area:** S3 / frontend
+- **Symptom:** The `Link` button in `/design` is red (Titanium Dark) or purple (Neon Noir) text on near-black: 3.94:1 and 3.54:1, below the 4.5:1 AA requirement. CLAUDE.md section 6 also says purple is not for body text on black.
+- **Steps to reproduce:** Open `/design` in Neon Noir or Titanium Dark and look at the `Link` button.
+- **Root cause:** shadcn's `link` variant is `text-primary`; our primary colours are fill colours chosen for white-on-primary contrast, not for use as text on `--bg`. The contrast test only checked a fixed list of token pairs, none of which was primary-as-text.
+- **Fix:** `link` variant in `button.tsx` and `badge.tsx` now uses `text-accent` (>= 4.5:1 on bg/surface/surface-2 in all three themes after the accent fix).
+- **Files changed:** `apps/web/src/components/ui/button.tsx`, `apps/web/src/components/ui/badge.tsx`
+- **Regression test:** `src/test/contrast.test.ts` accent-as-text pairs (guards the colour the variant now uses); nothing yet prevents `text-primary` from being reintroduced (see LIM-006).
+- **Commit:** `style(web): improve theme surface and accent contrast`
+- **Lesson / pattern to avoid:** Primary is a fill colour. Use accent (or text/muted) for text and link-like elements.
+
 ---
 
 ## 8. Decisions Log (lightweight ADRs)
@@ -297,10 +329,11 @@ Severity: **S1** critical (data loss, security, app down) · **S2** major (featu
 | LIM-004 | LLM free-tier quotas | Global daily cap may be hit during heavy use | Quotas, caching, AI-free Review mode still works |
 | LIM-005 | CI workflow only YAML-parsed locally, never executed on GitHub; repo not pushed | A mistake would only surface on first push | Push the branch, confirm green, fix in Phase 2 if needed |
 | LIM-006 | shadcn token remap (DEC-008) is applied by hand to generated files | New `npx shadcn add` components reintroduce `bg-muted` / `bg-accent` / the wrong `cn` import | After each add: grep and fix; consider a lint rule later |
-| LIM-007 | Titanium Light `--accent` (#8A9099) is about 3.2:1 on white; Neon Noir `--surface` vs `--bg` is subtle | Accent must not be used for small text in Titanium Light; panels rely on borders in Neon Noir | Contrast test covers text tokens only; revisit in Phase 13 a11y audit |
+| LIM-007 | ~~Titanium Light `--accent` (#8A9099) about 3.2:1 on white; Neon Noir `--surface` vs `--bg` subtle~~ **CLOSED 2026-11-19** (Session 2): accent now #5F6670 (5.80:1 on white); Neon Noir surface #17142A / surface-2 #231E38 / border #332C4D (surface 1.13:1, surface-2 1.26:1, border 1.55:1 vs bg) | Was: accent unusable as small text in Titanium Light; panels relied on thin borders | Contrast tests now also cover accent text and panel distinctness for all three themes |
 | LIM-008 | `/design` is gated by NODE_ENV only | Any non-production deployment exposes it | Acceptable: it holds no data |
 | LIM-009 | `/health/deep` is unauthenticated and reveals dependency status | Minor information disclosure | Reduce detail or protect in Phase 13 |
 | LIM-010 | `statement_cache_size=0` / `prepared_statement_cache_size=0` set only on the health-check engine | The shared engine in Phase 2 must apply the same settings (CLAUDE.md rule 6) | Put them in one engine factory in Phase 2 |
+| LIM-011 | **Phase 4:** Phase 4 must verify Supabase SSR auth works with Next.js cacheComponents/partialPrefetching (DEC-007); if it causes problems, disable them and record a new decision. | Auth cookies / session reads are dynamic data and may conflict with the prerendered shell | Verify in Phase 4 before building the app shell; if problematic set both flags off in `next.config.ts` and log a DEC |
 
 ---
 
