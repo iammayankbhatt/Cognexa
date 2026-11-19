@@ -51,7 +51,7 @@ git config --global user.email "you@example.com"
    git remote add origin https://github.com/cognexa-team/cognexa.git
    git push -u origin main
    ```
-5. **Protect main:** Repo → Settings → Rules → Rulesets (or Branches → Branch protection) → target `main` → require a pull request before merging (1 approval) and require status checks to pass. Add the CI check after Phase 1 creates it. Block force pushes.
+5. **Protect main (light):** Repo → Settings → Rules → Rulesets (or Branches → Branch protection) → target `main` → **block force pushes and branch deletion only.** Do **not** require pull requests or required status checks: the team commits directly to `main` (DEC-012), and those rules would reject direct pushes. Instead, watch the CI run after every push and fix a red build before any new work.
 
 ---
 

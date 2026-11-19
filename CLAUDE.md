@@ -138,5 +138,11 @@ A task is done only when **all** of these are true:
    - Decisions Log for any non-obvious choice. Known Limitations for anything deferred.
    - "What we learned" notes (2–5 bullets the team can study).
    - Traceability Matrix: update the status of report objectives/features touched.
-3. Commit following docs/COGNEXA_PROMPTS.md Appendix D: work on the phase branch, use small Conventional Commits (one per logical step, each passing tests), reference bug IDs in `fix:` commits, and end the phase with `docs(progress): phase NN complete`. Don't push, merge or tag unless the human asks; tell them the commands.
+3. Commit following docs/COGNEXA_PROMPTS.md Appendix D. **We work directly on `main`** (no feature branches, no PRs; DEC-012):
+   - Start every session with `git pull --rebase`.
+   - Before every commit, run the full verification for the app you touched (backend: ruff check, ruff format --check, mypy, pytest; frontend: lint, typecheck, test, build). Never commit a failing state.
+   - Small Conventional Commits, one per logical step, each passing; reference bug IDs in `fix:` commits; end the phase with `docs(progress): phase NN complete`.
+   - `git pull --rebase` again before pushing. The human pushes at the end of each phase (or sooner) and watches CI. **If CI fails, fixing it is the top priority before any new work.**
+   - Tag each finished phase on `main` (`v0.N`) once CI is green.
+   - **Don't push or tag unless the human asks;** give them the exact commands.
 4. Print a short summary: what's done, what's verified, anything the human must do manually (e.g., add an env var in a dashboard).

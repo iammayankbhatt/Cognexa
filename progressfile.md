@@ -16,10 +16,10 @@
 | Guide | Mr. Akash Chauhan, Assistant Professor |
 | Institution / ID | Graphic Era Hill University, Dehradun · Team CSE27-125 |
 | Subject (v1) | Data Structures & Algorithms (69 concepts, 8 clusters) |
-| Repository | _TBD (local only; not pushed yet)_ |
+| Repository | https://github.com/iammayankbhatt/Cognexa |
 | Live web app | _TBD (Vercel)_ |
 | Live API | _TBD (Render)_ |
-| Current phase | Phase 1 complete (branch `phase/01-scaffold`); next: Phase 2 |
+| Current phase | Phase 1 complete (merged to `main` via PR #1); next: Phase 2. Workflow now: commits directly on `main` (DEC-012) |
 | Overall status | 🟡 In progress |
 
 Status legend: 🔴 Not started · 🟡 In progress · 🟢 Done + verified · ⚠️ Done with known issues · ⏸️ Blocked
@@ -126,7 +126,7 @@ Key flows (details in docs/ARCHITECTURE.md once written):
 | Phase | Name | Status | Started | Finished | Commit | Verified by (human) | Notes |
 |---|---|---|---|---|---|---|---|
 | 0 | Manual setup: accounts & keys | 🔴 | | | — | | |
-| 1 | Scaffold, design system, CI | ⚠️ | 2026-11-19 | 2026-11-19 | see Session 1 (branch `phase/01-scaffold`) | | Done and verified locally. CI workflow not yet run on GitHub (repo not pushed). Awaiting human review. |
+| 1 | Scaffold, design system, CI | ⚠️ | 2026-11-19 | 2026-11-19 | `fb019e9` (PR #1 merge); CI fix `2fabc20` | | Merged. First GitHub CI run failed at typecheck (BUG-005); fix verified in a fresh clone, awaiting a green run on GitHub, then tag v0.1. |
 | 2 | Databases + DSA concept graph | 🔴 | | | | | |
 | 3 | Content, question bank, eval test set | 🔴 | | | | | |
 | 4 | Auth, roles, app shell, public pages | 🔴 | | | | | |
@@ -219,6 +219,31 @@ Key flows (details in docs/ARCHITECTURE.md once written):
 - Brand colours (purple, red) are fine for fills with white text but not as text on near-black; use accent for link-like text.
 **Next step:** Phase 2: databases + DSA concept graph.
 
+### Session 3 — 2026-11-19 — CI fix (BUG-005) and workflow change (DEC-012), on `main`
+**Goal:** Make the GitHub frontend job pass; switch the team workflow to direct commits on `main`.
+**Built:**
+- Local `main` was stale at the first commit while `origin/main` already contained PR #1; ran `git checkout main && git pull --rebase` (fast-forward to `fb019e9`) before starting.
+- BUG-005 fix: `typecheck` script is now `next typegen && tsc --noEmit`.
+- Workflow docs: CLAUDE.md section 9 step 3 and `docs/COGNEXA_PROMPTS.md` Appendix D rewritten for commits on `main` (Branch column removed from the commit table, per-phase commit lists kept); `docs/PHASE0_SETUP.md` step 5 no longer requires PRs/status checks on `main`.
+**Hidden-dependency audit (CI vs local):** deleted `.next` and `next-env.d.ts`, `npm ci` and re-ran everything; then cloned the repo fresh and ran both CI jobs there. Findings: only the route types depended on gitignored files. `uv.lock`, `package-lock.json`, `.python-version`, `components.json`, `.prettierrc.json`, `vitest.setup.ts` are all tracked. Playwright browsers are not used in CI (e2e is local only). The uv cache is only an accelerator (keyed on tracked `uv.lock`). `next/font/google` needs network at build time, which GitHub runners have. Backend integration tests skip without env vars and run in CI via service containers. Not covered locally: Ubuntu-specific behaviour (case-sensitive paths, line endings) and the Neo4j/pgvector service-container healthchecks in the workflow.
+**Files touched:** `apps/web/package.json`, `CLAUDE.md`, `docs/COGNEXA_PROMPTS.md`, `docs/PHASE0_SETUP.md`, `progressfile.md`.
+**Commands run & results (fresh clone and in place):** backend: ruff ✅ · ruff format ✅ · mypy ✅ · pytest ✅ (10 passed + 3 skipped without DBs; 13 passed with live DBs) · frontend: `npm ci` ✅ · eslint ✅ · typecheck ✅ (after fix; ❌ before) · vitest ✅ (69 passed) · `next build` ✅. Docs-only commit: no code checks needed beyond the above.
+**Manual verification:** reproduced the exact CI error locally before fixing; confirmed it is gone after.
+**Bugs found this session:** BUG-005
+**Decisions:** DEC-012 (requested ID DEC-008 was already used)
+**Human action needed:** push `main` and watch the CI run (commands below). If you created a GitHub ruleset requiring PRs/status checks on `main` (old PHASE0 step 5), relax it or direct pushes will be rejected. After CI is green: tag v0.1.
+```
+git pull --rebase
+git push
+# watch: GitHub -> Actions (or: gh run watch)
+git tag -a v0.1 -m "Phase 1: Scaffold, design system, CI" && git push --tags   # only after CI is green
+```
+**What we learned:**
+- Generated, gitignored files (`.next/types`, `next-env.d.ts`) make local checks lie. A fresh clone is the only honest CI rehearsal.
+- When a requested ID is already taken (DEC-008), allocate the next free one and say so; never overwrite history.
+- Branch protection that requires PRs or status checks silently contradicts a commit-to-main workflow.
+**Next step:** confirm green CI on GitHub, tag v0.1, then Phase 2: databases + DSA concept graph.
+
 ---
 
 ## 7. Bug Log
@@ -233,6 +258,7 @@ Severity: **S1** critical (data loss, security, app down) · **S2** major (featu
 | BUG-002 | 2026-11-19 | 1 | S3 | backend | App import failed: SQLAlchemy asyncio requires greenlet | Fixed | Phase 1 api commit | every test in `tests/test_health.py` imports the app |
 | BUG-003 | 2026-11-19 | 1 | S2 | frontend | shadcn init imported `cn` from an unvetted npm package; its `bg-muted` / `bg-accent` backgrounds clash with our muted (text) and accent (cyan) tokens | Fixed | Phase 1 web commit | `shared.test.tsx`, `contrast.test.ts`, visual check of `/design` |
 | BUG-004 | 2026-11-19 | 1 | S3 | frontend | `link` variant of Button/Badge used `--primary` as text: 3.54:1 (Neon Noir) and 3.94:1 (Titanium Dark) on `--bg`, below AA | Fixed | `style(web): improve theme surface and accent contrast` | `src/test/contrast.test.ts` (accent text pairs); component uses accent |
+| BUG-005 | 2026-11-19 | 1 | S2 | ci / frontend | GitHub Actions frontend job failed at `npm run typecheck`: `src/app/layout.tsx(17,50): error TS2304: Cannot find name 'LayoutProps'` | Fixed | `2fabc20` | The CI `typecheck` step itself (script now runs `next typegen` first); reproduced and verified from a fresh clone |
 
 ### 7.2 Bug details
 
@@ -299,6 +325,18 @@ Severity: **S1** critical (data loss, security, app down) · **S2** major (featu
 - **Commit:** `style(web): improve theme surface and accent contrast`
 - **Lesson / pattern to avoid:** Primary is a fill colour. Use accent (or text/muted) for text and link-like elements.
 
+#### BUG-005 — CI typecheck fails: Cannot find name 'LayoutProps'
+- **Found:** 2026-11-19, Phase 1 (after merge), by CI (GitHub Actions frontend job)
+- **Severity / Area:** S2 / ci, frontend
+- **Symptom:** `npm run typecheck` fails with `src/app/layout.tsx(17,50): error TS2304: Cannot find name 'LayoutProps'.`; passes locally.
+- **Steps to reproduce:** Fresh checkout (or `rm -rf apps/web/.next apps/web/next-env.d.ts`), `npm ci`, `npm run typecheck`. Reproduced locally with `.next` deleted: same error.
+- **Root cause:** Next.js 16 generates the global route helper types (`LayoutProps`, `PageProps`) into `.next/types` (plus `next-env.d.ts`). Both are gitignored and only exist after `next dev` or `next build`. Locally they were always present; in CI `typecheck` runs before `build`, so `tsc` ran without them.
+- **Fix:** `"typecheck": "next typegen && tsc --noEmit"`. `next typegen` exists in the installed Next.js 16.4.6 (`next typegen --help`) and generates the types without a full build; it also writes `next-env.d.ts`.
+- **Files changed:** `apps/web/package.json`
+- **Regression test:** the CI `typecheck` step itself. Verified by deleting `.next` and `next-env.d.ts` and running `npm ci && lint && typecheck && test && build` (all pass), then again in a fresh `git clone` of the repo (backend and frontend jobs, no `.env`, no `.venv`, no `node_modules`).
+- **Commit:** `2fabc20 fix(ci): generate next.js route types before typecheck (BUG-005)`
+- **Lesson / pattern to avoid:** "Works locally" is not "works in CI" when gitignored generated files are involved. Prove CI steps in a fresh clone, not in the dev working tree. This is LIM-005 materialising.
+
 ---
 
 ## 8. Decisions Log (lightweight ADRs)
@@ -316,6 +354,7 @@ Severity: **S1** critical (data loss, security, app down) · **S2** major (featu
 | DEC-009 | 2026-11-19 | Local Postgres published on host port 5433 | Stop the native Postgres; keep 5432 | Do not touch the user's installed database | Local `DATABASE_URL` uses 5433; the CI service container still uses 5432 |
 | DEC-010 | 2026-11-19 | Own ThemeProvider (`useSyncExternalStore` over `data-theme`) + inline no-flash script instead of next-themes | next-themes | Three named themes, no system/class modes needed, fewer deps; next-themes removed | Profile sync in Phase 4 hooks into `setTheme` |
 | DEC-011 | 2026-11-19 | Vitest without `@vitejs/plugin-react`; `@types/node` bumped to 22 | Install the plugin with `--legacy-peer-deps` | The plugin caused a Babel peer-dependency conflict with shadcn's deps and is not needed for these tests; Vitest 5 requires `@types/node` 22+ | Avoid `--legacy-peer-deps` so the lockfile stays honest |
+| DEC-012 | 2026-11-19 | Team commits directly on `main`: no feature branches, no PRs. Before every commit run full verification for the touched app; `git pull --rebase` before a session and before pushing; push at the end of each phase (or sooner) and watch CI; a red CI is fixed before any new work; tag each finished phase (v0.N) on `main`; Claude Code does not push or tag unless asked. (Requested as DEC-008, but that ID was already taken by the Tailwind muted/accent mapping, so it is recorded as DEC-012.) | Phase branches + PRs with review (previous Appendix D workflow, used once for Phase 1 via PR #1) | Small team, simpler flow, CI watched after each push | No review record per phase; a broken push blocks everyone. `docs/PHASE0_SETUP.md` step 5 changed: do not require PRs or status checks on `main` (they would reject direct pushes). **Check the GitHub ruleset if one was already created from the old instructions.** |
 
 ---
 
@@ -327,7 +366,7 @@ Severity: **S1** critical (data loss, security, app down) · **S2** major (featu
 | LIM-002 | No managed backups on free tiers | Data-loss risk | Manual backup script (Phase 13); Neo4j re-seedable from YAML |
 | LIM-003 | Per-minute rate limiter is in-memory | Only correct with one backend instance | Fine on Render free (1 instance); move to Redis if scaled |
 | LIM-004 | LLM free-tier quotas | Global daily cap may be hit during heavy use | Quotas, caching, AI-free Review mode still works |
-| LIM-005 | CI workflow only YAML-parsed locally, never executed on GitHub; repo not pushed | A mistake would only surface on first push | Push the branch, confirm green, fix in Phase 2 if needed |
+| LIM-005 | CI workflow was first run on GitHub after the Phase 1 merge and failed (BUG-005). The fix is verified only by reproducing CI steps in a fresh local clone, not yet by a green GitHub run | A remaining Linux/Windows or network difference could still fail | Push, watch the run, record the result in Session 4 / next phase |
 | LIM-006 | shadcn token remap (DEC-008) is applied by hand to generated files | New `npx shadcn add` components reintroduce `bg-muted` / `bg-accent` / the wrong `cn` import | After each add: grep and fix; consider a lint rule later |
 | LIM-007 | ~~Titanium Light `--accent` (#8A9099) about 3.2:1 on white; Neon Noir `--surface` vs `--bg` subtle~~ **CLOSED 2026-11-19** (Session 2): accent now #5F6670 (5.80:1 on white); Neon Noir surface #17142A / surface-2 #231E38 / border #332C4D (surface 1.13:1, surface-2 1.26:1, border 1.55:1 vs bg) | Was: accent unusable as small text in Titanium Light; panels relied on thin borders | Contrast tests now also cover accent text and panel distinctness for all three themes |
 | LIM-008 | `/design` is gated by NODE_ENV only | Any non-production deployment exposes it | Acceptable: it holds no data |
