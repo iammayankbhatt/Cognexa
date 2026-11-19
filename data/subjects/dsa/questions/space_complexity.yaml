@@ -1,0 +1,119 @@
+concept_id: space_complexity
+questions:
+  - id: space_complexity-q01
+    type: mcq
+    difficulty: 1
+    prompt: "An algorithm uses a few extra variables but never allocates arrays that grow with the input. What is its auxiliary space complexity?"
+    options:
+      - {id: a, text: "O(1)"}
+      - {id: b, text: "O(n)", why_wrong: "A fixed number of variables does not grow with n."}
+      - {id: c, text: "O(n squared)", why_wrong: "No table of size n by n is created."}
+      - {id: d, text: "O(log n)", why_wrong: "Nothing in the description grows with the input size."}
+    answer: a
+    explanation: "A fixed number of variables uses constant extra memory regardless of the input size."
+    misconception_tag: constant_space
+    diagnoses_prereq: time_complexity
+
+  - id: space_complexity-q02
+    type: mcq
+    difficulty: 1
+    prompt: "A function creates a new list with n elements copied from its input. What is its auxiliary space complexity?"
+    options:
+      - {id: a, text: "O(1)", why_wrong: "The copy holds n elements, so memory grows with the input."}
+      - {id: b, text: "O(log n)", why_wrong: "Copying n elements is linear, not logarithmic."}
+      - {id: c, text: "O(n)"}
+      - {id: d, text: "O(n squared)", why_wrong: "One list of n elements is linear, not quadratic."}
+    answer: c
+    explanation: "The new list stores n elements, so the extra memory is proportional to n."
+    misconception_tag: copy_costs_space
+    diagnoses_prereq: time_complexity
+
+  - id: space_complexity-q03
+    type: mcq
+    difficulty: 2
+    prompt: "A recursive function allocates no arrays but recurses n levels deep before returning. What is its space complexity?"
+    options:
+      - {id: a, text: "O(1), because it allocates nothing", why_wrong: "Each pending call occupies a stack frame, so memory grows with depth."}
+      - {id: b, text: "O(n), because n frames are on the call stack at the deepest point"}
+      - {id: c, text: "O(log n)", why_wrong: "Logarithmic space needs a recursion depth of log n, which halves the problem each call."}
+      - {id: d, text: "O(n squared)", why_wrong: "One frame per level gives linear, not quadratic, stack usage."}
+    answer: b
+    explanation: "Recursion depth counts toward space: n nested calls keep n frames alive at once."
+    misconception_tag: recursion_stack_space
+    diagnoses_prereq: stack_heap_memory
+
+  - id: space_complexity-q04
+    type: mcq
+    difficulty: 2
+    prompt: "A program stores a two-dimensional table of n rows and n columns of integers. What is its space complexity?"
+    options:
+      - {id: a, text: "O(n)", why_wrong: "n rows each with n entries hold n times n cells."}
+      - {id: b, text: "O(2n)", why_wrong: "Rows and columns multiply; they do not add."}
+      - {id: c, text: "O(n squared)"}
+      - {id: d, text: "O(log n)", why_wrong: "A table with n by n cells stores far more than a logarithmic amount."}
+    answer: c
+    explanation: "n rows times n columns is n squared cells, which for large n can exhaust memory."
+    misconception_tag: table_space
+    diagnoses_prereq: time_complexity
+
+  - id: space_complexity-q05
+    type: multi_select
+    difficulty: 2
+    prompt: "Select every true statement about space complexity."
+    options:
+      - {id: a, text: "An in-place algorithm uses O(1) auxiliary space."}
+      - {id: b, text: "Slicing a Python list creates a new list and uses extra memory."}
+      - {id: c, text: "Recursion never uses additional memory because functions share the same variables.", why_wrong: "Each call has its own frame on the call stack."}
+      - {id: d, text: "A faster algorithm always uses less memory.", why_wrong: "Many fast algorithms trade extra memory for speed, for example by caching results."}
+    answer: [a, b]
+    explanation: "In-place means constant extra space and slices copy. Recursion uses stack memory and speed and space often trade off."
+    misconception_tag: space_facts
+    diagnoses_prereq: null
+
+  - id: space_complexity-q06
+    type: true_false
+    difficulty: 1
+    prompt: "True or false: a Python generator expression produces its items one at a time instead of storing them all."
+    answer: true
+    explanation: "Generators compute values lazily, so they need constant memory for the items regardless of how many they will produce."
+    misconception_tag: generators
+    diagnoses_prereq: null
+
+  - id: space_complexity-q07
+    type: code_output
+    difficulty: 2
+    prompt: "What does this program print?"
+    code: |
+      depth = 0
+      peak = 0
+
+      def down(n):
+          global depth, peak
+          depth += 1
+          peak = max(peak, depth)
+          if n > 0:
+              down(n - 1)
+          depth -= 1
+
+      down(9)
+      print(peak, depth)
+    answer: "10 0"
+    explanation: "Calls nest from n = 9 down to n = 0, so ten frames are alive at the deepest point. After everything returns the depth is back to 0."
+    misconception_tag: stack_depth
+    diagnoses_prereq: stack_heap_memory
+
+  - id: space_complexity-q08
+    type: short_answer
+    difficulty: 3
+    prompt: "Compare reversing a list by building a new reversed copy with reversing it in place. Give the time and auxiliary space of each."
+    answer: "Both take O(n) time. Building a reversed copy uses O(n) extra space because it allocates a new list, while reversing in place swaps elements using only a few variables and so needs O(1) extra space."
+    explanation: "A complete answer states equal time, linear space for the copy and constant space for the in-place method."
+    rubric:
+      key_points:
+        - "both methods are O(n) time"
+        - "copy needs O(n) extra space for the new list"
+        - "in place needs O(1) extra space using swaps"
+      max_score: 1
+      partial_credit: true
+    misconception_tag: in_place_vs_copy
+    diagnoses_prereq: time_complexity

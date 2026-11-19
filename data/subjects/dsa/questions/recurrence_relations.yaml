@@ -1,0 +1,112 @@
+concept_id: recurrence_relations
+questions:
+  - id: recurrence_relations-q01
+    type: mcq
+    difficulty: 1
+    prompt: "What does the recurrence T(n) = T(n/2) + 1 describe, and what is its solution?"
+    options:
+      - {id: a, text: "An algorithm that halves its input each step; Theta(log n)"}
+      - {id: b, text: "An algorithm that halves its input but visits every element; Theta(n)", why_wrong: "Only constant work is done per level, so the total is the number of levels."}
+      - {id: c, text: "An algorithm that doubles its input each step; Theta(2 to the power n)", why_wrong: "The input shrinks by half each call, not doubles."}
+      - {id: d, text: "An algorithm with no recursion; Theta(1)", why_wrong: "The term T(n/2) is a recursive call."}
+    answer: a
+    explanation: "Each call does constant work and halves the problem, so there are log n levels and a total of Theta(log n)."
+    misconception_tag: halving_recurrence
+    diagnoses_prereq: recursion
+
+  - id: recurrence_relations-q02
+    type: mcq
+    difficulty: 1
+    prompt: "What is the solution of T(n) = 2T(n/2) + n (the recurrence of merge sort)?"
+    options:
+      - {id: a, text: "Theta(n)", why_wrong: "Each level costs n but there are log n levels."}
+      - {id: b, text: "Theta(n squared)", why_wrong: "The total work per level stays n; it does not grow by n each level."}
+      - {id: c, text: "Theta(log n)", why_wrong: "Each level costs n, so the total is more than the number of levels alone."}
+      - {id: d, text: "Theta(n log n)"}
+    answer: d
+    explanation: "There are log n levels, each doing about n units of merging work, so the total is n log n."
+    misconception_tag: merge_sort_recurrence
+    diagnoses_prereq: recursion
+
+  - id: recurrence_relations-q03
+    type: mcq
+    difficulty: 2
+    prompt: "Apply the Master Theorem to T(n) = 4T(n/2) + n. What is the result?"
+    options:
+      - {id: a, text: "Theta(n log n)", why_wrong: "That arises when f(n) equals n to the power log_b a; here that power is n squared, not n."}
+      - {id: b, text: "Theta(n squared)"}
+      - {id: c, text: "Theta(n)", why_wrong: "The leaves dominate with n squared work, so the answer is bigger than f(n) = n."}
+      - {id: d, text: "Theta(n cubed)", why_wrong: "log_2 4 is 2, so the leaf work is n squared, not n cubed."}
+    answer: b
+    explanation: "a = 4, b = 2 gives n to the power log_2 4 = n squared. Since f(n) = n is polynomially smaller, Case 1 applies: Theta(n squared)."
+    misconception_tag: master_theorem_case_1
+    diagnoses_prereq: asymptotic_notation
+
+  - id: recurrence_relations-q04
+    type: mcq
+    difficulty: 2
+    prompt: "Which recurrence is NOT directly solvable by the Master Theorem?"
+    options:
+      - {id: a, text: "T(n) = 2T(n/2) + n", why_wrong: "This has the form aT(n/b) + f(n) and is solvable."}
+      - {id: b, text: "T(n) = T(n/2) + 1", why_wrong: "This has the form aT(n/b) + f(n) with a = 1 and is solvable."}
+      - {id: c, text: "T(n) = T(n - 1) + n"}
+      - {id: d, text: "T(n) = 3T(n/4) + n", why_wrong: "This has the form aT(n/b) + f(n) and is solvable."}
+    answer: c
+    explanation: "The Master Theorem needs the input to shrink by dividing by a constant. T(n - 1) + n shrinks by subtraction and unrolls to Theta(n squared)."
+    misconception_tag: master_theorem_limits
+    diagnoses_prereq: recursion
+
+  - id: recurrence_relations-q05
+    type: multi_select
+    difficulty: 2
+    prompt: "Select every correct solution of a standard recurrence."
+    options:
+      - {id: a, text: "T(n) = 2T(n/2) + 1 is Theta(n)."}
+      - {id: b, text: "T(n) = T(n - 1) + 1 is Theta(n)."}
+      - {id: c, text: "T(n) = T(n - 1) + n is Theta(n log n).", why_wrong: "Summing n + (n-1) + ... + 1 gives about n squared over two, so it is Theta(n squared)."}
+      - {id: d, text: "T(n) = 2T(n - 1) + 1 is Theta(n squared).", why_wrong: "The number of calls doubles each level, giving Theta(2 to the power n)."}
+    answer: [a, b]
+    explanation: "A tree traversal is Theta(n) and a one-call recursion with constant work is Theta(n). The other two grow quadratically and exponentially respectively."
+    misconception_tag: standard_recurrences
+    diagnoses_prereq: null
+
+  - id: recurrence_relations-q06
+    type: true_false
+    difficulty: 1
+    prompt: "True or false: the base case of a recurrence changes the growth class (Theta) of the solution as long as it is a constant."
+    answer: false
+    explanation: "A constant base case only affects constant factors, not the growth class."
+    misconception_tag: base_case_in_recurrences
+    diagnoses_prereq: null
+
+  - id: recurrence_relations-q07
+    type: code_output
+    difficulty: 2
+    prompt: "What does this program print?"
+    code: |
+      def t(n):
+          if n == 1:
+              return 0
+          return 2 * t(n // 2) + n
+
+      print(t(2), t(4), t(8))
+    answer: "2 8 24"
+    explanation: "t(2) = 2*0 + 2 = 2, t(4) = 2*2 + 4 = 8 and t(8) = 2*8 + 8 = 24, which equal n times log2 n."
+    misconception_tag: evaluating_recurrence
+    diagnoses_prereq: recursion
+
+  - id: recurrence_relations-q08
+    type: short_answer
+    difficulty: 3
+    prompt: "Use a recursion tree to explain why merge sort, with T(n) = 2T(n/2) + n, takes Theta(n log n) time."
+    answer: "The tree has about log2 n levels because the input is halved at each level. At every level the sizes of all subproblems add up to n, so merging costs about n per level. Multiplying n work per level by log n levels gives Theta(n log n)."
+    explanation: "A full answer counts the levels, shows the per-level cost is n and multiplies."
+    rubric:
+      key_points:
+        - "there are about log2 n levels because the size halves each level"
+        - "the work at every level totals about n"
+        - "multiply levels by work per level to get n log n"
+      max_score: 1
+      partial_credit: true
+    misconception_tag: recursion_tree
+    diagnoses_prereq: recursion

@@ -1,0 +1,114 @@
+concept_id: amortized_analysis
+questions:
+  - id: amortized_analysis-q01
+    type: mcq
+    difficulty: 1
+    prompt: "What is the amortized time complexity of appending to a dynamic array that doubles its capacity when full?"
+    options:
+      - {id: a, text: "O(1)"}
+      - {id: b, text: "O(n)", why_wrong: "A single append can cost O(n) when it resizes, but n appends cost O(n) in total, so the average is constant."}
+      - {id: c, text: "O(log n)", why_wrong: "Doubling gives constant, not logarithmic, amortized cost."}
+      - {id: d, text: "O(n squared)", why_wrong: "n appends cost at most about 3n units in total, not quadratic."}
+    answer: a
+    explanation: "Resizes are rare and the copied totals form a geometric series below 2n, so the average per append is constant."
+    misconception_tag: amortized_append
+    diagnoses_prereq: dynamic_arrays
+
+  - id: amortized_analysis-q02
+    type: mcq
+    difficulty: 1
+    prompt: "What is the worst-case time of a single append to a dynamic array that must resize?"
+    options:
+      - {id: a, text: "O(1)", why_wrong: "A resize copies every existing element, which costs time proportional to the size."}
+      - {id: b, text: "O(log n)", why_wrong: "Copying the elements is linear, not logarithmic."}
+      - {id: c, text: "O(n)"}
+      - {id: d, text: "O(n squared)", why_wrong: "One resize copies n elements once, which is linear."}
+    answer: c
+    explanation: "The append that triggers the resize copies all n elements into the larger block."
+    misconception_tag: worst_case_append
+    diagnoses_prereq: dynamic_arrays
+
+  - id: amortized_analysis-q03
+    type: mcq
+    difficulty: 2
+    prompt: "A dynamic array grows by adding a fixed 10 slots every time it is full, instead of doubling. What is the amortized cost of an append?"
+    options:
+      - {id: a, text: "O(1), the same as doubling", why_wrong: "Fixed growth triggers a full copy every 10 appends, so the work per append grows with n."}
+      - {id: b, text: "O(n)"}
+      - {id: c, text: "O(log n)", why_wrong: "There is no halving or doubling structure to give logarithmic cost."}
+      - {id: d, text: "O(n squared)", why_wrong: "That is the total cost for n appends, not the amortized cost per append."}
+    answer: b
+    explanation: "About n/10 resizes each copy up to n elements, so n appends cost O(n squared) in total, which is O(n) per append on average."
+    misconception_tag: growth_factor
+    diagnoses_prereq: asymptotic_notation
+
+  - id: amortized_analysis-q04
+    type: mcq
+    difficulty: 2
+    prompt: "How does amortized analysis differ from average-case analysis?"
+    options:
+      - {id: a, text: "Amortized analysis averages over a sequence of operations with no probability assumptions, while average-case assumes a distribution over inputs."}
+      - {id: b, text: "They are the same idea with different names.", why_wrong: "Average-case relies on a probability model over inputs, amortized does not."}
+      - {id: c, text: "Amortized analysis only considers the best case.", why_wrong: "It bounds the total cost of the worst possible sequence."}
+      - {id: d, text: "Amortized analysis is only valid for random input.", why_wrong: "It holds for every sequence, however adversarial."}
+    answer: a
+    explanation: "An amortized bound is a worst-case guarantee on total cost across a sequence, so it needs no assumptions about randomness."
+    misconception_tag: amortized_vs_average
+    diagnoses_prereq: asymptotic_notation
+
+  - id: amortized_analysis-q05
+    type: multi_select
+    difficulty: 2
+    prompt: "Select every true statement about amortized analysis."
+    options:
+      - {id: a, text: "The aggregate method divides the total cost of n operations by n."}
+      - {id: b, text: "A binary counter's increment flips O(1) bits amortized."}
+      - {id: c, text: "Amortized O(1) means every single operation takes constant time.", why_wrong: "Individual operations can be expensive; only the average over a sequence is constant."}
+      - {id: d, text: "Doubling a dynamic array's capacity is not needed; adding one slot each time has the same amortized cost.", why_wrong: "Adding one slot copies the whole array every append, giving linear amortized cost."}
+    answer: [a, b]
+    explanation: "The aggregate method and the counter are standard examples. Amortized bounds permit occasional expensive operations and require geometric growth."
+    misconception_tag: amortized_facts
+    diagnoses_prereq: null
+
+  - id: amortized_analysis-q06
+    type: true_false
+    difficulty: 1
+    prompt: "True or false: the total cost of the copies made while appending n items to a doubling array is less than 2n."
+    answer: true
+    explanation: "Copies happen at sizes 1, 2, 4, ... and these form a geometric series that sums to less than 2n."
+    misconception_tag: geometric_series
+    diagnoses_prereq: null
+
+  - id: amortized_analysis-q07
+    type: code_output
+    difficulty: 2
+    prompt: "What does this program print?"
+    code: |
+      capacity, size, cost = 1, 0, 0
+      for _ in range(5):
+          if size == capacity:
+              cost += size
+              capacity *= 2
+          cost += 1
+          size += 1
+      print(cost, capacity)
+    answer: "12 8"
+    explanation: "The five appends cost 1, 2 (copy 1 then write), 3 (copy 2 then write), 1 and 5 (copy 4 then write), which sums to 12. The array doubled from 1 to 2, 4 and finally 8."
+    misconception_tag: tracing_amortized_cost
+    diagnoses_prereq: dynamic_arrays
+
+  - id: amortized_analysis-q08
+    type: short_answer
+    difficulty: 3
+    prompt: "Explain why n appends to a doubling dynamic array cost O(n) in total even though some appends copy the whole array."
+    answer: "Resizes occur only when the array is full, at sizes 1, 2, 4, 8 and so on. The elements copied across all resizes add up to a geometric series below 2n. Adding the n writes gives a total under 3n, so the cost per append averages a constant."
+    explanation: "A strong answer names the doubling schedule, the geometric series bound and the constant average."
+    rubric:
+      key_points:
+        - "resizes happen only at sizes 1, 2, 4, 8, ... (doubling)"
+        - "total copying is a geometric series bounded by about 2n"
+        - "total is O(n) so the average per append is O(1)"
+      max_score: 1
+      partial_credit: true
+    misconception_tag: aggregate_method
+    diagnoses_prereq: dynamic_arrays

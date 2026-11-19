@@ -1,0 +1,112 @@
+concept_id: asymptotic_notation
+questions:
+  - id: asymptotic_notation-q01
+    type: mcq
+    difficulty: 1
+    prompt: "Which notation expresses an upper bound on the growth of a function?"
+    options:
+      - {id: a, text: "Big-O"}
+      - {id: b, text: "Big-Omega", why_wrong: "Omega is the lower bound."}
+      - {id: c, text: "Big-Theta", why_wrong: "Theta is a tight bound, both upper and lower, not just an upper bound."}
+      - {id: d, text: "None; growth cannot be bounded", why_wrong: "Bounding growth is exactly what asymptotic notation is for."}
+    answer: a
+    explanation: "Big-O says the function grows no faster than a constant multiple of g(n) for large n."
+    misconception_tag: notation_meaning
+    diagnoses_prereq: time_complexity
+
+  - id: asymptotic_notation-q02
+    type: mcq
+    difficulty: 1
+    prompt: "Which notation expresses a lower bound on the growth of a function?"
+    options:
+      - {id: a, text: "Big-O", why_wrong: "Big-O is the upper bound."}
+      - {id: b, text: "Big-Theta", why_wrong: "Theta bounds from above and below together."}
+      - {id: c, text: "Big-Omega"}
+      - {id: d, text: "Little-o only", why_wrong: "Little-o is a strict upper bound, not a lower bound."}
+    answer: c
+    explanation: "Omega says the function grows at least as fast as a constant multiple of g(n) for large n."
+    misconception_tag: notation_meaning
+    diagnoses_prereq: time_complexity
+
+  - id: asymptotic_notation-q03
+    type: mcq
+    difficulty: 2
+    prompt: "Linear search on n items finds its target at the first position. Which statement is correct?"
+    options:
+      - {id: a, text: "This is the best case, which takes Theta(1) comparisons."}
+      - {id: b, text: "This is the worst case, which takes Theta(n) comparisons.", why_wrong: "The worst case is when the target is last or absent, not first."}
+      - {id: c, text: "Linear search can never take constant time.", why_wrong: "In the best case it needs a single comparison."}
+      - {id: d, text: "This is the average case, which takes Theta(n squared) comparisons.", why_wrong: "Linear search never takes quadratic time, and the average case is about n/2 comparisons."}
+    answer: a
+    explanation: "The best case happens when the first element matches, costing one comparison."
+    misconception_tag: best_worst_average
+    diagnoses_prereq: time_complexity
+
+  - id: asymptotic_notation-q04
+    type: mcq
+    difficulty: 2
+    prompt: "Which statement about O and the worst case is correct?"
+    options:
+      - {id: a, text: "Big-O always means the worst case.", why_wrong: "Big-O is a bound on a function; any case (best, average or worst) can be described with O, Omega or Theta."}
+      - {id: b, text: "The best case of an algorithm can be written with Big-O just like the worst case."}
+      - {id: c, text: "Omega always refers to the best case.", why_wrong: "Omega is a lower bound on a function, not a scenario."}
+      - {id: d, text: "A Theta bound cannot be given for a worst case.", why_wrong: "Theta bounds apply to any function, including the worst-case cost."}
+    answer: b
+    explanation: "Bounds describe functions and cases pick which function we talk about, so the two ideas are independent."
+    misconception_tag: bounds_vs_cases
+    diagnoses_prereq: time_complexity
+
+  - id: asymptotic_notation-q05
+    type: multi_select
+    difficulty: 2
+    prompt: "Select every true statement about asymptotic notation."
+    options:
+      - {id: a, text: "3n + 7 is Theta(n)."}
+      - {id: b, text: "log2 n and log10 n differ only by a constant factor, so Theta(log2 n) equals Theta(log10 n)."}
+      - {id: c, text: "n squared is O(n), because O only needs to hold for small n.", why_wrong: "O requires the bound to hold for all large n, and n squared eventually exceeds any constant multiple of n."}
+      - {id: d, text: "If f is Theta(g), then f can grow faster than g by an unbounded factor.", why_wrong: "Theta bounds f within constant multiples of g from both sides."}
+    answer: [a, b]
+    explanation: "Linear functions with constants are Theta(n) and logarithm bases differ by a constant. Big-O is about large n and Theta is two-sided."
+    misconception_tag: notation_rules
+    diagnoses_prereq: null
+
+  - id: asymptotic_notation-q06
+    type: true_false
+    difficulty: 1
+    prompt: "True or false: an algorithm whose running time is Theta(n) is also O(n squared)."
+    answer: true
+    explanation: "O is only an upper bound, and linear growth is below quadratic growth, so a Theta(n) algorithm is also O(n squared), although that is a very loose statement."
+    misconception_tag: loose_upper_bounds
+    diagnoses_prereq: null
+
+  - id: asymptotic_notation-q07
+    type: code_output
+    difficulty: 2
+    prompt: "What does this program print?"
+    code: |
+      def f(n):
+          return 2 * n * n + 10 * n
+
+      ok_upper = all(f(n) <= 3 * n * n for n in range(10, 500))
+      fails_early = f(1) <= 3 * 1 * 1
+      print(ok_upper, fails_early)
+    answer: "True False"
+    explanation: "For n at least 10, 10n is at most n squared, so f(n) is at most 3n squared. At n = 1 the value 12 exceeds 3, so the same constant fails below the threshold n0."
+    misconception_tag: witnesses_c_n0
+    diagnoses_prereq: time_complexity
+
+  - id: asymptotic_notation-q08
+    type: short_answer
+    difficulty: 3
+    prompt: "Explain the difference between Big-O, Big-Omega and Big-Theta, and why 'worst case' is not a synonym for Big-O."
+    answer: "Big-O is an upper bound on growth, Big-Omega is a lower bound and Big-Theta bounds the growth from both sides. They describe functions, whereas best, average and worst case describe which inputs we consider, so each case can have its own O, Omega and Theta."
+    explanation: "A strong answer separates bounds on a function from scenarios over inputs."
+    rubric:
+      key_points:
+        - "O is an upper bound, Omega a lower bound, Theta both"
+        - "bounds describe functions of n"
+        - "best, average and worst case are scenarios; each has its own bounds"
+      max_score: 1
+      partial_credit: true
+    misconception_tag: bounds_vs_cases
+    diagnoses_prereq: time_complexity

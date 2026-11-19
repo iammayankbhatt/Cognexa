@@ -1,0 +1,117 @@
+concept_id: time_complexity
+questions:
+  - id: time_complexity-q01
+    type: mcq
+    difficulty: 1
+    prompt: "What is the time complexity of a single loop that runs n times doing a constant amount of work each time?"
+    options:
+      - {id: a, text: "O(1)", why_wrong: "Constant time would mean the work does not depend on n at all."}
+      - {id: b, text: "O(n)"}
+      - {id: c, text: "O(n squared)", why_wrong: "Quadratic time needs a loop nested inside another loop."}
+      - {id: d, text: "O(log n)", why_wrong: "Logarithmic time needs the remaining work to halve each step."}
+    answer: b
+    explanation: "n iterations of constant work is n steps in total, which is linear."
+    misconception_tag: single_loop_linear
+    diagnoses_prereq: control_flow
+
+  - id: time_complexity-q02
+    type: mcq
+    difficulty: 1
+    prompt: "What is the time complexity of two nested loops that each run n times with constant work inside?"
+    options:
+      - {id: a, text: "O(n)", why_wrong: "Nested loops multiply their counts rather than add them."}
+      - {id: b, text: "O(2n)", why_wrong: "That would apply to two loops run one after the other, not nested."}
+      - {id: c, text: "O(n squared)"}
+      - {id: d, text: "O(log n)", why_wrong: "Nothing halves here; the inner loop runs n times for every outer iteration."}
+    answer: c
+    explanation: "The inner body runs n times for each of the n outer iterations, giving n times n steps."
+    misconception_tag: nested_loops_multiply
+    diagnoses_prereq: control_flow
+
+  - id: time_complexity-q03
+    type: mcq
+    difficulty: 2
+    prompt: "A program takes 2 seconds for n = 10,000 and its running time is O(n squared). Roughly how long will it take for n = 20,000?"
+    options:
+      - {id: a, text: "About 4 seconds", why_wrong: "That would be linear growth; quadratic growth quadruples when n doubles."}
+      - {id: b, text: "About 8 seconds"}
+      - {id: c, text: "About 2 seconds", why_wrong: "The time does grow with n; it is not constant."}
+      - {id: d, text: "About 16 seconds", why_wrong: "That would be cubic growth (eight times), not quadratic."}
+    answer: b
+    explanation: "Doubling n multiplies n squared by four, so 2 seconds becomes about 8 seconds."
+    misconception_tag: scaling_prediction
+    diagnoses_prereq: discrete_math_basics
+
+  - id: time_complexity-q04
+    type: mcq
+    difficulty: 2
+    prompt: "What is the Big-O form of the step count 5n squared + 40n + 300?"
+    options:
+      - {id: a, text: "O(n)", why_wrong: "The n squared term grows faster than n and dominates."}
+      - {id: b, text: "O(5n squared)", why_wrong: "Constant factors are dropped in Big-O."}
+      - {id: c, text: "O(n squared)"}
+      - {id: d, text: "O(n squared + n + 1)", why_wrong: "Lower-order terms are dropped; only the dominant term remains."}
+    answer: c
+    explanation: "Drop constant factors and lower-order terms, leaving the dominant n squared."
+    misconception_tag: dropping_constants
+    diagnoses_prereq: discrete_math_basics
+
+  - id: time_complexity-q05
+    type: multi_select
+    difficulty: 2
+    prompt: "Select every true statement about time complexity."
+    options:
+      - {id: a, text: "A loop that halves its counter each iteration runs about log n times."}
+      - {id: b, text: "Two loops one after the other, each running n times, are O(n) overall."}
+      - {id: c, text: "O(n) code is always faster than O(n squared) code for every input size.", why_wrong: "Constants can make a quadratic method faster for small n; Big-O compares growth, not exact speed."}
+      - {id: d, text: "Big-O keeps constant factors, so 3n is different from n.", why_wrong: "Big-O drops constant factors; both are O(n)."}
+    answer: [a, b]
+    explanation: "Halving loops are logarithmic and sequential blocks add, so the larger term dominates. Constants are dropped and small inputs can behave differently."
+    misconception_tag: bigo_rules
+    diagnoses_prereq: null
+
+  - id: time_complexity-q06
+    type: true_false
+    difficulty: 1
+    prompt: "True or false: accessing an array element by index takes O(1) time."
+    answer: true
+    explanation: "The address is computed directly from the index, so the cost does not depend on the array's size."
+    misconception_tag: constant_time_access
+    diagnoses_prereq: null
+
+  - id: time_complexity-q07
+    type: code_output
+    difficulty: 2
+    prompt: "What does this program print?"
+    code: |
+      n = 8
+      steps = 0
+      i = n
+      while i > 1:
+          i //= 2
+          steps += 1
+      pairs = 0
+      for a in range(n):
+          for b in range(a + 1, n):
+              pairs += 1
+      print(steps, pairs)
+    answer: "3 28"
+    explanation: "Halving 8 reaches 1 after 3 steps. The nested loops count the pairs a < b among 8 items, which is 8 * 7 / 2 = 28."
+    misconception_tag: counting_steps
+    diagnoses_prereq: control_flow
+
+  - id: time_complexity-q08
+    type: short_answer
+    difficulty: 3
+    prompt: "A program works quickly for 100 items but takes minutes for 100,000 items. Explain how time complexity can account for this and what you would look for in the code."
+    answer: "The running time grows faster than linearly, for example quadratically when nested loops compare all pairs, so a 1,000 times larger input could take about a million times longer. Look for nested loops over the data or repeated work and replace them with a better algorithm or data structure."
+    explanation: "A full answer ties the slowdown to the growth rate and names nested loops or repeated scans as the likely culprit."
+    rubric:
+      key_points:
+        - "running time grows faster than linearly (for example quadratic)"
+        - "a 1000x bigger input can cost a million times more work"
+        - "look for nested loops or repeated scans and use a better algorithm"
+      max_score: 1
+      partial_credit: true
+    misconception_tag: scalability
+    diagnoses_prereq: control_flow

@@ -27,7 +27,7 @@
 **Phase 3 checkpoints**
 - [x] 3.1 Content tooling: `validate_content.py`, snippet runner, content/question schemas + tests
 - [x] 3.2 Cluster: foundations (11 concepts)
-- [ ] 3.3 Cluster: complexity (5)
+- [x] 3.3 Cluster: complexity (5)
 - [ ] 3.4 Cluster: linear (9)
 - [ ] 3.5 Cluster: searching_hashing (8)
 - [ ] 3.6 Cluster: sorting (7)
@@ -35,9 +35,9 @@
 - [ ] 3.8 Cluster: graphs (10) and paradigms (6)
 - [ ] 3.9 Eval test set (80 items) + study sets, chunk seeding, `seed_vectors.py`, wrap-up
 
-**Next action:** 3.3 complexity cluster (5 concepts)
+**Next action:** 3.4 linear cluster (9 concepts)
 
-**Last cluster note:** foundations 11/69 written, 88 questions, 22 snippets + 11 answer keys verified
+**Last cluster note:** complexity 5/5 written; 16/69 concepts total; answer-key verifier caught a wrong guess in amortized_analysis-q07 (fixed)
 **Blockers:** none
 **Human Action Needed:** see the table below (grows as phases complete)
 
@@ -563,12 +563,12 @@ _(Claude Code: keep this in sync with both .env.example files.)_
 | foundations | call_stack | notes + questions | ☐ | ☐ |  |  |
 | foundations | bit_manipulation | notes + questions | ☐ | ☐ |  |  |
 | foundations | recursion | notes + questions | ☐ | ☐ |  |  |
-| complexity | time_complexity | pending | ☐ | ☐ |  |  |
-| complexity | asymptotic_notation | pending | ☐ | ☐ |  |  |
-| complexity | space_complexity | pending | ☐ | ☐ |  |  |
-| complexity | recurrence_relations | pending | ☐ | ☐ |  |  |
+| complexity | time_complexity | notes + questions | ☐ | ☐ |  |  |
+| complexity | asymptotic_notation | notes + questions | ☐ | ☐ |  |  |
+| complexity | space_complexity | notes + questions | ☐ | ☐ |  |  |
+| complexity | recurrence_relations | notes + questions | ☐ | ☐ |  |  |
 | linear | dynamic_arrays | pending | ☐ | ☐ |  |  |
-| complexity | amortized_analysis | pending | ☐ | ☐ |  |  |
+| complexity | amortized_analysis | notes + questions | ☐ | ☐ |  |  |
 | linear | singly_linked_list | pending | ☐ | ☐ |  |  |
 | linear | doubly_circular_linked_list | pending | ☐ | ☐ |  |  |
 | linear | stack | pending | ☐ | ☐ |  |  |
