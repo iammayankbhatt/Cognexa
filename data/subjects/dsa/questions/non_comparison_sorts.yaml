@@ -1,0 +1,114 @@
+concept_id: non_comparison_sorts
+questions:
+  - id: non_comparison_sorts-q01
+    type: mcq
+    difficulty: 1
+    prompt: "What is the time complexity of counting sort for n integers with values in the range 0 to k?"
+    options:
+      - {id: a, text: "O(n + k)"}
+      - {id: b, text: "O(n log n)", why_wrong: "That is the cost of comparison sorts; counting sort does not compare elements."}
+      - {id: c, text: "O(n squared)", why_wrong: "Counting sort makes a constant number of passes over the input and the counts."}
+      - {id: d, text: "O(log k)", why_wrong: "Every element and every counter is touched at least once."}
+    answer: a
+    explanation: "One pass counts the n items and one pass walks the k + 1 counters."
+    misconception_tag: counting_sort_complexity
+    diagnoses_prereq: elementary_sorts
+
+  - id: non_comparison_sorts-q02
+    type: mcq
+    difficulty: 1
+    prompt: "Which condition makes counting sort a good choice?"
+    options:
+      - {id: a, text: "Integer keys from a small range compared with n"}
+      - {id: b, text: "Arbitrary floating-point numbers", why_wrong: "Floats cannot be used directly as array indexes."}
+      - {id: c, text: "Keys drawn from up to a billion values with only a hundred items", why_wrong: "The counts array would be enormous compared with n."}
+      - {id: d, text: "Already sorted input only", why_wrong: "Counting sort does not rely on the input being sorted."}
+    answer: a
+    explanation: "Counting sort uses keys as indexes, so it needs a key range k that is not much larger than n."
+    misconception_tag: counting_sort_assumptions
+    diagnoses_prereq: elementary_sorts
+
+  - id: non_comparison_sorts-q03
+    type: mcq
+    difficulty: 2
+    prompt: "In least-significant-digit radix sort, why must the sort used on each digit be stable?"
+    options:
+      - {id: a, text: "To preserve the order produced by the earlier, less significant digit passes"}
+      - {id: b, text: "To make each pass faster", why_wrong: "Stability concerns correctness, not speed."}
+      - {id: c, text: "To avoid using extra memory", why_wrong: "Stable counting sort still uses extra memory."}
+      - {id: d, text: "It does not need to be stable", why_wrong: "An unstable pass would scramble the ordering established earlier."}
+    answer: a
+    explanation: "Elements with equal current digits must stay in the order they had from previous passes, otherwise earlier work is lost."
+    misconception_tag: radix_stability
+    diagnoses_prereq: elementary_sorts
+
+  - id: non_comparison_sorts-q04
+    type: mcq
+    difficulty: 2
+    prompt: "Counting sort is used on 100 numbers that can be as large as 10^9. What is the main problem?"
+    options:
+      - {id: a, text: "The counts array needs about a billion entries, far more than the input size"}
+      - {id: b, text: "The sort becomes unstable", why_wrong: "Stability depends on the placement loop, not the key range."}
+      - {id: c, text: "It cannot sort integers", why_wrong: "Integers are exactly what it sorts, as long as the range is small."}
+      - {id: d, text: "It becomes O(n log n)", why_wrong: "The cost becomes O(n + k) with a huge k, which is far worse here."}
+    answer: a
+    explanation: "Time and space are O(n + k), so a huge range k dominates and wastes memory."
+    misconception_tag: large_key_range
+    diagnoses_prereq: elementary_sorts
+
+  - id: non_comparison_sorts-q05
+    type: multi_select
+    difficulty: 2
+    prompt: "Select every true statement about non-comparison sorts."
+    options:
+      - {id: a, text: "They can run in linear time under assumptions about the keys."}
+      - {id: b, text: "The n log n lower bound applies only to comparison-based sorting."}
+      - {id: c, text: "Bucket sort is always O(n).", why_wrong: "It degrades if the data is not spread evenly across buckets."}
+      - {id: d, text: "Radix sort works directly on any floating-point numbers without conversion.", why_wrong: "Keys must be mapped to digits or small integers first."}
+    answer: [a, b]
+    explanation: "They exploit key structure to avoid comparisons and are therefore not bound by the comparison lower bound. Skewed data and floats need special care."
+    misconception_tag: non_comparison_facts
+    diagnoses_prereq: null
+
+  - id: non_comparison_sorts-q06
+    type: true_false
+    difficulty: 1
+    prompt: "True or false: counting sort contradicts the Omega(n log n) lower bound for sorting."
+    answer: false
+    explanation: "The lower bound applies to comparison sorts. Counting sort is not comparison-based and relies on a bounded key range."
+    misconception_tag: lower_bound_scope
+    diagnoses_prereq: null
+
+  - id: non_comparison_sorts-q07
+    type: code_output
+    difficulty: 2
+    prompt: "What does this program print?"
+    code: |
+      values = [2, 5, 3, 0, 2, 3, 0, 3]
+      counts = [0] * 6
+      for v in values:
+          counts[v] += 1
+      out = []
+      for v, c in enumerate(counts):
+          out.extend([v] * c)
+      print(counts, out)
+    answer: "[2, 0, 2, 3, 0, 1] [0, 0, 2, 2, 3, 3, 3, 5]"
+    explanation: "The value 0 occurs twice, 1 never, 2 twice, 3 three times, 4 never and 5 once. Writing each value as many times as counted gives the sorted list."
+    misconception_tag: counting_sort_trace
+    diagnoses_prereq: elementary_sorts
+
+  - id: non_comparison_sorts-q08
+    type: short_answer
+    difficulty: 3
+    prompt: "Explain how least-significant-digit radix sort sorts numbers without comparing them, and why it works."
+    answer: "It sorts the numbers by their least significant digit with a stable counting sort, then by the next digit, and so on up to the most significant digit. Because each pass is stable, numbers with the same current digit keep the order given by the earlier, lower digits, so after the last pass the numbers are fully ordered."
+    explanation: "A good answer mentions digit-by-digit passes from the least significant digit, stability and the final order."
+    rubric:
+      key_points:
+        - "sort by one digit at a time from least to most significant"
+        - "each pass uses a stable (counting) sort"
+        - "stability preserves earlier ordering so the final result is sorted"
+      max_score: 1
+      partial_credit: true
+    misconception_tag: radix_sort_idea
+    diagnoses_prereq: elementary_sorts

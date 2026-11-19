@@ -1,0 +1,118 @@
+concept_id: merge_sort
+questions:
+  - id: merge_sort-q01
+    type: mcq
+    difficulty: 1
+    prompt: "What is the worst-case time complexity of merge sort?"
+    options:
+      - {id: a, text: "O(n log n)"}
+      - {id: b, text: "O(n squared)", why_wrong: "That is quick sort's worst case; merge sort always splits evenly."}
+      - {id: c, text: "O(n)", why_wrong: "Sorting by comparisons cannot beat n log n in general."}
+      - {id: d, text: "O(log n)", why_wrong: "Every element must be examined, so at least linear time is needed."}
+    answer: a
+    explanation: "There are log n levels of merging and each level costs O(n), regardless of the input order."
+    misconception_tag: merge_sort_complexity
+    diagnoses_prereq: divide_and_conquer
+
+  - id: merge_sort-q02
+    type: mcq
+    difficulty: 1
+    prompt: "What does the merge step of merge sort require of its two input sequences?"
+    options:
+      - {id: a, text: "Both must already be sorted"}
+      - {id: b, text: "Both must have the same length", why_wrong: "Merging works for any lengths."}
+      - {id: c, text: "Both must contain only distinct values", why_wrong: "Duplicates are fine."}
+      - {id: d, text: "Both must be reversed", why_wrong: "Order direction must match, ascending for ascending output."}
+    answer: a
+    explanation: "Because both inputs are sorted, only their front items ever need to be compared."
+    misconception_tag: merge_precondition
+    diagnoses_prereq: divide_and_conquer
+
+  - id: merge_sort-q03
+    type: mcq
+    difficulty: 2
+    prompt: "How much extra memory does merge sort on an array of n items typically need?"
+    options:
+      - {id: a, text: "O(1), it is in place", why_wrong: "The merge needs a buffer to write the merged output."}
+      - {id: b, text: "O(n), for the merge buffer"}
+      - {id: c, text: "O(n squared)", why_wrong: "A single buffer of size n is reused; quadratic memory is not needed."}
+      - {id: d, text: "O(log log n)", why_wrong: "That is far smaller than what merging needs."}
+    answer: b
+    explanation: "Merging writes into a temporary array of up to n elements, so the array version uses O(n) extra space."
+    misconception_tag: merge_sort_space
+    diagnoses_prereq: divide_and_conquer
+
+  - id: merge_sort-q04
+    type: mcq
+    difficulty: 2
+    prompt: "In the merge step, which comparison keeps merge sort stable when two front items are equal?"
+    options:
+      - {id: a, text: "Take the item from the left half first (use <=)"}
+      - {id: b, text: "Take the item from the right half first (use <)", why_wrong: "That would reverse the original order of equal items."}
+      - {id: c, text: "Take whichever is easier", why_wrong: "A fixed rule is required for stability."}
+      - {id: d, text: "Discard one of the equal items", why_wrong: "Sorting must keep all items."}
+    answer: a
+    explanation: "Items in the left half came earlier in the input, so taking them first on ties preserves the original order."
+    misconception_tag: merge_stability
+    diagnoses_prereq: elementary_sorts
+
+  - id: merge_sort-q05
+    type: multi_select
+    difficulty: 2
+    prompt: "Select every true statement about merge sort."
+    options:
+      - {id: a, text: "It is a stable sort."}
+      - {id: b, text: "Its running time does not depend on the initial order of the input."}
+      - {id: c, text: "It sorts in place with O(1) extra memory for arrays.", why_wrong: "The array version needs an O(n) buffer."}
+      - {id: d, text: "It is always faster than quick sort.", why_wrong: "Quick sort is often faster in practice on arrays; merge sort wins on worst-case guarantees and stability."}
+    answer: [a, b]
+    explanation: "Stability and input-independent splitting are merge sort's properties. It needs extra memory and is not always faster in practice."
+    misconception_tag: merge_sort_facts
+    diagnoses_prereq: null
+
+  - id: merge_sort-q06
+    type: true_false
+    difficulty: 1
+    prompt: "True or false: merge sort is a good choice for sorting linked lists because merging only relinks nodes."
+    answer: true
+    explanation: "Merging on a linked list needs no extra buffer, and merge sort avoids the random access that other sorts require."
+    misconception_tag: merge_sort_linked_lists
+    diagnoses_prereq: null
+
+  - id: merge_sort-q07
+    type: code_output
+    difficulty: 2
+    prompt: "What does this program print?"
+    code: |
+      def merge(a, b):
+          out, i, j = [], 0, 0
+          while i < len(a) and j < len(b):
+              if a[i] <= b[j]:
+                  out.append(a[i])
+                  i += 1
+              else:
+                  out.append(b[j])
+                  j += 1
+          return out + a[i:] + b[j:]
+
+      print(merge([1, 4, 6], [2, 3, 7]))
+    answer: "[1, 2, 3, 4, 6, 7]"
+    explanation: "The merge repeatedly takes the smaller front item: 1, 2, 3, 4, then the left half has 6 and the right has 7, so 6 and finally 7 follow."
+    misconception_tag: merge_trace
+    diagnoses_prereq: divide_and_conquer
+
+  - id: merge_sort-q08
+    type: short_answer
+    difficulty: 3
+    prompt: "Explain why merge sort runs in O(n log n) time."
+    answer: "Each level of the recursion splits the array in half, so there are about log2 n levels. At every level the merges together process all n elements once, costing O(n). Multiplying n work per level by log n levels gives O(n log n), as in the recurrence T(n) = 2T(n/2) + n."
+    explanation: "Look for the number of levels, the per-level cost and their product."
+    rubric:
+      key_points:
+        - "about log2 n levels because the size halves each time"
+        - "merging at each level costs O(n) in total"
+        - "product gives O(n log n); T(n) = 2T(n/2) + n"
+      max_score: 1
+      partial_credit: true
+    misconception_tag: merge_sort_analysis
+    diagnoses_prereq: recurrence_relations

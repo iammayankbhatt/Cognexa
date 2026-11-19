@@ -1,0 +1,115 @@
+concept_id: quick_sort
+questions:
+  - id: quick_sort-q01
+    type: mcq
+    difficulty: 1
+    prompt: "After one partition step of quick sort, where is the pivot?"
+    options:
+      - {id: a, text: "In its final sorted position, with smaller items on its left and larger on its right"}
+      - {id: b, text: "Still at the end of the array", why_wrong: "Partitioning moves the pivot to its boundary position."}
+      - {id: c, text: "In the middle of the array", why_wrong: "Its position depends on how many items are smaller than it."}
+      - {id: d, text: "Removed from the array", why_wrong: "The pivot stays in the array at its final position."}
+    answer: a
+    explanation: "The pivot ends exactly where it belongs, so only the two sides remain to be sorted."
+    misconception_tag: partition_result
+    diagnoses_prereq: divide_and_conquer
+
+  - id: quick_sort-q02
+    type: mcq
+    difficulty: 1
+    prompt: "What is quick sort's average-case time complexity?"
+    options:
+      - {id: a, text: "O(n log n)"}
+      - {id: b, text: "O(n squared)", why_wrong: "That is the worst case with consistently bad pivots."}
+      - {id: c, text: "O(n)", why_wrong: "Comparison sorting needs more than linear time."}
+      - {id: d, text: "O(log n)", why_wrong: "Every element must be processed."}
+    answer: a
+    explanation: "With reasonably balanced partitions there are log n levels of O(n) partitioning work."
+    misconception_tag: quick_sort_average
+    diagnoses_prereq: divide_and_conquer
+
+  - id: quick_sort-q03
+    type: mcq
+    difficulty: 2
+    prompt: "A quick sort that always picks the last element as pivot is run on an already sorted array. What happens?"
+    options:
+      - {id: a, text: "Each partition peels off only one element, giving O(n squared) time and O(n) recursion depth"}
+      - {id: b, text: "It runs in O(n) time", why_wrong: "Sorted input is the classic bad case for a last-element pivot."}
+      - {id: c, text: "It runs in O(n log n) time", why_wrong: "The splits are maximally unbalanced, not balanced."}
+      - {id: d, text: "It returns an incorrect result", why_wrong: "The result is correct, just slow."}
+    answer: a
+    explanation: "The last element is the maximum, so one side is empty and the other has n - 1 items. Random or median-of-three pivots avoid this."
+    misconception_tag: bad_pivot
+    diagnoses_prereq: elementary_sorts
+
+  - id: quick_sort-q04
+    type: mcq
+    difficulty: 2
+    prompt: "Why is quick sort not a stable sort?"
+    options:
+      - {id: a, text: "Partitioning swaps elements across long distances, which can reorder equal items"}
+      - {id: b, text: "It uses recursion", why_wrong: "Merge sort is also recursive and is stable."}
+      - {id: c, text: "It needs extra memory", why_wrong: "Stability is unrelated to memory use."}
+      - {id: d, text: "It always takes O(n squared) time", why_wrong: "Its running time does not determine stability."}
+    answer: a
+    explanation: "A swap can move an element past an equal one, so equal items may end up in a different relative order."
+    misconception_tag: quick_sort_stability
+    diagnoses_prereq: elementary_sorts
+
+  - id: quick_sort-q05
+    type: multi_select
+    difficulty: 2
+    prompt: "Select every true statement about quick sort."
+    options:
+      - {id: a, text: "A random pivot makes the expected time O(n log n) for every input."}
+      - {id: b, text: "Recursing into the smaller side first keeps the stack depth O(log n)."}
+      - {id: c, text: "It is stable by default.", why_wrong: "Partition swaps break stability."}
+      - {id: d, text: "Its worst case is O(n log n).", why_wrong: "The worst case is O(n squared) with consistently unbalanced partitions."}
+    answer: [a, b]
+    explanation: "Randomisation and smaller-side recursion are the standard safeguards. Quick sort is neither stable nor O(n log n) in the worst case."
+    misconception_tag: quick_sort_facts
+    diagnoses_prereq: null
+
+  - id: quick_sort-q06
+    type: true_false
+    difficulty: 1
+    prompt: "True or false: quick sort sorts in place, apart from the space used by its recursion stack."
+    answer: true
+    explanation: "Partitioning rearranges elements within the array using only a few extra variables."
+    misconception_tag: in_place
+    diagnoses_prereq: elementary_sorts
+
+  - id: quick_sort-q07
+    type: code_output
+    difficulty: 2
+    prompt: "What does this program print?"
+    code: |
+      a = [3, 8, 2, 5, 1, 4]
+      pivot = a[-1]
+      i = 0
+      for j in range(len(a) - 1):
+          if a[j] < pivot:
+              a[i], a[j] = a[j], a[i]
+              i += 1
+      a[i], a[-1] = a[-1], a[i]
+      print(a, i)
+    answer: "[3, 2, 1, 4, 8, 5] 3"
+    explanation: "The items smaller than 4 (3, 2, 1) are gathered on the left, then the pivot is swapped into index 3, which also moves 5 to the end."
+    misconception_tag: partition_trace
+    diagnoses_prereq: divide_and_conquer
+
+  - id: quick_sort-q08
+    type: short_answer
+    difficulty: 3
+    prompt: "Explain why quick sort can take O(n squared) time and how randomising the pivot helps."
+    answer: "If every partition picks the minimum or maximum as pivot, one side is empty and the other has n - 1 elements, so the sizes shrink by only one each time and total work is about n squared over two. Choosing the pivot at random makes such unlucky splits unlikely for any fixed input, so the expected running time is O(n log n)."
+    explanation: "Look for the unbalanced-split argument and the effect of randomisation on expected time."
+    rubric:
+      key_points:
+        - "a minimum or maximum pivot leaves one side empty (T(n) = T(n-1) + n)"
+        - "total work is about n squared over 2"
+        - "a random pivot makes bad splits unlikely, giving expected O(n log n)"
+      max_score: 1
+      partial_credit: true
+    misconception_tag: quick_sort_worst_case
+    diagnoses_prereq: divide_and_conquer

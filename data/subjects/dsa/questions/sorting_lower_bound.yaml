@@ -1,0 +1,110 @@
+concept_id: sorting_lower_bound
+questions:
+  - id: sorting_lower_bound-q01
+    type: mcq
+    difficulty: 1
+    prompt: "What does the comparison sorting lower bound state?"
+    options:
+      - {id: a, text: "Any comparison-based sort needs Omega(n log n) comparisons in the worst case"}
+      - {id: b, text: "Every sorting algorithm needs Omega(n log n) time", why_wrong: "Counting and radix sort beat it because they do not rely on comparisons."}
+      - {id: c, text: "Every sort needs exactly n squared comparisons", why_wrong: "Merge sort uses far fewer in the worst case."}
+      - {id: d, text: "Sorting can be done in O(1) comparisons", why_wrong: "Every element must be compared at least once."}
+    answer: a
+    explanation: "The bound applies to algorithms that learn about the order only through pairwise comparisons."
+    misconception_tag: lower_bound_statement
+    diagnoses_prereq: asymptotic_notation
+
+  - id: sorting_lower_bound-q02
+    type: mcq
+    difficulty: 1
+    prompt: "How many possible orderings (permutations) of n distinct items must a sorting decision tree be able to reach?"
+    options:
+      - {id: a, text: "n!"}
+      - {id: b, text: "n", why_wrong: "There are many more orderings than items."}
+      - {id: c, text: "2n", why_wrong: "That is far smaller than the number of permutations."}
+      - {id: d, text: "n squared", why_wrong: "The count of permutations grows much faster than n squared."}
+    answer: a
+    explanation: "Any of the n! orderings could be the correct sorted arrangement of some input, so each needs a leaf."
+    misconception_tag: n_factorial_leaves
+    diagnoses_prereq: tree_basics
+
+  - id: sorting_lower_bound-q03
+    type: mcq
+    difficulty: 2
+    prompt: "A binary decision tree has at least n! leaves. Why does its height have to be at least log2(n!)?"
+    options:
+      - {id: a, text: "A binary tree of height h has at most 2^h leaves, so 2^h must be at least n!"}
+      - {id: b, text: "Because trees are always balanced", why_wrong: "Balance is not assumed; the bound comes from counting leaves."}
+      - {id: c, text: "Because every node has n children", why_wrong: "Decision tree nodes have two children (yes or no)."}
+      - {id: d, text: "Because the height equals n", why_wrong: "The height is not n; it is at least log2(n!)."}
+    answer: a
+    explanation: "Each comparison has two outcomes, so after h comparisons there are at most 2^h distinguishable results."
+    misconception_tag: height_vs_leaves
+    diagnoses_prereq: tree_basics
+
+  - id: sorting_lower_bound-q04
+    type: mcq
+    difficulty: 2
+    prompt: "Counting sort sorts integers in O(n + k) time. Why does this not contradict the n log n lower bound?"
+    options:
+      - {id: a, text: "The lower bound only applies to algorithms that sort using comparisons, and counting sort uses key values directly"}
+      - {id: b, text: "Counting sort secretly performs n log n comparisons", why_wrong: "It makes no comparisons between elements."}
+      - {id: c, text: "The lower bound is false for integers", why_wrong: "The bound is a proven theorem for the comparison model."}
+      - {id: d, text: "Counting sort does not actually sort", why_wrong: "It produces a correctly sorted output."}
+    answer: a
+    explanation: "Counting sort exploits extra information, the bounded key range, so it falls outside the comparison model."
+    misconception_tag: lower_bound_scope
+    diagnoses_prereq: asymptotic_notation
+
+  - id: sorting_lower_bound-q05
+    type: multi_select
+    difficulty: 2
+    prompt: "Select every true statement about the comparison sorting lower bound."
+    options:
+      - {id: a, text: "It shows merge sort and heap sort are asymptotically optimal among comparison sorts."}
+      - {id: b, text: "It is a statement about the worst case (and average case), not about every input."}
+      - {id: c, text: "It proves insertion sort can never run in O(n) time.", why_wrong: "Insertion sort is O(n) on sorted input; the bound concerns the worst case."}
+      - {id: d, text: "It applies to radix sort.", why_wrong: "Radix sort is not comparison-based."}
+    answer: [a, b]
+    explanation: "Optimality of n log n methods and the worst-case nature of the bound are its meaning. Some inputs can be sorted faster and non-comparison sorts are outside its scope."
+    misconception_tag: lower_bound_facts
+    diagnoses_prereq: null
+
+  - id: sorting_lower_bound-q06
+    type: true_false
+    difficulty: 1
+    prompt: "True or false: sorting 5 items needs at least 7 comparisons in the worst case for any comparison sort."
+    answer: true
+    explanation: "There are 5! = 120 orderings and ceil(log2 120) = 7, so a decision tree needs height at least 7."
+    misconception_tag: small_n_bound
+    diagnoses_prereq: null
+
+  - id: sorting_lower_bound-q07
+    type: code_output
+    difficulty: 2
+    prompt: "What does this program print?"
+    code: |
+      import math
+
+      for n in (4, 5):
+          print(n, math.factorial(n), math.ceil(math.log2(math.factorial(n))))
+    answer: "4 24 5\n5 120 7"
+    explanation: "4! = 24 and log2 24 is about 4.58, so at least 5 comparisons. 5! = 120 and log2 120 is about 6.9, so at least 7 comparisons."
+    misconception_tag: minimum_comparisons
+    diagnoses_prereq: discrete_math_basics
+
+  - id: sorting_lower_bound-q08
+    type: short_answer
+    difficulty: 3
+    prompt: "Use a decision tree argument to explain why any comparison sort needs Omega(n log n) comparisons in the worst case."
+    answer: "Model the algorithm as a binary decision tree where each internal node is a comparison and each leaf is an output ordering. All n! orderings must appear as leaves. A binary tree of height h has at most 2^h leaves, so 2^h is at least n! and h is at least log2(n!), which is Omega(n log n). The height is the worst-case number of comparisons."
+    explanation: "A full answer names the decision tree, the n! leaves, the 2^h bound and the conclusion about log2(n!)."
+    rubric:
+      key_points:
+        - "decision tree: comparisons as internal nodes, outputs as leaves"
+        - "at least n! leaves and a tree of height h has at most 2^h leaves"
+        - "h >= log2(n!) = Omega(n log n)"
+      max_score: 1
+      partial_credit: true
+    misconception_tag: decision_tree_proof
+    diagnoses_prereq: tree_basics

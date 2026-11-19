@@ -1,0 +1,114 @@
+concept_id: elementary_sorts
+questions:
+  - id: elementary_sorts-q01
+    type: mcq
+    difficulty: 1
+    prompt: "What is the worst-case time complexity of bubble sort, selection sort and insertion sort?"
+    options:
+      - {id: a, text: "O(n)", why_wrong: "Linear time is only the best case of insertion or bubble sort on sorted input."}
+      - {id: b, text: "O(n log n)", why_wrong: "That is the cost of merge sort and heap sort."}
+      - {id: c, text: "O(n squared)"}
+      - {id: d, text: "O(log n)", why_wrong: "Sorting must look at every element, so it cannot be logarithmic."}
+    answer: c
+    explanation: "Each uses nested loops that compare or move up to n(n-1)/2 pairs in the worst case."
+    misconception_tag: quadratic_sorts
+    diagnoses_prereq: time_complexity
+
+  - id: elementary_sorts-q02
+    type: mcq
+    difficulty: 1
+    prompt: "Which elementary sort works like arranging playing cards in your hand by inserting each new card into its place among the sorted cards?"
+    options:
+      - {id: a, text: "Insertion sort"}
+      - {id: b, text: "Selection sort", why_wrong: "Selection sort repeatedly picks the smallest remaining card instead of inserting."}
+      - {id: c, text: "Bubble sort", why_wrong: "Bubble sort swaps neighbouring cards repeatedly."}
+      - {id: d, text: "Counting sort", why_wrong: "Counting sort counts occurrences; it is not an elementary comparison sort."}
+    answer: a
+    explanation: "Insertion sort grows a sorted prefix by shifting larger items and inserting the next item in its place."
+    misconception_tag: insertion_sort_analogy
+    diagnoses_prereq: arrays
+
+  - id: elementary_sorts-q03
+    type: mcq
+    difficulty: 2
+    prompt: "A sorting algorithm is called stable. What does that guarantee?"
+    options:
+      - {id: a, text: "Equal elements keep their original relative order"}
+      - {id: b, text: "The algorithm never crashes", why_wrong: "Stability is about ordering of equal keys, not about crashes."}
+      - {id: c, text: "The algorithm always takes the same time", why_wrong: "Running time and stability are unrelated."}
+      - {id: d, text: "The array is sorted in descending order", why_wrong: "Stability says nothing about direction."}
+    answer: a
+    explanation: "With a stable sort, records with equal keys stay in the order they had in the input."
+    misconception_tag: stability_meaning
+    diagnoses_prereq: arrays
+
+  - id: elementary_sorts-q04
+    type: mcq
+    difficulty: 2
+    prompt: "Which of these elementary sorts is Theta(n squared) even when the input is already sorted?"
+    options:
+      - {id: a, text: "Selection sort"}
+      - {id: b, text: "Insertion sort", why_wrong: "Insertion sort needs no shifts on sorted input and runs in O(n)."}
+      - {id: c, text: "Bubble sort with an early-exit flag", why_wrong: "With the flag it stops after one pass on sorted input, O(n)."}
+      - {id: d, text: "None of them", why_wrong: "Selection sort always scans the unsorted part to find the minimum."}
+    answer: a
+    explanation: "Selection sort does the same n(n-1)/2 comparisons regardless of the input order."
+    misconception_tag: selection_not_adaptive
+    diagnoses_prereq: time_complexity
+
+  - id: elementary_sorts-q05
+    type: multi_select
+    difficulty: 2
+    prompt: "Select every true statement about elementary sorts."
+    options:
+      - {id: a, text: "All three sort in place using O(1) extra memory."}
+      - {id: b, text: "Insertion sort is stable when it shifts only strictly greater elements."}
+      - {id: c, text: "Selection sort is adaptive and fast on sorted input.", why_wrong: "It does the same comparisons on any input."}
+      - {id: d, text: "Bubble sort needs fewer than n comparisons on any input.", why_wrong: "Even one pass compares n - 1 pairs, and unsorted inputs need many passes."}
+    answer: [a, b]
+    explanation: "They need no extra arrays and strict comparisons preserve order of equal items. Selection sort is not adaptive and bubble sort does quadratic work in general."
+    misconception_tag: elementary_sort_facts
+    diagnoses_prereq: null
+
+  - id: elementary_sorts-q06
+    type: true_false
+    difficulty: 1
+    prompt: "True or false: a reverse-sorted array is the worst case for insertion sort."
+    answer: true
+    explanation: "Every element must shift past all earlier elements, giving n(n-1)/2 shifts."
+    misconception_tag: worst_case_input
+    diagnoses_prereq: time_complexity
+
+  - id: elementary_sorts-q07
+    type: code_output
+    difficulty: 2
+    prompt: "What does this program print?"
+    code: |
+      a = [3, 1, 2]
+      swaps = 0
+      for i in range(len(a)):
+          for j in range(len(a) - 1 - i):
+              if a[j] > a[j + 1]:
+                  a[j], a[j + 1] = a[j + 1], a[j]
+                  swaps += 1
+      print(a, swaps)
+    answer: "[1, 2, 3] 2"
+    explanation: "In the first pass 3 swaps with 1 and then with 2, giving [1, 2, 3] with 2 swaps. The later passes find nothing to swap."
+    misconception_tag: bubble_sort_trace
+    diagnoses_prereq: arrays
+
+  - id: elementary_sorts-q08
+    type: short_answer
+    difficulty: 3
+    prompt: "Explain why insertion sort runs in O(n) time on an already sorted array but O(n squared) on a reversed array."
+    answer: "Insertion sort shifts each element left past every larger element before it. On sorted input there is no larger element before any item, so no shifts happen and the loop does only n - 1 comparisons. On reversed input every earlier element is larger, so item i shifts i places, giving about n squared over two shifts in total."
+    explanation: "A good answer ties the cost to the number of shifts (inversions) and contrasts the two inputs."
+    rubric:
+      key_points:
+        - "cost depends on how many elements each item must shift past (inversions)"
+        - "sorted input needs no shifts so only O(n) comparisons"
+        - "reversed input needs i shifts for item i, about n squared over 2 in total"
+      max_score: 1
+      partial_credit: true
+    misconception_tag: insertion_sort_adaptive
+    diagnoses_prereq: time_complexity

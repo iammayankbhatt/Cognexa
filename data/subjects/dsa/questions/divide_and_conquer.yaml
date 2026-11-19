@@ -1,0 +1,113 @@
+concept_id: divide_and_conquer
+questions:
+  - id: divide_and_conquer-q01
+    type: mcq
+    difficulty: 1
+    prompt: "Which list correctly names the three steps of divide and conquer?"
+    options:
+      - {id: a, text: "Divide, conquer, combine"}
+      - {id: b, text: "Sort, search, merge", why_wrong: "Those are operations, not the three steps of the strategy."}
+      - {id: c, text: "Loop, compare, return", why_wrong: "These are generic programming steps, not the strategy's steps."}
+      - {id: d, text: "Guess, check, repeat", why_wrong: "That describes trial and error, not divide and conquer."}
+    answer: a
+    explanation: "The strategy splits the problem, solves the parts recursively and combines their answers."
+    misconception_tag: dc_steps
+    diagnoses_prereq: recursion
+
+  - id: divide_and_conquer-q02
+    type: mcq
+    difficulty: 1
+    prompt: "Which algorithm is NOT an example of divide and conquer?"
+    options:
+      - {id: a, text: "Merge sort", why_wrong: "Merge sort splits the array and merges sorted halves."}
+      - {id: b, text: "Binary search", why_wrong: "Binary search divides to one half and recurses."}
+      - {id: c, text: "Insertion sort"}
+      - {id: d, text: "Quick sort", why_wrong: "Quick sort partitions around a pivot and recurses on both sides."}
+    answer: c
+    explanation: "Insertion sort grows a sorted prefix with nested loops and does not recursively split the problem."
+    misconception_tag: dc_examples
+    diagnoses_prereq: recursion
+
+  - id: divide_and_conquer-q03
+    type: mcq
+    difficulty: 2
+    prompt: "A divide-and-conquer algorithm splits a problem of size n into two halves and does n units of work to combine. What is its running time?"
+    options:
+      - {id: a, text: "Theta(n log n)"}
+      - {id: b, text: "Theta(n)", why_wrong: "There are log n levels, each with about n work."}
+      - {id: c, text: "Theta(n squared)", why_wrong: "Per-level work stays n; it does not grow with depth."}
+      - {id: d, text: "Theta(log n)", why_wrong: "Each level costs n, so the total exceeds the number of levels."}
+    answer: a
+    explanation: "T(n) = 2T(n/2) + n gives log n levels of about n work each."
+    misconception_tag: dc_recurrence
+    diagnoses_prereq: recurrence_relations
+
+  - id: divide_and_conquer-q04
+    type: mcq
+    difficulty: 2
+    prompt: "A recursive solution to a problem splits it into subproblems that overlap heavily and repeats the same computations. Which strategy fits better?"
+    options:
+      - {id: a, text: "Dynamic programming, which stores and reuses subproblem answers"}
+      - {id: b, text: "Divide and conquer with more splitting", why_wrong: "More splitting makes overlap worse; the subproblems are not independent."}
+      - {id: c, text: "A greedy choice at each step", why_wrong: "Greedy does not automatically reuse overlapping subproblems."}
+      - {id: d, text: "Linear search", why_wrong: "Searching is unrelated to repeated subproblems."}
+    answer: a
+    explanation: "Divide and conquer assumes independent subproblems. Overlapping ones are the signal to cache results with dynamic programming."
+    misconception_tag: dc_vs_dp
+    diagnoses_prereq: recursion
+
+  - id: divide_and_conquer-q05
+    type: multi_select
+    difficulty: 2
+    prompt: "Select every true statement about divide and conquer."
+    options:
+      - {id: a, text: "Fast exponentiation computes x to the power n in O(log n) multiplications."}
+      - {id: b, text: "An unbalanced split can make the running time quadratic."}
+      - {id: c, text: "Dividing always makes an algorithm faster than a simple loop.", why_wrong: "Finding the maximum by splitting is still linear, no faster than a loop."}
+      - {id: d, text: "The base case is optional.", why_wrong: "Without a base case the recursion never ends."}
+    answer: [a, b]
+    explanation: "Halving the exponent gives log n steps and a 1-versus-(n-1) split degrades to T(n) = T(n - 1) + n. Splitting is not always faster and a base case is required."
+    misconception_tag: dc_facts
+    diagnoses_prereq: null
+
+  - id: divide_and_conquer-q06
+    type: true_false
+    difficulty: 1
+    prompt: "True or false: the subproblems in divide and conquer are usually independent of each other."
+    answer: true
+    explanation: "Independence lets each subproblem be solved separately (even in parallel) and its answer combined without recomputation."
+    misconception_tag: independent_subproblems
+    diagnoses_prereq: null
+
+  - id: divide_and_conquer-q07
+    type: code_output
+    difficulty: 2
+    prompt: "What does this program print?"
+    code: |
+      def power(x, n):
+          if n == 0:
+              return 1
+          half = power(x, n // 2)
+          return half * half if n % 2 == 0 else half * half * x
+
+      print(power(2, 10), power(3, 5))
+    answer: "1024 243"
+    explanation: "power(2, 10) squares power(2, 5) which is 32, giving 1024. power(3, 5) is 3 to the fifth power, which is 243."
+    misconception_tag: fast_exponent_trace
+    diagnoses_prereq: recursion
+
+  - id: divide_and_conquer-q08
+    type: short_answer
+    difficulty: 3
+    prompt: "Explain why fast exponentiation needs only about log2 n multiplications to compute x to the power n."
+    answer: "It computes x to the power n/2 once and squares the result, multiplying by x once more if n is odd. This halves the exponent with each recursive call, so there are about log2 n calls, each doing a constant number of multiplications."
+    explanation: "Look for halving the exponent, reuse of the half-power result and the logarithmic count of calls."
+    rubric:
+      key_points:
+        - "compute the half power once and square it"
+        - "the exponent halves with every call"
+        - "so about log2 n calls with constant work each"
+      max_score: 1
+      partial_credit: true
+    misconception_tag: fast_exponent_idea
+    diagnoses_prereq: recurrence_relations

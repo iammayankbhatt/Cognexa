@@ -30,14 +30,14 @@
 - [x] 3.3 Cluster: complexity (5)
 - [x] 3.4 Cluster: linear (9)
 - [x] 3.5 Cluster: searching_hashing (8)
-- [ ] 3.6 Cluster: sorting (7)
+- [x] 3.6 Cluster: sorting (7)
 - [ ] 3.7 Cluster: trees (13)
 - [ ] 3.8 Cluster: graphs (10) and paradigms (6)
 - [ ] 3.9 Eval test set (80 items) + study sets, chunk seeding, `seed_vectors.py`, wrap-up
 
-**Next action:** 3.6 sorting cluster (7 concepts)
+**Next action:** 3.7 trees cluster (13 concepts)
 
-**Last cluster note:** searching_hashing 8/8 written; 33/69 concepts total; verifier caught a wrong key in binary_search-q07; stray self-correction text found in a note and now rejected by the validator
+**Last cluster note:** sorting 7/7 written; 40/69 concepts total
 **Blockers:** none
 **Human Action Needed:** see the table below (grows as phases complete)
 
@@ -585,19 +585,19 @@ _(Claude Code: keep this in sync with both .env.example files.)_
 | searching_hashing | hash_functions | notes + questions | ☐ | ☐ |  |  |
 | searching_hashing | hash_tables | notes + questions | ☐ | ☐ |  |  |
 | searching_hashing | hash_sets_maps | notes + questions | ☐ | ☐ |  |  |
-| sorting | elementary_sorts | pending | ☐ | ☐ |  |  |
-| sorting | divide_and_conquer | pending | ☐ | ☐ |  |  |
-| sorting | merge_sort | pending | ☐ | ☐ |  |  |
-| sorting | quick_sort | pending | ☐ | ☐ |  |  |
-| sorting | non_comparison_sorts | pending | ☐ | ☐ |  |  |
+| sorting | elementary_sorts | notes + questions | ☐ | ☐ |  |  |
+| sorting | divide_and_conquer | notes + questions | ☐ | ☐ |  |  |
+| sorting | merge_sort | notes + questions | ☐ | ☐ |  |  |
+| sorting | quick_sort | notes + questions | ☐ | ☐ |  |  |
+| sorting | non_comparison_sorts | notes + questions | ☐ | ☐ |  |  |
 | trees | tree_basics | pending | ☐ | ☐ |  |  |
-| sorting | sorting_lower_bound | pending | ☐ | ☐ |  |  |
+| sorting | sorting_lower_bound | notes + questions | ☐ | ☐ |  |  |
 | trees | binary_tree | pending | ☐ | ☐ |  |  |
 | trees | dfs_tree_traversals | pending | ☐ | ☐ |  |  |
 | trees | level_order_traversal | pending | ☐ | ☐ |  |  |
 | trees | bst | pending | ☐ | ☐ |  |  |
 | trees | binary_heap | pending | ☐ | ☐ |  |  |
-| sorting | heap_sort | pending | ☐ | ☐ |  |  |
+| sorting | heap_sort | notes + questions | ☐ | ☐ |  |  |
 | trees | avl_tree | pending | ☐ | ☐ |  |  |
 | trees | red_black_tree | pending | ☐ | ☐ |  |  |
 | trees | b_tree | pending | ☐ | ☐ |  |  |

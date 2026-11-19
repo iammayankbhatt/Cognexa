@@ -1,0 +1,122 @@
+concept_id: heap_sort
+questions:
+  - id: heap_sort-q01
+    type: mcq
+    difficulty: 1
+    prompt: "What is the time complexity of heap sort in the worst case?"
+    options:
+      - {id: a, text: "O(n log n)"}
+      - {id: b, text: "O(n squared)", why_wrong: "That is quick sort's worst case; heap sort never degrades this way."}
+      - {id: c, text: "O(n)", why_wrong: "Only building the heap is linear; extracting all elements takes n log n."}
+      - {id: d, text: "O(log n)", why_wrong: "n extractions each cost log n, so the total is much larger."}
+    answer: a
+    explanation: "Each of the n extractions sifts down in O(log n), giving O(n log n) in every case."
+    misconception_tag: heap_sort_complexity
+    diagnoses_prereq: binary_heap
+
+  - id: heap_sort-q02
+    type: mcq
+    difficulty: 1
+    prompt: "In a max-heap stored in an array (zero-based), where are the children of the node at index i?"
+    options:
+      - {id: a, text: "2i + 1 and 2i + 2"}
+      - {id: b, text: "2i and 2i + 1", why_wrong: "That formula is for one-based indexing."}
+      - {id: c, text: "i + 1 and i + 2", why_wrong: "Children are not simply the next elements."}
+      - {id: d, text: "i / 2 and i / 2 + 1", why_wrong: "Those are not child positions."}
+    answer: a
+    explanation: "With zero-based indexes the left child of i is 2i + 1 and the right child is 2i + 2."
+    misconception_tag: heap_index_arithmetic
+    diagnoses_prereq: binary_heap
+
+  - id: heap_sort-q03
+    type: mcq
+    difficulty: 2
+    prompt: "What is the time complexity of building a binary heap from an unsorted array of n items using sift-down from the last parent?"
+    options:
+      - {id: a, text: "O(n)"}
+      - {id: b, text: "O(n log n)", why_wrong: "That is the naive bound; a careful count shows most nodes need very little sifting."}
+      - {id: c, text: "O(n squared)", why_wrong: "Each sift costs at most O(log n), so the total cannot be quadratic."}
+      - {id: d, text: "O(log n)", why_wrong: "Every element must be examined at least once."}
+    answer: a
+    explanation: "Half the nodes are leaves that need no work and only a few nodes sift far, so the total is linear."
+    misconception_tag: build_heap_linear
+    diagnoses_prereq: binary_heap
+
+  - id: heap_sort-q04
+    type: mcq
+    difficulty: 2
+    prompt: "A heap sort implementation leaves the array nearly but not fully sorted. The sort phase calls sift_down(a, 0, len(a)) in every round. What is the bug?"
+    options:
+      - {id: a, text: "The sift-down must use the shrunken heap size so it does not disturb already placed maxima"}
+      - {id: b, text: "The build phase should be skipped", why_wrong: "Without building a heap the extraction logic is invalid."}
+      - {id: c, text: "The array should be reversed first", why_wrong: "Reversing is unrelated to the heap invariant."}
+      - {id: d, text: "A min-heap must be used", why_wrong: "A max-heap is correct for ascending in-place sorting."}
+    answer: a
+    explanation: "After each swap the heap shrinks by one. Sifting over the whole array can pull the placed maximum back into the heap."
+    misconception_tag: heap_size_parameter
+    diagnoses_prereq: binary_heap
+
+  - id: heap_sort-q05
+    type: multi_select
+    difficulty: 2
+    prompt: "Select every true statement about heap sort."
+    options:
+      - {id: a, text: "It sorts in place using O(1) extra memory."}
+      - {id: b, text: "It is not a stable sort."}
+      - {id: c, text: "It is usually faster than quick sort in practice.", why_wrong: "Poor cache locality typically makes it slower than a good quick sort."}
+      - {id: d, text: "Its running time depends heavily on the input order.", why_wrong: "It is Theta(n log n) for every input order."}
+    answer: [a, b]
+    explanation: "In-place and unstable are properties of heap sort. It is typically slower than quick sort and insensitive to input order."
+    misconception_tag: heap_sort_facts
+    diagnoses_prereq: null
+
+  - id: heap_sort-q06
+    type: true_false
+    difficulty: 1
+    prompt: "True or false: after building a max-heap, the largest element is at index 0 of the array."
+    answer: true
+    explanation: "The heap property makes every parent at least as large as its children, so the root holds the maximum."
+    misconception_tag: heap_root
+    diagnoses_prereq: binary_heap
+
+  - id: heap_sort-q07
+    type: code_output
+    difficulty: 2
+    prompt: "What does this program print?"
+    code: |
+      def sift_down(a, i, size):
+          while True:
+              left, right, largest = 2 * i + 1, 2 * i + 2, i
+              if left < size and a[left] > a[largest]:
+                  largest = left
+              if right < size and a[right] > a[largest]:
+                  largest = right
+              if largest == i:
+                  return
+              a[i], a[largest] = a[largest], a[i]
+              i = largest
+
+      a = [4, 10, 3, 5, 1]
+      for i in range(len(a) // 2 - 1, -1, -1):
+          sift_down(a, i, len(a))
+      print(a)
+    answer: "[10, 5, 3, 4, 1]"
+    explanation: "Sifting index 1 changes nothing. Sifting index 0 swaps 4 with 10 and then with 5, producing the max-heap [10, 5, 3, 4, 1]."
+    misconception_tag: build_heap_trace
+    diagnoses_prereq: binary_heap
+
+  - id: heap_sort-q08
+    type: short_answer
+    difficulty: 3
+    prompt: "Describe the two phases of heap sort and explain why it needs only O(1) extra space."
+    answer: "First it builds a max-heap in the array. Then it repeatedly swaps the root (the maximum) with the last element of the heap, shrinks the heap by one and sifts the new root down to restore the heap property, so the sorted suffix grows at the end of the same array. All operations rearrange elements inside the input array using a few index variables, so only O(1) extra space is needed."
+    explanation: "A good answer names build-heap and the repeated extract-and-sift phase, and that everything happens inside the array."
+    rubric:
+      key_points:
+        - "build a max-heap in the array"
+        - "repeatedly swap the root to the end, shrink the heap, sift down"
+        - "everything is done inside the array, so O(1) extra space"
+      max_score: 1
+      partial_credit: true
+    misconception_tag: heap_sort_phases
+    diagnoses_prereq: binary_heap
