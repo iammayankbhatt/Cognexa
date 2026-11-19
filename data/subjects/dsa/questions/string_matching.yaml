@@ -1,0 +1,117 @@
+concept_id: string_matching
+questions:
+  - id: string_matching-q01
+    type: mcq
+    difficulty: 1
+    prompt: "What is the worst-case time complexity of naive string matching for a text of length n and a pattern of length m?"
+    options:
+      - {id: a, text: "O(nm)"}
+      - {id: b, text: "O(n + m)", why_wrong: "That is KMP's bound; the naive method can recheck characters many times."}
+      - {id: c, text: "O(n log m)", why_wrong: "No logarithmic structure is involved."}
+      - {id: d, text: "O(m)", why_wrong: "Every text position may be tried."}
+    answer: a
+    explanation: "Up to n - m + 1 start positions are tried, and each comparison may take up to m steps."
+    misconception_tag: naive_match_cost
+    diagnoses_prereq: strings
+
+  - id: string_matching-q02
+    type: mcq
+    difficulty: 1
+    prompt: "What does Rabin-Karp compare first for each window of the text?"
+    options:
+      - {id: a, text: "A rolling hash of the window against the pattern's hash"}
+      - {id: b, text: "The first character only", why_wrong: "Rabin-Karp compares hashes, not single characters."}
+      - {id: c, text: "The KMP failure table", why_wrong: "That belongs to KMP."}
+      - {id: d, text: "The sorted letters of the window", why_wrong: "Sorting would lose order information."}
+    answer: a
+    explanation: "Only windows whose hash equals the pattern hash are verified character by character."
+    misconception_tag: rabin_karp_hash
+    diagnoses_prereq: hash_functions
+
+  - id: string_matching-q03
+    type: mcq
+    difficulty: 2
+    prompt: "What is the KMP lps (failure) array for the pattern \"AABAA\"?"
+    options:
+      - {id: a, text: "[0, 1, 0, 1, 2]"}
+      - {id: b, text: "[0, 1, 2, 3, 4]", why_wrong: "That is the table for a pattern of identical letters."}
+      - {id: c, text: "[0, 0, 0, 1, 2]", why_wrong: "\"AA\" already has border \"A\" of length 1."}
+      - {id: d, text: "[1, 1, 0, 1, 2]", why_wrong: "lps[0] is always 0 because a proper border must be shorter than the string."}
+    answer: a
+    explanation: "\"A\" 0, \"AA\" 1, \"AAB\" 0, \"AABA\" 1, \"AABAA\" 2 (border \"AA\")."
+    misconception_tag: lps_compute
+    diagnoses_prereq: strings
+
+  - id: string_matching-q04
+    type: mcq
+    difficulty: 2
+    prompt: "A Rabin-Karp implementation reports a match whenever the window hash equals the pattern hash, without comparing characters. What can go wrong?"
+    options:
+      - {id: a, text: "Hash collisions produce false matches"}
+      - {id: b, text: "It misses real matches", why_wrong: "Equal strings always have equal hashes, so real matches are found."}
+      - {id: c, text: "It becomes O(nm)", why_wrong: "Skipping verification makes it faster, not slower, but incorrect."}
+      - {id: d, text: "The rolling hash stops updating", why_wrong: "The update is independent of verification."}
+    answer: a
+    explanation: "Different strings can share a hash value. Verification removes these spurious hits."
+    misconception_tag: rabin_karp_collision
+    diagnoses_prereq: hash_functions
+
+  - id: string_matching-q05
+    type: multi_select
+    difficulty: 2
+    prompt: "Select every true statement about string matching algorithms."
+    options:
+      - {id: a, text: "KMP never moves its text pointer backwards."}
+      - {id: b, text: "Rabin-Karp runs in O(n + m) expected time with a good hash."}
+      - {id: c, text: "Rabin-Karp is guaranteed O(n + m) in the worst case.", why_wrong: "With many collisions it degrades to O(nm)."}
+      - {id: d, text: "KMP needs a hash function.", why_wrong: "KMP uses the failure table, not hashing."}
+    answer: [a, b]
+    explanation: "KMP uses the failure table to avoid re-reading text, and Rabin-Karp's bound is expected rather than guaranteed."
+    misconception_tag: matching_properties
+    diagnoses_prereq: hash_functions
+
+  - id: string_matching-q06
+    type: true_false
+    difficulty: 1
+    prompt: "True or false: in the text \"AAAA\" the pattern \"AA\" occurs three times when overlapping matches are counted."
+    answer: true
+    explanation: "Matches start at positions 0, 1 and 2."
+    misconception_tag: overlapping_matches
+    diagnoses_prereq: strings
+
+  - id: string_matching-q07
+    type: code_output
+    difficulty: 2
+    prompt: "What does this program print?"
+    code: |
+      def lps(p):
+          t, k = [0] * len(p), 0
+          for i in range(1, len(p)):
+              while k > 0 and p[i] != p[k]:
+                  k = t[k - 1]
+              if p[i] == p[k]:
+                  k += 1
+              t[i] = k
+          return t
+
+      print(lps("ABABCABAB"))
+    answer: "[0, 0, 1, 2, 0, 1, 2, 3, 4]"
+    explanation: "Borders grow with ABA and ABAB, reset at C, then grow again as the pattern repeats ABAB."
+    misconception_tag: lps_trace
+    diagnoses_prereq: strings
+
+  - id: string_matching-q08
+    type: short_answer
+    difficulty: 3
+    prompt: "Explain how KMP avoids re-examining text characters after a mismatch."
+    answer: "KMP precomputes for each prefix of the pattern the length of its longest proper prefix that is also a suffix. When a mismatch happens after j matched characters, those last characters of the text equal the pattern's prefix of length j, so the algorithm knows that the prefix of length lps[j - 1] is still matched. It continues comparing from there instead of moving the text pointer back, so each text character is read a constant number of times overall."
+    explanation: "A good answer mentions the failure table, falling back to a shorter matched prefix and the text pointer never moving back."
+    rubric:
+      key_points:
+        - "precomputed longest proper prefix that is also a suffix"
+        - "on mismatch, fall back to a shorter prefix that is still matched"
+        - "the text pointer never moves backwards, giving linear time"
+      max_score: 1
+      partial_credit: true
+    misconception_tag: kmp_mechanism
+    diagnoses_prereq: strings

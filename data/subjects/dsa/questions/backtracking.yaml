@@ -1,0 +1,119 @@
+concept_id: backtracking
+questions:
+  - id: backtracking-q01
+    type: mcq
+    difficulty: 1
+    prompt: "What does a backtracking algorithm do when a partial solution violates a constraint?"
+    options:
+      - {id: a, text: "Abandons that partial solution and tries the next option at the previous decision"}
+      - {id: b, text: "Restarts the whole search from the beginning", why_wrong: "Backtracking only returns to the most recent decision."}
+      - {id: c, text: "Keeps extending it in case it becomes valid later", why_wrong: "That is brute force; pruning is the point of backtracking."}
+      - {id: d, text: "Stores it in a memo table", why_wrong: "Memoization is a dynamic programming technique, not the backtracking step."}
+    answer: a
+    explanation: "Backtracking prunes an invalid branch and returns to the last choice point."
+    misconception_tag: backtrack_definition
+    diagnoses_prereq: recursion
+
+  - id: backtracking-q02
+    type: mcq
+    difficulty: 1
+    prompt: "How many subsets does a backtracking generator produce for a list of n distinct items?"
+    options:
+      - {id: a, text: "2^n"}
+      - {id: b, text: "n!", why_wrong: "n! counts permutations, not subsets."}
+      - {id: c, text: "n squared", why_wrong: "Each item doubles the number of subsets."}
+      - {id: d, text: "n", why_wrong: "There are far more subsets than items."}
+    answer: a
+    explanation: "Each item is either included or excluded, giving 2 choices per item."
+    misconception_tag: subsets_count
+    diagnoses_prereq: recursion
+
+  - id: backtracking-q03
+    type: mcq
+    difficulty: 2
+    prompt: "A subset generator does result.append(current) and later current.pop(). At the end every stored subset is empty. Why?"
+    options:
+      - {id: a, text: "It stores a reference to the same list, which is emptied by the later pops; it should store a copy"}
+      - {id: b, text: "The base case is wrong", why_wrong: "The base case triggers correctly; the stored object is the problem."}
+      - {id: c, text: "Python lists cannot be nested", why_wrong: "Lists can contain lists."}
+      - {id: d, text: "pop removes items from result", why_wrong: "pop is called on current, but result holds the very same list object."}
+    answer: a
+    explanation: "All entries in result refer to one list object. Append list(current) to snapshot the current state."
+    misconception_tag: backtrack_copy
+    diagnoses_prereq: recursion
+
+  - id: backtracking-q04
+    type: mcq
+    difficulty: 2
+    prompt: "In a subset-sum search over sorted positive integers, why is it safe to stop the loop when the next number exceeds the remaining target?"
+    options:
+      - {id: a, text: "All later numbers are at least as large, so none of them can fit either"}
+      - {id: b, text: "Because the target is always reached by then", why_wrong: "The target may not be reachable at all."}
+      - {id: c, text: "It is not safe; it may miss solutions", why_wrong: "With sorted positive numbers, nothing later can fit."}
+      - {id: d, text: "Because each number can be used only once", why_wrong: "Single use is unrelated to this pruning rule."}
+    answer: a
+    explanation: "Sorting makes the pruning valid. With negative numbers allowed this cut would be wrong."
+    misconception_tag: safe_pruning
+    diagnoses_prereq: recursion
+
+  - id: backtracking-q05
+    type: multi_select
+    difficulty: 2
+    prompt: "Select every true statement about backtracking."
+    options:
+      - {id: a, text: "It is a depth-first search over a tree of choices."}
+      - {id: b, text: "Each choice must be undone after the recursive call returns, when state is shared."}
+      - {id: c, text: "Pruning guarantees polynomial running time.", why_wrong: "Pruning helps in practice but the worst case stays exponential."}
+      - {id: d, text: "It always visits every leaf of the state-space tree.", why_wrong: "Pruned subtrees are never visited."}
+    answer: [a, b]
+    explanation: "Backtracking explores choices depth first and restores state; pruning skips subtrees but does not remove exponential worst cases."
+    misconception_tag: backtracking_properties
+    diagnoses_prereq: recursion
+
+  - id: backtracking-q06
+    type: true_false
+    difficulty: 1
+    prompt: "True or false: the 8-Queens puzzle has 92 solutions."
+    answer: true
+    explanation: "A backtracking search over one queen per row finds exactly 92 valid placements."
+    misconception_tag: eight_queens
+    diagnoses_prereq: null
+
+  - id: backtracking-q07
+    type: code_output
+    difficulty: 2
+    prompt: "What does this program print?"
+    code: |
+      out = []
+
+      def perm(path, left):
+          if not left:
+              out.append("".join(path))
+              return
+          for i in range(len(left)):
+              path.append(left[i])
+              perm(path, left[:i] + left[i + 1:])
+              path.pop()
+
+      perm([], "abc")
+      print(out)
+    answer: "['abc', 'acb', 'bac', 'bca', 'cab', 'cba']"
+    explanation: "Each position tries every remaining letter in order, and the choice is undone with pop, producing all 3! = 6 permutations in lexicographic order."
+    misconception_tag: permutation_trace
+    diagnoses_prereq: recursion
+
+  - id: backtracking-q08
+    type: short_answer
+    difficulty: 3
+    prompt: "Explain how backtracking differs from plain brute force, using N-Queens as an example."
+    answer: "Brute force generates every complete placement of queens and only then checks whether it is valid. Backtracking places queens one row at a time and checks the constraints immediately; if a queen is attacked it does not place it, and if no column works it returns to the previous row and tries another option. Whole groups of invalid boards are skipped without being built, so far fewer boards are examined, although the worst case is still exponential."
+    explanation: "A good answer contrasts checking at the end with checking each partial placement and pruning."
+    rubric:
+      key_points:
+        - "brute force builds every complete candidate before checking"
+        - "backtracking checks constraints on partial solutions and prunes"
+        - "it returns to the previous decision when no option works"
+      max_score: 1
+      partial_credit: true
+    misconception_tag: backtracking_vs_bruteforce
+    diagnoses_prereq: recursion

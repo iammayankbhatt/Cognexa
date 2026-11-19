@@ -1,0 +1,113 @@
+concept_id: greedy
+questions:
+  - id: greedy-q01
+    type: mcq
+    difficulty: 1
+    prompt: "What characterises a greedy algorithm?"
+    options:
+      - {id: a, text: "It makes the locally best choice at each step and never reconsiders it"}
+      - {id: b, text: "It tries every possible combination", why_wrong: "That is brute force or backtracking."}
+      - {id: c, text: "It stores answers to overlapping subproblems", why_wrong: "That is dynamic programming."}
+      - {id: d, text: "It splits the input into halves", why_wrong: "That is divide and conquer."}
+    answer: a
+    explanation: "Greedy commits to the best-looking option at each step, which is fast but needs a correctness proof."
+    misconception_tag: greedy_definition
+    diagnoses_prereq: null
+
+  - id: greedy-q02
+    type: mcq
+    difficulty: 1
+    prompt: "Which greedy rule maximises the number of non-overlapping activities?"
+    options:
+      - {id: a, text: "Pick the activity that finishes earliest among those compatible"}
+      - {id: b, text: "Pick the activity that starts earliest", why_wrong: "An early-starting long activity can block many short ones."}
+      - {id: c, text: "Pick the shortest activity", why_wrong: "A short activity can overlap two others that could both have been chosen."}
+      - {id: d, text: "Pick the activity with the fewest overlaps", why_wrong: "There are inputs where this rule is not optimal."}
+    answer: a
+    explanation: "Finishing earliest leaves the most time for the remaining activities, which an exchange argument proves optimal."
+    misconception_tag: activity_selection_rule
+    diagnoses_prereq: elementary_sorts
+
+  - id: greedy-q03
+    type: mcq
+    difficulty: 2
+    prompt: "With coins {1, 3, 4} and amount 6, how many coins does greedy change-making use, and is it optimal?"
+    options:
+      - {id: a, text: "3 coins (4 + 1 + 1), which is not optimal because 3 + 3 uses 2"}
+      - {id: b, text: "2 coins (3 + 3), optimal", why_wrong: "Greedy takes the largest coin 4 first."}
+      - {id: c, text: "6 coins of 1", why_wrong: "Greedy starts with the largest coin."}
+      - {id: d, text: "3 coins, which is optimal", why_wrong: "Two coins of 3 do better."}
+    answer: a
+    explanation: "Greedy grabs 4 first and is then forced to use two 1s. This coin system is not canonical, so dynamic programming is needed."
+    misconception_tag: greedy_coin_failure
+    diagnoses_prereq: null
+
+  - id: greedy-q04
+    type: mcq
+    difficulty: 2
+    prompt: "Knapsack capacity 50 with items (value, weight) (60, 10), (100, 20), (120, 30). Items cannot be split. Greedy by value per weight takes the first two for 160. What is the best possible value?"
+    options:
+      - {id: a, text: "220"}
+      - {id: b, text: "160", why_wrong: "Taking the 100 and 120 items fits exactly and is worth more."}
+      - {id: c, text: "280", why_wrong: "All three items weigh 60, which exceeds the capacity."}
+      - {id: d, text: "240", why_wrong: "240 is the fractional knapsack answer, which needs splitting an item."}
+    answer: a
+    explanation: "Items 2 and 3 weigh exactly 50 and are worth 220. The ratio rule is optimal only for the fractional version."
+    misconception_tag: greedy_01_knapsack
+    diagnoses_prereq: null
+
+  - id: greedy-q05
+    type: multi_select
+    difficulty: 2
+    prompt: "Select every problem that a greedy algorithm solves optimally."
+    options:
+      - {id: a, text: "Activity selection (maximum number of non-overlapping intervals)"}
+      - {id: b, text: "Fractional knapsack"}
+      - {id: c, text: "Minimum spanning tree"}
+      - {id: d, text: "0/1 knapsack", why_wrong: "Greedy can be far from optimal; 0/1 knapsack needs dynamic programming."}
+    answer: [a, b, c]
+    explanation: "The first three have the greedy-choice property. 0/1 knapsack does not."
+    misconception_tag: greedy_applicability
+    diagnoses_prereq: null
+
+  - id: greedy-q06
+    type: true_false
+    difficulty: 1
+    prompt: "True or false: if a greedy rule gives the correct answer on several test cases, it is proven correct."
+    answer: false
+    explanation: "Correctness needs a proof such as an exchange argument. A single counterexample is enough to show a greedy rule fails."
+    misconception_tag: greedy_needs_proof
+    diagnoses_prereq: null
+
+  - id: greedy-q07
+    type: code_output
+    difficulty: 2
+    prompt: "What does this program print?"
+    code: |
+      acts = [(1, 3), (2, 5), (4, 6), (6, 8), (5, 9)]
+      chosen, last = [], 0
+      for s, e in sorted(acts, key=lambda a: a[1]):
+          if s >= last:
+              chosen.append((s, e))
+              last = e
+      print(chosen)
+    answer: "[(1, 3), (4, 6), (6, 8)]"
+    explanation: "Sorted by finish: (1,3), (2,5), (4,6), (6,8), (5,9). Take (1,3), skip (2,5), take (4,6), take (6,8) since it starts at 6, and skip (5,9)."
+    misconception_tag: activity_trace
+    diagnoses_prereq: elementary_sorts
+
+  - id: greedy-q08
+    type: short_answer
+    difficulty: 3
+    prompt: "Describe the exchange argument used to prove that a greedy algorithm is optimal."
+    answer: "Take an optimal solution that differs from the greedy solution. Find the first place where they differ and replace the optimal solution's choice with the greedy choice. Show that the modified solution is still valid and no worse. Repeating this transforms the optimal solution into the greedy one without losing quality, so the greedy solution is optimal too."
+    explanation: "A good answer mentions swapping in the greedy choice and showing the solution stays valid and no worse."
+    rubric:
+      key_points:
+        - "start from an optimal solution differing from greedy"
+        - "swap one choice for the greedy choice"
+        - "show validity and no loss, repeat until it equals greedy"
+      max_score: 1
+      partial_credit: true
+    misconception_tag: exchange_argument
+    diagnoses_prereq: null

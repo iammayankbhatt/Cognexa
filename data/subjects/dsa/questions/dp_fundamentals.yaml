@@ -1,0 +1,120 @@
+concept_id: dp_fundamentals
+questions:
+  - id: dp_fundamentals-q01
+    type: mcq
+    difficulty: 1
+    prompt: "Which two properties make a problem suitable for dynamic programming?"
+    options:
+      - {id: a, text: "Optimal substructure and overlapping subproblems"}
+      - {id: b, text: "Sorted input and unique values", why_wrong: "DP does not require sorted or unique input."}
+      - {id: c, text: "Independent subproblems and a greedy choice", why_wrong: "Independent subproblems suit divide and conquer; a greedy choice suits greedy algorithms."}
+      - {id: d, text: "A graph with no cycles only", why_wrong: "DP applies far beyond graphs."}
+    answer: a
+    explanation: "The answer must be built from subanswers, and those subanswers must repeat so that caching saves work."
+    misconception_tag: dp_properties
+    diagnoses_prereq: recursion
+
+  - id: dp_fundamentals-q02
+    type: mcq
+    difficulty: 1
+    prompt: "What is the time complexity of computing the n-th Fibonacci number with memoization?"
+    options:
+      - {id: a, text: "O(n)"}
+      - {id: b, text: "O(2^n)", why_wrong: "That is roughly the naive recursion without caching."}
+      - {id: c, text: "O(n squared)", why_wrong: "Each of the n states takes constant work."}
+      - {id: d, text: "O(log n)", why_wrong: "That needs matrix exponentiation, not plain memoization."}
+    answer: a
+    explanation: "There are n distinct states and each is computed once with O(1) work."
+    misconception_tag: fib_memo_cost
+    diagnoses_prereq: recursion
+
+  - id: dp_fundamentals-q03
+    type: mcq
+    difficulty: 2
+    prompt: "A memoized Python solution works for n = 500 but raises RecursionError for n = 5000. What is the standard fix?"
+    options:
+      - {id: a, text: "Rewrite it as bottom-up tabulation with a loop"}
+      - {id: b, text: "Remove the cache", why_wrong: "Without the cache the time becomes exponential, and the depth stays the same."}
+      - {id: c, text: "Use a bigger data type", why_wrong: "The problem is call depth, not number size."}
+      - {id: d, text: "Sort the input first", why_wrong: "Sorting is unrelated to recursion depth."}
+    answer: a
+    explanation: "Top-down recursion reaches depth n. A bottom-up loop computes the same table without deep recursion."
+    misconception_tag: memo_recursion_depth
+    diagnoses_prereq: recursion
+
+  - id: dp_fundamentals-q04
+    type: mcq
+    difficulty: 2
+    prompt: "A tabulation fills f[i] = f[i - 1] + f[i - 2] but loops i from n down to 2. The results are mostly zero. Why?"
+    options:
+      - {id: a, text: "Each f[i] reads f[i - 1] and f[i - 2] before those entries have been computed"}
+      - {id: b, text: "The array is too large", why_wrong: "Size does not cause zero values."}
+      - {id: c, text: "The base cases should be at the end", why_wrong: "Base cases are the smallest states and must be set first."}
+      - {id: d, text: "Tabulation cannot compute Fibonacci", why_wrong: "Tabulation computes it easily in the correct order."}
+    answer: a
+    explanation: "Bottom-up DP must fill states in dependency order, smallest first, so every value read is already final."
+    misconception_tag: tabulation_order
+    diagnoses_prereq: dynamic_arrays
+
+  - id: dp_fundamentals-q05
+    type: multi_select
+    difficulty: 2
+    prompt: "Select every true statement about dynamic programming."
+    options:
+      - {id: a, text: "Running time is roughly the number of states times the work per state."}
+      - {id: b, text: "Tabulation avoids recursion-depth limits."}
+      - {id: c, text: "Memoizing merge sort makes it asymptotically faster.", why_wrong: "Merge sort's subproblems do not overlap, so caching saves nothing."}
+      - {id: d, text: "A DP always needs O(n squared) memory.", why_wrong: "Memory equals the number of stored states, often reducible to a few values."}
+    answer: [a, b]
+    explanation: "Count states times transitions for time, and use loops to avoid deep recursion. Caching helps only when subproblems overlap."
+    misconception_tag: dp_facts
+    diagnoses_prereq: recursion
+
+  - id: dp_fundamentals-q06
+    type: true_false
+    difficulty: 1
+    prompt: "True or false: memoization stores the result of each subproblem the first time it is computed and reuses it afterwards."
+    answer: true
+    explanation: "That is the definition of memoization."
+    misconception_tag: memo_definition
+    diagnoses_prereq: recursion
+
+  - id: dp_fundamentals-q07
+    type: code_output
+    difficulty: 2
+    prompt: "What does this program print?"
+    code: |
+      calls = 0
+      memo = {}
+
+      def f(n):
+          global calls
+          calls += 1
+          if n < 2:
+              return n
+          if n in memo:
+              return memo[n]
+          memo[n] = f(n - 1) + f(n - 2)
+          return memo[n]
+
+      print(f(10), calls)
+    answer: "55 19"
+    explanation: "f(10) is 55. Each n from 10 down to 2 is computed once and makes two calls; the second call is a cache hit or base case. That is 1 initial call plus 2 calls for each of the 9 values 10 down to 2, giving 19."
+    misconception_tag: memo_call_count
+    diagnoses_prereq: recursion
+
+  - id: dp_fundamentals-q08
+    type: short_answer
+    difficulty: 3
+    prompt: "Explain why naive recursive Fibonacci is exponential and how dynamic programming makes it linear."
+    answer: "Each call to fib(n) makes two more calls, and the same values such as fib(n - 2) are computed again in many branches, so the call tree has an exponential number of nodes. Dynamic programming stores each fib(i) the first time it is computed, either in a memo for the recursion or in a table filled from small to large, so each of the n values is computed once with O(1) work, giving O(n) time."
+    explanation: "A good answer mentions repeated subproblems in the call tree and computing each once."
+    rubric:
+      key_points:
+        - "the recursion tree recomputes the same subproblems"
+        - "the number of calls grows exponentially"
+        - "storing each result means n states each computed once, so O(n)"
+      max_score: 1
+      partial_credit: true
+    misconception_tag: dp_fib_reason
+    diagnoses_prereq: recursion

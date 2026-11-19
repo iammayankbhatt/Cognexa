@@ -1,0 +1,115 @@
+concept_id: dp_classic
+questions:
+  - id: dp_classic-q01
+    type: mcq
+    difficulty: 1
+    prompt: "What is the time complexity of the standard LCS dynamic program for strings of lengths m and n?"
+    options:
+      - {id: a, text: "O(mn)"}
+      - {id: b, text: "O(m + n)", why_wrong: "Every pair of prefixes is a state, so the table has mn cells."}
+      - {id: c, text: "O(2^(m + n))", why_wrong: "That is brute force over subsequences, which DP avoids."}
+      - {id: d, text: "O(mn log n)", why_wrong: "Each cell takes constant time."}
+    answer: a
+    explanation: "The table has (m + 1)(n + 1) cells and each is filled in O(1)."
+    misconception_tag: lcs_complexity
+    diagnoses_prereq: dp_fundamentals
+
+  - id: dp_classic-q02
+    type: mcq
+    difficulty: 1
+    prompt: "What is the edit distance between \"cat\" and \"cut\"?"
+    options:
+      - {id: a, text: "1"}
+      - {id: b, text: "2", why_wrong: "Deleting and inserting is worse than one substitution."}
+      - {id: c, text: "0", why_wrong: "The strings differ."}
+      - {id: d, text: "3", why_wrong: "Only one character differs."}
+    answer: a
+    explanation: "Substituting a with u converts one string into the other."
+    misconception_tag: edit_distance_basic
+    diagnoses_prereq: dp_fundamentals
+
+  - id: dp_classic-q03
+    type: mcq
+    difficulty: 2
+    prompt: "A 1D 0/1 knapsack loops `for w in range(weight, capacity + 1)` (upward). What goes wrong?"
+    options:
+      - {id: a, text: "The same item can be taken multiple times, so it solves unbounded knapsack instead"}
+      - {id: b, text: "Nothing, the direction does not matter", why_wrong: "Upward iteration reuses values already updated for this item."}
+      - {id: c, text: "It always returns 0", why_wrong: "It returns values that are too large, not zero."}
+      - {id: d, text: "It raises IndexError", why_wrong: "The indexes stay in range."}
+    answer: a
+    explanation: "best[w - weight] may already include the current item. Looping downward reads only values from before this item."
+    misconception_tag: knapsack_loop_direction
+    diagnoses_prereq: dp_fundamentals
+
+  - id: dp_classic-q04
+    type: mcq
+    difficulty: 2
+    prompt: "What is the difference between the longest common subsequence and the longest common substring?"
+    options:
+      - {id: a, text: "A subsequence keeps order but may skip characters; a substring must be contiguous"}
+      - {id: b, text: "They are the same thing", why_wrong: "They differ in whether gaps are allowed and have different recurrences."}
+      - {id: c, text: "A substring may skip characters", why_wrong: "It is the subsequence that may skip characters."}
+      - {id: d, text: "A subsequence must be at the start of both strings", why_wrong: "It can appear anywhere."}
+    answer: a
+    explanation: "For \"ABCD\" and \"ACBD\", \"ABD\" is a common subsequence while the longest common substring has length 1."
+    misconception_tag: subsequence_vs_substring
+    diagnoses_prereq: dp_fundamentals
+
+  - id: dp_classic-q05
+    type: multi_select
+    difficulty: 3
+    prompt: "Select every true statement about these classic DP problems."
+    options:
+      - {id: a, text: "0/1 knapsack in O(nW) is pseudo-polynomial."}
+      - {id: b, text: "LIS can be computed in O(n log n) with binary search."}
+      - {id: c, text: "The edit distance base case D[i][0] equals i."}
+      - {id: d, text: "A greedy rule by value per weight solves 0/1 knapsack.", why_wrong: "Greedy can fail for 0/1 knapsack; it works only for the fractional version."}
+    answer: [a, b, c]
+    explanation: "O(nW) depends on the numeric capacity, LIS has an O(n log n) tails method, and deleting i characters costs i."
+    misconception_tag: classic_dp_facts
+    diagnoses_prereq: dp_fundamentals
+
+  - id: dp_classic-q06
+    type: true_false
+    difficulty: 1
+    prompt: "True or false: the longest increasing subsequence of [10, 9, 2, 5, 3, 7, 101, 18] has length 4."
+    answer: true
+    explanation: "One example is 2, 3, 7, 18 (or 2, 5, 7, 101); no increasing subsequence of length 5 exists."
+    misconception_tag: lis_example
+    diagnoses_prereq: dp_fundamentals
+
+  - id: dp_classic-q07
+    type: code_output
+    difficulty: 2
+    prompt: "What does this program print?"
+    code: |
+      a, b = "ABCB", "BDCB"
+      L = [[0] * (len(b) + 1) for _ in range(len(a) + 1)]
+      for i in range(1, len(a) + 1):
+          for j in range(1, len(b) + 1):
+              if a[i - 1] == b[j - 1]:
+                  L[i][j] = L[i - 1][j - 1] + 1
+              else:
+                  L[i][j] = max(L[i - 1][j], L[i][j - 1])
+      print(L[len(a)][len(b)])
+    answer: "3"
+    explanation: "\"BCB\" is a common subsequence of \"ABCB\" and \"BDCB\" and no longer one exists."
+    misconception_tag: lcs_trace
+    diagnoses_prereq: dp_fundamentals
+
+  - id: dp_classic-q08
+    type: short_answer
+    difficulty: 3
+    prompt: "Define the state and recurrence for the edit distance between strings a and b."
+    answer: "D[i][j] is the minimum number of edits to turn the first i characters of a into the first j characters of b. Base cases: D[i][0] = i and D[0][j] = j. If a[i - 1] equals b[j - 1], D[i][j] = D[i - 1][j - 1]. Otherwise D[i][j] = 1 + min(D[i - 1][j] for a deletion, D[i][j - 1] for an insertion, D[i - 1][j - 1] for a substitution). The answer is D[m][n]."
+    explanation: "A good answer gives the prefix-based state, the base cases and the three operations."
+    rubric:
+      key_points:
+        - "state is the distance between two prefixes"
+        - "base cases i and j for empty prefixes"
+        - "match copies the diagonal, otherwise 1 plus min of delete, insert, substitute"
+      max_score: 1
+      partial_credit: true
+    misconception_tag: edit_distance_recurrence
+    diagnoses_prereq: dp_fundamentals

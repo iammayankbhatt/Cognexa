@@ -1,0 +1,117 @@
+concept_id: complexity_classes
+questions:
+  - id: complexity_classes-q01
+    type: mcq
+    difficulty: 1
+    prompt: "Which statement describes the class NP?"
+    options:
+      - {id: a, text: "Problems whose yes answers can be verified in polynomial time given a certificate"}
+      - {id: b, text: "Problems that cannot be solved in polynomial time", why_wrong: "NP stands for nondeterministic polynomial and includes every problem in P."}
+      - {id: c, text: "Problems that cannot be solved at all", why_wrong: "Those are undecidable problems, a different notion."}
+      - {id: d, text: "Problems solvable in O(n log n)", why_wrong: "That describes a small part of P."}
+    answer: a
+    explanation: "NP is about efficient verification. Whether every such problem is also efficiently solvable is the P versus NP question."
+    misconception_tag: np_definition
+    diagnoses_prereq: asymptotic_notation
+
+  - id: complexity_classes-q02
+    type: mcq
+    difficulty: 1
+    prompt: "Which of these problems is NP-complete?"
+    options:
+      - {id: a, text: "Boolean satisfiability (SAT)"}
+      - {id: b, text: "Sorting an array", why_wrong: "Sorting is in P, solvable in O(n log n)."}
+      - {id: c, text: "Single-source shortest paths with non-negative weights", why_wrong: "Dijkstra solves it in polynomial time."}
+      - {id: d, text: "Minimum spanning tree", why_wrong: "Kruskal and Prim solve it in polynomial time."}
+    answer: a
+    explanation: "SAT was the first problem proved NP-complete, by the Cook-Levin theorem."
+    misconception_tag: np_complete_examples
+    diagnoses_prereq: null
+
+  - id: complexity_classes-q03
+    type: mcq
+    difficulty: 2
+    prompt: "To prove that a new problem X is NP-hard, which reduction do you show?"
+    options:
+      - {id: a, text: "A polynomial-time reduction from a known NP-complete problem to X"}
+      - {id: b, text: "A reduction from X to a known NP-complete problem", why_wrong: "That shows X is no harder than the known problem, not that it is hard."}
+      - {id: c, text: "An exponential-time algorithm for X", why_wrong: "Slow algorithms do not prove that no fast one exists."}
+      - {id: d, text: "That X has many possible inputs", why_wrong: "The number of inputs says nothing about hardness."}
+    answer: a
+    explanation: "If a known hard problem can be translated into X, a fast algorithm for X would solve the hard problem too."
+    misconception_tag: reduction_direction
+    diagnoses_prereq: null
+
+  - id: complexity_classes-q04
+    type: mcq
+    difficulty: 2
+    prompt: "The 0/1 knapsack DP runs in O(nW). Why is knapsack still considered NP-complete (in its decision form)?"
+    options:
+      - {id: a, text: "W can be exponential in the number of bits of the input, so O(nW) is only pseudo-polynomial"}
+      - {id: b, text: "The DP is incorrect", why_wrong: "The DP is correct."}
+      - {id: c, text: "Because n can be large", why_wrong: "Large n alone is handled by the polynomial factor."}
+      - {id: d, text: "Because it uses recursion", why_wrong: "Recursion has nothing to do with complexity class."}
+    answer: a
+    explanation: "Input size is measured in bits. A capacity written with b bits can be as large as 2^b, making O(nW) exponential in the input size."
+    misconception_tag: pseudo_polynomial
+    diagnoses_prereq: asymptotic_notation
+
+  - id: complexity_classes-q05
+    type: multi_select
+    difficulty: 3
+    prompt: "Select every true statement."
+    options:
+      - {id: a, text: "Every problem in P is also in NP."}
+      - {id: b, text: "If any NP-complete problem has a polynomial-time algorithm, then P = NP."}
+      - {id: c, text: "NP-hard problems must belong to NP.", why_wrong: "NP-hard problems can lie outside NP, such as the halting problem."}
+      - {id: d, text: "It has been proven that P is not equal to NP.", why_wrong: "The question is still open."}
+    answer: [a, b]
+    explanation: "Solving implies verifying, so P is inside NP, and NP-complete problems are the hardest in NP. Whether P = NP remains unproven."
+    misconception_tag: p_np_facts
+    diagnoses_prereq: null
+
+  - id: complexity_classes-q06
+    type: true_false
+    difficulty: 1
+    prompt: "True or false: verifying a proposed solution to subset sum (checking that the chosen numbers add up to the target) can be done in polynomial time."
+    answer: true
+    explanation: "Adding the chosen numbers is linear in their count, which is why subset sum is in NP."
+    misconception_tag: verification_easy
+    diagnoses_prereq: null
+
+  - id: complexity_classes-q07
+    type: code_output
+    difficulty: 2
+    prompt: "What does this program print?"
+    code: |
+      from itertools import combinations
+
+      nums = [3, 5, 7]
+      checked = 0
+      found = None
+      for r in range(len(nums) + 1):
+          for combo in combinations(nums, r):
+              checked += 1
+              if sum(combo) == 12 and found is None:
+                  found = combo
+      print(found, checked)
+    answer: "(5, 7) 8"
+    explanation: "All 2^3 = 8 subsets are generated. The first subset summing to 12 is (5, 7), found among the pairs."
+    misconception_tag: exhaustive_search_count
+    diagnoses_prereq: backtracking
+
+  - id: complexity_classes-q08
+    type: short_answer
+    difficulty: 3
+    prompt: "Explain the difference between P and NP using the idea of solving versus verifying, and say why NP-complete problems matter in practice."
+    answer: "P contains problems that can be solved in polynomial time. NP contains problems whose yes answers can be checked in polynomial time if someone gives you a certificate, even if finding that certificate may seem to need exponential search. NP-complete problems are the hardest in NP: every NP problem reduces to them, so no polynomial algorithm is known for them. In practice, recognising a problem as NP-complete tells you to use approximation, heuristics, special cases or exponential search with pruning rather than look for an exact fast algorithm."
+    explanation: "A good answer contrasts solving with verifying, defines NP-complete via reductions and gives the practical consequence."
+    rubric:
+      key_points:
+        - "P is solvable in polynomial time"
+        - "NP is verifiable in polynomial time with a certificate"
+        - "NP-complete problems are hardest in NP, so use approximation or heuristics"
+      max_score: 1
+      partial_credit: true
+    misconception_tag: p_vs_np_explained
+    diagnoses_prereq: backtracking
