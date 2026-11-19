@@ -1,0 +1,155 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+/* Dark themes (neon-noir, titanium-dark) enable the `dark:` variant used by shadcn components. */
+@custom-variant dark (&:is([data-theme="neon-noir"] *, [data-theme="titanium-dark"] *));
+
+/* ------------------------------------------------------------------ */
+/* Theme tokens (CLAUDE.md §6). Components use these via Tailwind only. */
+/* Neon Noir is the default, so it also applies when no data-theme is set. */
+/* ------------------------------------------------------------------ */
+:root,
+[data-theme="neon-noir"] {
+  color-scheme: dark;
+  --bg: #07060b;
+  --surface: #11101a;
+  --surface-2: #1a1726;
+  --border: #2a2540;
+  --text: #eceaf5;
+  --muted: #9c98b0;
+  --primary: #7c3aed;
+  --primary-fg: #ffffff;
+  --accent: #22d3ee;
+  --success: #34d399;
+  --warning: #fbbf24;
+  --danger: #f43f5e;
+}
+
+[data-theme="titanium-dark"] {
+  color-scheme: dark;
+  --bg: #111214;
+  --surface: #1a1c20;
+  --surface-2: #24272c;
+  --border: #34373d;
+  --text: #e2e4e8;
+  --muted: #9499a1;
+  --primary: #e11d2e;
+  --primary-fg: #ffffff;
+  --accent: #c0c4cc;
+  --success: #34d399;
+  --warning: #fbbf24;
+  --danger: #f43f5e;
+}
+
+[data-theme="titanium-light"] {
+  color-scheme: light;
+  --bg: #f4f5f7;
+  --surface: #ffffff;
+  --surface-2: #e9ebee;
+  --border: #d3d6db;
+  --text: #16181c;
+  --muted: #5b616b;
+  --primary: #c8102e;
+  --primary-fg: #ffffff;
+  --accent: #8a9099;
+  --success: #15803d;
+  --warning: #b45309;
+  --danger: #be123c;
+}
+
+:root {
+  --radius: 0.625rem;
+  --motion-fast: 150ms;
+  --motion-base: 200ms;
+}
+
+/* ------------------------------------------------------------------ */
+/* Tailwind theme: project tokens first, then shadcn semantic tokens.   */
+/* ------------------------------------------------------------------ */
+@theme inline {
+  /* Project tokens -> bg-bg, bg-surface, text-text, text-muted, bg-primary, text-accent ... */
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-primary: var(--primary);
+  --color-primary-fg: var(--primary-fg);
+  --color-accent: var(--accent);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+
+  /* shadcn semantic tokens, all wired to the project tokens (no separate palette). */
+  --color-background: var(--bg);
+  --color-foreground: var(--text);
+  --color-card: var(--surface);
+  --color-card-foreground: var(--text);
+  --color-popover: var(--surface-2);
+  --color-popover-foreground: var(--text);
+  --color-primary-foreground: var(--primary-fg);
+  --color-secondary: var(--surface-2);
+  --color-secondary-foreground: var(--text);
+  --color-muted-foreground: var(--muted);
+  --color-accent-foreground: var(--text);
+  --color-destructive: var(--danger);
+  --color-input: var(--border);
+  --color-ring: var(--accent);
+  --color-chart-1: var(--primary);
+  --color-chart-2: var(--accent);
+  --color-chart-3: var(--success);
+  --color-chart-4: var(--warning);
+  --color-chart-5: var(--danger);
+  --color-sidebar: var(--surface);
+  --color-sidebar-foreground: var(--text);
+  --color-sidebar-primary: var(--primary);
+  --color-sidebar-primary-foreground: var(--primary-fg);
+  --color-sidebar-accent: var(--surface-2);
+  --color-sidebar-accent-foreground: var(--text);
+  --color-sidebar-border: var(--border);
+  --color-sidebar-ring: var(--accent);
+
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, monospace;
+  --font-heading: var(--font-sans);
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans;
+  }
+  body {
+    @apply bg-bg text-text antialiased;
+    transition:
+      background-color var(--motion-base) ease,
+      color var(--motion-base) ease;
+  }
+  ::selection {
+    background: color-mix(in srgb, var(--primary) 45%, transparent);
+  }
+}
+
+/* Subtle motion only; honour the user's reduced-motion preference. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
