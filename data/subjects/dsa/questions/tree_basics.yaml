@@ -1,0 +1,123 @@
+concept_id: tree_basics
+questions:
+  - id: tree_basics-q01
+    type: mcq
+    difficulty: 1
+    prompt: "A tree has 15 nodes. How many edges does it have?"
+    options:
+      - {id: a, text: "14"}
+      - {id: b, text: "15", why_wrong: "Only a cycle-containing graph on 15 nodes could have 15 edges; every non-root node adds exactly one edge."}
+      - {id: c, text: "16", why_wrong: "That would need extra edges, which would create cycles."}
+      - {id: d, text: "It depends on the shape", why_wrong: "Every tree on n nodes has n - 1 edges regardless of shape."}
+    answer: a
+    explanation: "Each node except the root has exactly one parent edge, so n nodes give n - 1 edges."
+    misconception_tag: tree_edge_count
+    diagnoses_prereq: null
+
+  - id: tree_basics-q02
+    type: mcq
+    difficulty: 1
+    prompt: "What is a leaf in a tree?"
+    options:
+      - {id: a, text: "A node with no children"}
+      - {id: b, text: "A node with no parent", why_wrong: "A node with no parent is the root."}
+      - {id: c, text: "A node with exactly one child", why_wrong: "Such a node is internal."}
+      - {id: d, text: "Any node at the last level only", why_wrong: "Leaves can appear at several different depths."}
+    answer: a
+    explanation: "A leaf has no children. Leaves can sit at different depths in the same tree."
+    misconception_tag: leaf_definition
+    diagnoses_prereq: null
+
+  - id: tree_basics-q03
+    type: mcq
+    difficulty: 2
+    prompt: "In the usual convention (counting edges), what is the height of a tree with a single node?"
+    options:
+      - {id: a, text: "0"}
+      - {id: b, text: "1", why_wrong: "That counts nodes rather than edges."}
+      - {id: c, text: "-1", why_wrong: "-1 is sometimes used for an empty tree, not for a single node."}
+      - {id: d, text: "Undefined", why_wrong: "A one-node tree has a well-defined height."}
+    answer: a
+    explanation: "The longest downward path from the root has zero edges, so the height is 0."
+    misconception_tag: height_off_by_one
+    diagnoses_prereq: null
+
+  - id: tree_basics-q04
+    type: mcq
+    difficulty: 2
+    prompt: "A student's code lets node X be added as a child of both P and Q, which are on different branches. Which property of a tree is broken?"
+    options:
+      - {id: a, text: "Every non-root node has exactly one parent, so there is one path from the root to each node"}
+      - {id: b, text: "The tree must be balanced", why_wrong: "Balance is not part of the definition of a tree."}
+      - {id: c, text: "Each node must have at most two children", why_wrong: "That describes binary trees, not trees in general."}
+      - {id: d, text: "The root must be the smallest value", why_wrong: "Trees do not require ordering."}
+    answer: a
+    explanation: "Two parents give two paths to X and form a cycle in the underlying graph, so the structure is no longer a tree."
+    misconception_tag: shared_child
+    diagnoses_prereq: singly_linked_list
+
+  - id: tree_basics-q05
+    type: multi_select
+    difficulty: 2
+    prompt: "Select every statement that is true for any tree."
+    options:
+      - {id: a, text: "Removing any edge disconnects the tree."}
+      - {id: b, text: "Adding an edge between two existing nodes creates a cycle."}
+      - {id: c, text: "Every node has at most two children.", why_wrong: "Only binary trees have that limit."}
+      - {id: d, text: "All leaves have the same depth.", why_wrong: "Leaves can have different depths unless the tree is perfect."}
+    answer: [a, b]
+    explanation: "A tree is connected and acyclic, which gives both properties. The other two describe special kinds of trees only."
+    misconception_tag: tree_properties
+    diagnoses_prereq: null
+
+  - id: tree_basics-q06
+    type: true_false
+    difficulty: 1
+    prompt: "True or false: the depth of the root node is 0."
+    answer: true
+    explanation: "Depth counts edges from the root, and the root is zero edges from itself."
+    misconception_tag: depth_of_root
+    diagnoses_prereq: null
+
+  - id: tree_basics-q07
+    type: code_output
+    difficulty: 2
+    prompt: "What does this program print?"
+    code: |
+      class Node:
+          def __init__(self, v):
+              self.v = v
+              self.kids = []
+
+      def height(n):
+          if not n.kids:
+              return 0
+          return 1 + max(height(k) for k in n.kids)
+
+      root = Node(1)
+      a = Node(2)
+      b = Node(3)
+      root.kids = [a, b]
+      a.kids = [Node(4)]
+      a.kids[0].kids = [Node(5)]
+      print(height(root), height(b))
+    answer: "3 0"
+    explanation: "The longest downward path from the root goes 1, 2, 4, 5, which is 3 edges. Node b is a leaf, so its height is 0."
+    misconception_tag: height_trace
+    diagnoses_prereq: null
+
+  - id: tree_basics-q08
+    type: short_answer
+    difficulty: 3
+    prompt: "Explain why a tree with n nodes always has exactly n - 1 edges."
+    answer: "Every node except the root has exactly one parent, and each node is joined to its parent by exactly one edge. The root has no parent edge, so counting parent edges gives n - 1 edges, and there are no other edges because extra ones would create cycles."
+    explanation: "A good answer ties each non-root node to its single parent edge."
+    rubric:
+      key_points:
+        - "every non-root node has exactly one parent"
+        - "each node corresponds to one parent edge, giving n - 1"
+        - "the root has no parent edge"
+      max_score: 1
+      partial_credit: true
+    misconception_tag: edge_count_reasoning
+    diagnoses_prereq: null

@@ -1,0 +1,120 @@
+concept_id: segment_tree
+questions:
+  - id: segment_tree-q01
+    type: mcq
+    difficulty: 1
+    prompt: "What is the time complexity of a range-sum query and of a point update on a segment tree over n elements?"
+    options:
+      - {id: a, text: "Both O(log n)"}
+      - {id: b, text: "Query O(1), update O(n)", why_wrong: "That is the trade-off of prefix sums, not a segment tree."}
+      - {id: c, text: "Query O(n), update O(1)", why_wrong: "That is the trade-off of a plain array."}
+      - {id: d, text: "Both O(n)", why_wrong: "The tree structure avoids visiting every element."}
+    answer: a
+    explanation: "Both operations touch about one or two nodes per level of a tree of height O(log n)."
+    misconception_tag: segtree_complexity
+    diagnoses_prereq: prefix_sums
+
+  - id: segment_tree-q02
+    type: mcq
+    difficulty: 1
+    prompt: "What does the root of a segment tree built for range sums store?"
+    options:
+      - {id: a, text: "The sum of the entire array"}
+      - {id: b, text: "The first element", why_wrong: "Each node stores a summary of its range, not one element."}
+      - {id: c, text: "The sum of the left half only", why_wrong: "The left half belongs to the left child."}
+      - {id: d, text: "The maximum element", why_wrong: "That would be the root of a max-tree, not a sum-tree."}
+    answer: a
+    explanation: "The root covers the whole range, so its stored value is the combined value (sum) of all elements."
+    misconception_tag: segtree_node_meaning
+    diagnoses_prereq: prefix_sums
+
+  - id: segment_tree-q03
+    type: mcq
+    difficulty: 2
+    prompt: "A recursive segment tree is allocated with an array of size 2n. For n = 5 it raises IndexError. What is the standard fix?"
+    options:
+      - {id: a, text: "Allocate 4n entries"}
+      - {id: b, text: "Allocate n entries", why_wrong: "That is even smaller."}
+      - {id: c, text: "Use a linked list instead", why_wrong: "This is a layout problem, not a data-type problem."}
+      - {id: d, text: "Only use powers of two for n", why_wrong: "Padding works but 4n entries is the simple general fix."}
+    answer: a
+    explanation: "When n is not a power of two, the recursive layout can use indexes up to nearly 4n, so 4n slots are safe."
+    misconception_tag: segtree_array_size
+    diagnoses_prereq: dfs_tree_traversals
+
+  - id: segment_tree-q04
+    type: mcq
+    difficulty: 2
+    prompt: "A segment tree stores minimums. A query range does not overlap a node's range at all. What should that node return?"
+    options:
+      - {id: a, text: "Infinity (the identity for minimum)"}
+      - {id: b, text: "0", why_wrong: "0 would wrongly become the minimum if all real values are positive."}
+      - {id: c, text: "Its own stored value", why_wrong: "That would include elements outside the query."}
+      - {id: d, text: "-1", why_wrong: "An arbitrary negative number would corrupt the result."}
+    answer: a
+    explanation: "A non-overlapping node must not influence the answer. For minimum, infinity is neutral, just as 0 is for a sum."
+    misconception_tag: segtree_identity
+    diagnoses_prereq: divide_and_conquer
+
+  - id: segment_tree-q05
+    type: multi_select
+    difficulty: 2
+    prompt: "Select every operation a segment tree can use as its combine function."
+    options:
+      - {id: a, text: "Sum"}
+      - {id: b, text: "Minimum"}
+      - {id: c, text: "Gcd"}
+      - {id: d, text: "Subtraction of the right half from the left half", why_wrong: "Subtraction is not associative, so the answer would depend on how the range is split."}
+    answer: [a, b, c]
+    explanation: "Any associative operation works because a query combines pieces from different nodes. Subtraction does not qualify."
+    misconception_tag: segtree_associativity
+    diagnoses_prereq: divide_and_conquer
+
+  - id: segment_tree-q06
+    type: true_false
+    difficulty: 1
+    prompt: "True or false: after updating one array element, a segment tree needs to recompute only the nodes on the path from that element's leaf to the root."
+    answer: true
+    explanation: "Only ancestors of the changed leaf cover it, so only they hold stale values. That path has O(log n) nodes."
+    misconception_tag: segtree_update_path
+    diagnoses_prereq: dfs_tree_traversals
+
+  - id: segment_tree-q07
+    type: code_output
+    difficulty: 2
+    prompt: "What does this program print?"
+    code: |
+      a = [2, 1, 5, 3]
+      tree = {}
+
+      def build(node, l, r):
+          if l == r:
+              tree[node] = a[l]
+              return
+          m = (l + r) // 2
+          build(2 * node, l, m)
+          build(2 * node + 1, m + 1, r)
+          tree[node] = tree[2 * node] + tree[2 * node + 1]
+
+      build(1, 0, 3)
+      print(tree[1], tree[2], tree[3])
+    answer: "11 3 8"
+    explanation: "Node 1 covers all four elements (sum 11). Node 2 covers a[0..1] (2 + 1 = 3) and node 3 covers a[2..3] (5 + 3 = 8)."
+    misconception_tag: segtree_build_trace
+    diagnoses_prereq: dfs_tree_traversals
+
+  - id: segment_tree-q08
+    type: short_answer
+    difficulty: 3
+    prompt: "Why does a range query on a segment tree visit only O(log n) nodes even though the range may cover many elements?"
+    answer: "Nodes whose range lies completely inside the query return their stored value immediately without going deeper, and nodes completely outside return at once. Only nodes that partly overlap the query need to recurse, and at most two such nodes exist at each level (the ones containing the two ends of the range). With O(log n) levels, only O(log n) nodes are visited."
+    explanation: "A good answer mentions full-overlap early return and at most two partial nodes per level."
+    rubric:
+      key_points:
+        - "fully covered nodes return their stored value without recursing"
+        - "at most two partially overlapping nodes per level"
+        - "the tree has O(log n) levels"
+      max_score: 1
+      partial_credit: true
+    misconception_tag: segtree_query_cost
+    diagnoses_prereq: divide_and_conquer

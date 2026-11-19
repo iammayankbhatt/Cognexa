@@ -1,0 +1,121 @@
+concept_id: dfs_tree_traversals
+questions:
+  - id: dfs_tree_traversals-q01
+    type: mcq
+    difficulty: 1
+    prompt: "Which traversal visits the nodes of a binary search tree in ascending key order?"
+    options:
+      - {id: a, text: "Inorder"}
+      - {id: b, text: "Preorder", why_wrong: "Preorder visits a node before its subtrees, so a parent appears before smaller left-subtree keys."}
+      - {id: c, text: "Postorder", why_wrong: "Postorder places the root last, which is the middle value rather than the largest."}
+      - {id: d, text: "Reverse level order", why_wrong: "That orders by depth, not by key."}
+    answer: a
+    explanation: "Inorder visits the left subtree (smaller keys), then the node, then the right subtree (larger keys)."
+    misconception_tag: inorder_sorted
+    diagnoses_prereq: binary_tree
+
+  - id: dfs_tree_traversals-q02
+    type: mcq
+    difficulty: 1
+    prompt: "In which traversal is the root visited last?"
+    options:
+      - {id: a, text: "Postorder"}
+      - {id: b, text: "Preorder", why_wrong: "Preorder visits the root first."}
+      - {id: c, text: "Inorder", why_wrong: "Inorder visits the root between its two subtrees."}
+      - {id: d, text: "All three", why_wrong: "Only postorder puts the root at the end."}
+    answer: a
+    explanation: "Postorder processes left subtree, right subtree and then the node itself."
+    misconception_tag: traversal_order_definitions
+    diagnoses_prereq: binary_tree
+
+  - id: dfs_tree_traversals-q03
+    type: mcq
+    difficulty: 2
+    prompt: "A recursive inorder function raises AttributeError: 'NoneType' object has no attribute 'left'. What is the most likely problem?"
+    options:
+      - {id: a, text: "It is missing the base case that returns when the node is None"}
+      - {id: b, text: "The tree is too tall", why_wrong: "Height causes RecursionError, not AttributeError."}
+      - {id: c, text: "It visits the node before the left subtree", why_wrong: "That would give preorder output but would not cause this error."}
+      - {id: d, text: "The traversal uses a stack", why_wrong: "Using a stack is a valid approach and does not cause this error."}
+    answer: a
+    explanation: "When recursion reaches a missing child, the function receives None and tries to read .left. A base case must stop there."
+    misconception_tag: missing_base_case
+    diagnoses_prereq: recursion
+
+  - id: dfs_tree_traversals-q04
+    type: mcq
+    difficulty: 2
+    prompt: "You must free every node of a binary tree in C++ without leaving dangling pointers. Which order is the safest for deleting nodes?"
+    options:
+      - {id: a, text: "Postorder, so children are deleted before their parent"}
+      - {id: b, text: "Preorder, so the parent is deleted first", why_wrong: "After deleting the parent you can no longer safely read its child pointers."}
+      - {id: c, text: "Inorder", why_wrong: "Inorder deletes the node between its subtrees, and the right child pointer is then read from freed memory."}
+      - {id: d, text: "Any order works the same", why_wrong: "The order decides whether freed memory is read."}
+    answer: a
+    explanation: "Postorder finishes both children before touching the node, so the parent's pointers are still valid when the children are freed."
+    misconception_tag: postorder_for_deletion
+    diagnoses_prereq: binary_tree
+
+  - id: dfs_tree_traversals-q05
+    type: multi_select
+    difficulty: 2
+    prompt: "Select every true statement about depth-first tree traversals on a tree with n nodes and height h."
+    options:
+      - {id: a, text: "Each runs in O(n) time."}
+      - {id: b, text: "Recursive versions use O(h) stack space."}
+      - {id: c, text: "Inorder output is sorted for any binary tree.", why_wrong: "This only holds for binary search trees."}
+      - {id: d, text: "They need a visited set to avoid infinite loops.", why_wrong: "A tree has no cycles, so no visited set is needed."}
+    answer: [a, b]
+    explanation: "Each node is visited once and the stack holds one root-to-node path. Sorted output needs the search-tree ordering rule, and trees have no cycles."
+    misconception_tag: traversal_complexity
+    diagnoses_prereq: binary_tree
+
+  - id: dfs_tree_traversals-q06
+    type: true_false
+    difficulty: 1
+    prompt: "True or false: moving the line that visits the node from before the two recursive calls to between them turns preorder into inorder."
+    answer: true
+    explanation: "The three orders differ only in where the visit happens relative to the left and right recursive calls."
+    misconception_tag: traversal_order_definitions
+    diagnoses_prereq: binary_tree
+
+  - id: dfs_tree_traversals-q07
+    type: code_output
+    difficulty: 2
+    prompt: "What does this program print?"
+    code: |
+      class Node:
+          def __init__(self, v, l=None, r=None):
+              self.v, self.l, self.r = v, l, r
+
+      def walk(n, out):
+          if n is None:
+              return
+          walk(n.l, out)
+          walk(n.r, out)
+          out.append(n.v)
+
+      t = Node(1, Node(2, Node(4), Node(5)), Node(3))
+      res = []
+      walk(t, res)
+      print(res)
+    answer: "[4, 5, 2, 3, 1]"
+    explanation: "The node is appended after both subtrees, which is postorder. The left subtree gives 4, 5, 2, then the right gives 3, then the root 1."
+    misconception_tag: postorder_trace
+    diagnoses_prereq: recursion
+
+  - id: dfs_tree_traversals-q08
+    type: short_answer
+    difficulty: 3
+    prompt: "Explain how an iterative inorder traversal uses an explicit stack, and why its extra space is O(h)."
+    answer: "Go left from the current node pushing every node onto the stack until there is no left child. Then pop a node, visit it, and move to its right child, repeating the same process. The stack only holds the nodes on the path from the root to the current node, whose length is at most the height h, so the extra space is O(h)."
+    explanation: "A good answer describes pushing along the left spine, popping to visit, then moving right, and says the stack holds one root-to-node path."
+    rubric:
+      key_points:
+        - "push nodes while moving left"
+        - "pop to visit, then move to the right child"
+        - "the stack holds one root-to-node path of length at most h"
+      max_score: 1
+      partial_credit: true
+    misconception_tag: iterative_inorder
+    diagnoses_prereq: recursion

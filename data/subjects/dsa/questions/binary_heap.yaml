@@ -1,0 +1,112 @@
+concept_id: binary_heap
+questions:
+  - id: binary_heap-q01
+    type: mcq
+    difficulty: 1
+    prompt: "Where is the smallest element stored in a min-heap?"
+    options:
+      - {id: a, text: "At the root (index 0)"}
+      - {id: b, text: "At the last position of the array", why_wrong: "The last position is a leaf, which can hold any large value."}
+      - {id: c, text: "At the leftmost leaf", why_wrong: "Leaves are not guaranteed to be small; only the root is the minimum."}
+      - {id: d, text: "It could be anywhere", why_wrong: "The heap property forces the minimum to the root."}
+    answer: a
+    explanation: "Each node is at most as large as its children, so by induction the root is the minimum."
+    misconception_tag: heap_root
+    diagnoses_prereq: binary_tree
+
+  - id: binary_heap-q02
+    type: mcq
+    difficulty: 1
+    prompt: "What is the time complexity of inserting one item into a binary heap with n items?"
+    options:
+      - {id: a, text: "O(log n)"}
+      - {id: b, text: "O(1)", why_wrong: "The item may need to sift up past many ancestors."}
+      - {id: c, text: "O(n)", why_wrong: "Only one root-to-leaf path is touched, not all items."}
+      - {id: d, text: "O(n log n)", why_wrong: "That is the cost of inserting n items one at a time."}
+    answer: a
+    explanation: "A new item is appended and sifts up along one path of length at most floor(log2 n)."
+    misconception_tag: heap_insert_cost
+    diagnoses_prereq: priority_queue_adt
+
+  - id: binary_heap-q03
+    type: mcq
+    difficulty: 2
+    prompt: "Which statement about the array [1, 9, 2, 10, 11, 3, 4] is correct?"
+    options:
+      - {id: a, text: "It is a valid min-heap but it is not sorted in the usual sense for all adjacent pairs"}
+      - {id: b, text: "It is not a valid min-heap because 9 is larger than 2", why_wrong: "9 and 2 are siblings, which are never compared in a heap."}
+      - {id: c, text: "It is a valid max-heap", why_wrong: "The root 1 is the smallest, not the largest."}
+      - {id: d, text: "It is invalid because it is not sorted", why_wrong: "Heaps do not need to be sorted."}
+    answer: a
+    explanation: "Index 0 has value 1, children 9 and 2. Index 1 (9) has children 10 and 11, and index 2 (2) has children 3 and 4. Every parent is at most its children, so it is a min-heap, even though the siblings 9 and 2 are out of order."
+    misconception_tag: heap_vs_sorted
+    diagnoses_prereq: binary_tree
+
+  - id: binary_heap-q04
+    type: mcq
+    difficulty: 2
+    prompt: "A programmer wants the largest elements first using Python's heapq, but pushes the numbers 5, 1, 9 and pops 1 first. What should they do?"
+    options:
+      - {id: a, text: "Push the negated values and negate again after popping"}
+      - {id: b, text: "Use heapq.heapify with reverse=True", why_wrong: "heapify has no reverse argument."}
+      - {id: c, text: "Pop from the end of the list", why_wrong: "The end of the underlying list is not the maximum."}
+      - {id: d, text: "Sort the list after every push", why_wrong: "That defeats the purpose of using a heap and costs far more."}
+    answer: a
+    explanation: "heapq implements a min-heap only. Negating keys turns the smallest negated value into the largest original value."
+    misconception_tag: max_heap_in_python
+    diagnoses_prereq: priority_queue_adt
+
+  - id: binary_heap-q05
+    type: multi_select
+    difficulty: 2
+    prompt: "Select every true statement about a binary heap with n items."
+    options:
+      - {id: a, text: "Building a heap from an unsorted array takes O(n)."}
+      - {id: b, text: "Peeking at the minimum of a min-heap takes O(1)."}
+      - {id: c, text: "Searching for an arbitrary value takes O(log n).", why_wrong: "Siblings are unordered, so a general search may check every item, which is O(n)."}
+      - {id: d, text: "The array is always sorted in ascending order.", why_wrong: "Only parent-child order is guaranteed."}
+    answer: [a, b]
+    explanation: "Build-heap with sift-down is linear and the minimum is at index 0. A heap offers no fast general search and no full order."
+    misconception_tag: heap_operation_costs
+    diagnoses_prereq: binary_tree
+
+  - id: binary_heap-q06
+    type: true_false
+    difficulty: 2
+    prompt: "True or false: after removing the minimum from a min-heap, the standard method moves the last array element to the root and sifts it down."
+    answer: true
+    explanation: "Using the last element keeps the tree complete, and sifting down restores the heap property in O(log n)."
+    misconception_tag: heap_extract_procedure
+    diagnoses_prereq: binary_tree
+
+  - id: binary_heap-q07
+    type: code_output
+    difficulty: 2
+    prompt: "What does this program print?"
+    code: |
+      import heapq
+
+      h = []
+      for x in [7, 2, 9, 4, 1]:
+          heapq.heappush(h, x)
+      print(h[0], heapq.heappop(h), heapq.heappop(h), len(h))
+    answer: "1 1 2 3"
+    explanation: "The first print argument is the minimum 1 without removing it. Then two pops return 1 and 2, leaving 3 items."
+    misconception_tag: heapq_basics
+    diagnoses_prereq: priority_queue_adt
+
+  - id: binary_heap-q08
+    type: short_answer
+    difficulty: 3
+    prompt: "Explain why building a heap from n unsorted items with sift-down takes O(n) and not O(n log n)."
+    answer: "Sift-down is applied to each non-leaf node, and the cost of sifting a node is proportional to its height, not to the full height of the tree. Half the nodes are leaves and need no work, a quarter have height 1, an eighth have height 2, and so on. The sum of height times the number of nodes of that height converges to a constant multiple of n, so the total is O(n)."
+    explanation: "A good answer says most nodes are near the leaves and have small heights, so the sum of work is linear."
+    rubric:
+      key_points:
+        - "sift-down cost is proportional to the node's height"
+        - "most nodes are leaves or close to the bottom"
+        - "the total sum is bounded by a constant times n"
+      max_score: 1
+      partial_credit: true
+    misconception_tag: build_heap_linear
+    diagnoses_prereq: binary_tree

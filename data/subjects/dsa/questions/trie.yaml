@@ -1,0 +1,117 @@
+concept_id: trie
+questions:
+  - id: trie-q01
+    type: mcq
+    difficulty: 1
+    prompt: "What is the time complexity of searching a trie for a word of length L?"
+    options:
+      - {id: a, text: "O(L)"}
+      - {id: b, text: "O(n), where n is the number of stored words", why_wrong: "The walk follows one path whose length is the word length."}
+      - {id: c, text: "O(log n)", why_wrong: "A trie does not binary search over words."}
+      - {id: d, text: "O(L * n)", why_wrong: "No scan over all words is needed."}
+    answer: a
+    explanation: "The search follows one edge per character, so the cost depends only on the length of the query."
+    misconception_tag: trie_search_cost
+    diagnoses_prereq: tree_basics
+
+  - id: trie-q02
+    type: mcq
+    difficulty: 1
+    prompt: "A trie holds only the word \"tea\". What does search(\"te\") return, and what does starts_with(\"te\") return?"
+    options:
+      - {id: a, text: "False and True"}
+      - {id: b, text: "True and True", why_wrong: "\"te\" was never inserted as a word, even though the path exists."}
+      - {id: c, text: "False and False", why_wrong: "The path t, e exists, so the prefix is present."}
+      - {id: d, text: "True and False", why_wrong: "A word cannot exist without its prefix existing."}
+    answer: a
+    explanation: "The path for \"te\" exists but its last node is not marked as a word end, so search fails while the prefix query succeeds."
+    misconception_tag: trie_end_flag
+    diagnoses_prereq: strings
+
+  - id: trie-q03
+    type: mcq
+    difficulty: 2
+    prompt: "A trie's search function returns True for \"car\" after only \"card\" was inserted. What is the most likely bug?"
+    options:
+      - {id: a, text: "It never checks the end-of-word flag at the last node"}
+      - {id: b, text: "The insert function does not create nodes", why_wrong: "If nodes were not created, the walk for \"car\" would fail."}
+      - {id: c, text: "The children are stored in a hash map", why_wrong: "The storage type does not cause this logic error."}
+      - {id: d, text: "The root has a flag set", why_wrong: "That would only affect the empty string."}
+    answer: a
+    explanation: "Finishing the walk only proves the prefix exists. The function must also check that a word ends at that node."
+    misconception_tag: trie_missing_end_check
+    diagnoses_prereq: strings
+
+  - id: trie-q04
+    type: mcq
+    difficulty: 2
+    prompt: "An array-based trie node uses next[ch - 'a']. The program crashes when inserting \"Hello\". Why?"
+    options:
+      - {id: a, text: "'H' - 'a' is negative, so the index is out of bounds"}
+      - {id: b, text: "Words may not contain repeated letters", why_wrong: "Repeated letters are fine."}
+      - {id: c, text: "The trie has no root", why_wrong: "The root exists; the failure is the index."}
+      - {id: d, text: "The word is too long", why_wrong: "Length is not limited by the array of children."}
+    answer: a
+    explanation: "The array is sized for lowercase letters only. Uppercase characters give negative indexes, so normalise the input or use a map."
+    misconception_tag: trie_alphabet_index
+    diagnoses_prereq: strings
+
+  - id: trie-q05
+    type: multi_select
+    difficulty: 2
+    prompt: "Select every true statement about tries."
+    options:
+      - {id: a, text: "Words sharing a prefix share the nodes of that prefix."}
+      - {id: b, text: "A trie can list all words with a given prefix efficiently."}
+      - {id: c, text: "A trie always uses less memory than a list of the same words.", why_wrong: "With few shared prefixes, a trie uses a node per character and can use more memory."}
+      - {id: d, text: "A hash set supports prefix queries as efficiently as a trie.", why_wrong: "A hash set cannot enumerate by prefix without scanning."}
+    answer: [a, b]
+    explanation: "Shared paths and prefix traversal are the strengths of a trie. Its memory benefit depends on how much the words overlap."
+    misconception_tag: trie_properties
+    diagnoses_prereq: tree_basics
+
+  - id: trie-q06
+    type: true_false
+    difficulty: 1
+    prompt: "True or false: in a trie, each edge is labelled with one character and the path from the root to a node spells a prefix."
+    answer: true
+    explanation: "That is the defining structure. A node marked as a word end means the prefix is also a stored word."
+    misconception_tag: trie_structure
+    diagnoses_prereq: tree_basics
+
+  - id: trie-q07
+    type: code_output
+    difficulty: 2
+    prompt: "What does this program print?"
+    code: |
+      root = {}
+      for w in ["to", "tea", "ten"]:
+          node = root
+          for ch in w:
+              node = node.setdefault(ch, {})
+          node["$"] = True
+
+      def count(n):
+          return 1 + sum(count(v) for k, v in n.items() if k != "$")
+
+      print(count(root))
+    answer: "6"
+    explanation: "The nodes are the root, t, o, e, a and n, which makes 6. The shared path t and the shared t-e prefix are counted once."
+    misconception_tag: trie_node_count
+    diagnoses_prereq: tree_basics
+
+  - id: trie-q08
+    type: short_answer
+    difficulty: 3
+    prompt: "Why does a trie answer a prefix query in time that does not depend on the number of stored words, and what is the main cost of this speed?"
+    answer: "The query follows one edge per character of the prefix, so it takes O(L) steps for a prefix of length L, whatever the number of words. The cost is memory: each character of each distinct path needs a node, and nodes using arrays of child slots waste space when most slots are empty."
+    explanation: "A good answer gives O(L), explains that the walk is one path, and mentions memory overhead."
+    rubric:
+      key_points:
+        - "the walk follows one edge per character, so O(L)"
+        - "shared prefixes mean the number of words does not matter"
+        - "memory cost from many nodes or sparse child arrays"
+      max_score: 1
+      partial_credit: true
+    misconception_tag: trie_tradeoff
+    diagnoses_prereq: strings

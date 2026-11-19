@@ -1,0 +1,122 @@
+concept_id: disjoint_set_union
+questions:
+  - id: disjoint_set_union-q01
+    type: mcq
+    difficulty: 1
+    prompt: "What are the two main operations of a disjoint set union structure?"
+    options:
+      - {id: a, text: "find (which set does x belong to) and union (merge two sets)"}
+      - {id: b, text: "insert and delete-min", why_wrong: "Those are priority queue operations."}
+      - {id: c, text: "push and pop", why_wrong: "Those are stack operations."}
+      - {id: d, text: "split and merge sorted lists", why_wrong: "A DSU cannot split a set."}
+    answer: a
+    explanation: "find returns the representative of an element's set and union merges two sets into one."
+    misconception_tag: dsu_operations
+    diagnoses_prereq: tree_basics
+
+  - id: disjoint_set_union-q02
+    type: mcq
+    difficulty: 1
+    prompt: "How do you test whether elements a and b are in the same set?"
+    options:
+      - {id: a, text: "find(a) == find(b)"}
+      - {id: b, text: "parent[a] == parent[b]", why_wrong: "This only works if both are direct children of the same root."}
+      - {id: c, text: "a == b", why_wrong: "Different elements can belong to the same set."}
+      - {id: d, text: "size[a] == size[b]", why_wrong: "Equal sizes say nothing about membership."}
+    answer: a
+    explanation: "Two elements share a set exactly when they have the same root."
+    misconception_tag: dsu_connected_check
+    diagnoses_prereq: tree_basics
+
+  - id: disjoint_set_union-q03
+    type: mcq
+    difficulty: 2
+    prompt: "A DSU implementation merges sets with parent[a] = b, where a and b are the original elements rather than their roots. What goes wrong?"
+    options:
+      - {id: a, text: "Earlier merges are lost or the forest structure breaks, so some elements are wrongly reported as disconnected"}
+      - {id: b, text: "Nothing, the result is the same", why_wrong: "Re-pointing a non-root node detaches it from its previous set's root."}
+      - {id: c, text: "The structure runs out of memory", why_wrong: "Memory use is unchanged."}
+      - {id: d, text: "find becomes O(1)", why_wrong: "The bug causes wrong answers, not faster ones."}
+    answer: a
+    explanation: "If a is not a root, setting its parent moves only a (and its subtree) and its old root loses the link to other members."
+    misconception_tag: dsu_union_roots
+    diagnoses_prereq: tree_basics
+
+  - id: disjoint_set_union-q04
+    type: mcq
+    difficulty: 2
+    prompt: "With union by size and path compression, what is the amortised cost per operation?"
+    options:
+      - {id: a, text: "Nearly constant, O(alpha(n)), where alpha is the inverse Ackermann function"}
+      - {id: b, text: "O(n)", why_wrong: "That is the worst case with no optimisation."}
+      - {id: c, text: "O(log n) exactly", why_wrong: "That is the bound with only one of the optimisations."}
+      - {id: d, text: "O(n log n)", why_wrong: "That would be too slow for such a simple structure."}
+    answer: a
+    explanation: "The two heuristics together give a bound that grows so slowly it is below 5 for any realistic input size."
+    misconception_tag: dsu_complexity
+    diagnoses_prereq: amortized_analysis
+
+  - id: disjoint_set_union-q05
+    type: multi_select
+    difficulty: 2
+    prompt: "Select every true statement about a disjoint set union structure."
+    options:
+      - {id: a, text: "It can detect a cycle when adding an edge to an undirected graph."}
+      - {id: b, text: "union by size keeps trees shallow."}
+      - {id: c, text: "It efficiently supports splitting a set into two.", why_wrong: "DSU supports merging only; splitting needs a different structure."}
+      - {id: d, text: "Each element's parent pointer always points directly to the root.", why_wrong: "Only after path compression; otherwise a path may be longer."}
+    answer: [a, b]
+    explanation: "An edge whose endpoints already share a root closes a cycle. Splitting is not supported, and parents may not point straight at the root."
+    misconception_tag: dsu_properties
+    diagnoses_prereq: tree_basics
+
+  - id: disjoint_set_union-q06
+    type: true_false
+    difficulty: 1
+    prompt: "True or false: a union of two elements that are already in the same set changes nothing."
+    answer: true
+    explanation: "find returns the same root for both, so the structure leaves the trees as they are. Kruskal's algorithm uses this to skip cycle-forming edges."
+    misconception_tag: dsu_redundant_union
+    diagnoses_prereq: tree_basics
+
+  - id: disjoint_set_union-q07
+    type: code_output
+    difficulty: 2
+    prompt: "What does this program print?"
+    code: |
+      parent = list(range(5))
+
+      def find(x):
+          while parent[x] != x:
+              x = parent[x]
+          return x
+
+      def union(a, b):
+          ra, rb = find(a), find(b)
+          if ra != rb:
+              parent[rb] = ra
+
+      union(0, 1)
+      union(2, 3)
+      union(1, 3)
+      print(find(3), find(4), parent)
+    answer: "0 4 [0, 0, 0, 2, 4]"
+    explanation: "union(0, 1) sets parent[1] = 0, union(2, 3) sets parent[3] = 2, and union(1, 3) joins the roots 0 and 2 by setting parent[2] = 0. Element 4 stays alone."
+    misconception_tag: dsu_trace
+    diagnoses_prereq: tree_basics
+
+  - id: disjoint_set_union-q08
+    type: short_answer
+    difficulty: 3
+    prompt: "Explain why path compression makes later find operations faster."
+    answer: "During a find, every node on the path from the starting element to the root is re-pointed to the root (or to its grandparent in path halving). The trees become flatter, so the next find on any of those nodes follows a very short path. The cost of a long find is paid once and shared by all later operations, which is the amortised argument."
+    explanation: "A good answer says nodes are re-pointed closer to the root and the one-time cost pays for faster later finds."
+    rubric:
+      key_points:
+        - "nodes on the find path are re-pointed to the root or grandparent"
+        - "the tree becomes flatter"
+        - "the extra work is paid once and speeds up later finds (amortised)"
+      max_score: 1
+      partial_credit: true
+    misconception_tag: path_compression
+    diagnoses_prereq: amortized_analysis

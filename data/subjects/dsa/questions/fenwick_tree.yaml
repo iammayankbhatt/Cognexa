@@ -1,0 +1,107 @@
+concept_id: fenwick_tree
+questions:
+  - id: fenwick_tree-q01
+    type: mcq
+    difficulty: 1
+    prompt: "What is the time complexity of a prefix-sum query and of a point update in a Fenwick tree with n positions?"
+    options:
+      - {id: a, text: "Both O(log n)"}
+      - {id: b, text: "Query O(1), update O(n)", why_wrong: "That is the cost with a plain prefix-sum array."}
+      - {id: c, text: "Both O(n)", why_wrong: "Each operation visits only about log n entries."}
+      - {id: d, text: "Query O(n), update O(1)", why_wrong: "That is a plain array of values."}
+    answer: a
+    explanation: "Each step clears or sets one bit of the index, and an index has about log2 n bits."
+    misconception_tag: fenwick_complexity
+    diagnoses_prereq: prefix_sums
+
+  - id: fenwick_tree-q02
+    type: mcq
+    difficulty: 1
+    prompt: "What is i & -i for i = 12 (binary 1100)?"
+    options:
+      - {id: a, text: "4"}
+      - {id: b, text: "12", why_wrong: "That is i itself, not the lowest set bit."}
+      - {id: c, text: "2", why_wrong: "The lowest set bit of 1100 is the 4s place."}
+      - {id: d, text: "1", why_wrong: "Bit 0 of 12 is zero."}
+    answer: a
+    explanation: "The expression isolates the lowest set bit. For 1100 that bit is worth 4."
+    misconception_tag: lowbit
+    diagnoses_prereq: bit_manipulation
+
+  - id: fenwick_tree-q03
+    type: mcq
+    difficulty: 2
+    prompt: "Which indexes does prefix(7) read in a Fenwick tree?"
+    options:
+      - {id: a, text: "7, 6, 4"}
+      - {id: b, text: "7, 8, 16", why_wrong: "Those are the indexes an update from 7 would write, moving upward."}
+      - {id: c, text: "7, 6, 5, 4, 3, 2, 1", why_wrong: "That would be an O(n) walk; the query clears the lowest bit each step."}
+      - {id: d, text: "7, 3, 1", why_wrong: "That halves the index, which is not the Fenwick rule."}
+    answer: a
+    explanation: "7 = 111, remove the lowest bit to get 110 = 6, then 100 = 4, then 0."
+    misconception_tag: fenwick_query_path
+    diagnoses_prereq: bit_manipulation
+
+  - id: fenwick_tree-q04
+    type: mcq
+    difficulty: 2
+    prompt: "A Fenwick update loop `while i <= n: tree[i] += d; i += i & -i` hangs forever when called with i = 0. Why?"
+    options:
+      - {id: a, text: "0 & -0 is 0, so i never changes"}
+      - {id: b, text: "n is too small", why_wrong: "The problem is the starting index, not n."}
+      - {id: c, text: "The tree is empty", why_wrong: "The loop never reads tree contents when deciding whether to continue, so emptiness is irrelevant."}
+      - {id: d, text: "d is negative", why_wrong: "The sign of the delta does not affect the loop."}
+    answer: a
+    explanation: "lowbit(0) is 0, so i + 0 stays 0 and the condition i <= n holds forever. Fenwick trees need 1-based indexes."
+    misconception_tag: fenwick_zero_index
+    diagnoses_prereq: bit_manipulation
+
+  - id: fenwick_tree-q05
+    type: multi_select
+    difficulty: 3
+    prompt: "Select every true statement about Fenwick trees."
+    options:
+      - {id: a, text: "They store O(n) numbers in a single array."}
+      - {id: b, text: "A range sum can be computed as prefix(r) - prefix(l - 1)."}
+      - {id: c, text: "They directly support range-minimum queries.", why_wrong: "Minimum has no inverse operation, so the subtraction trick fails."}
+      - {id: d, text: "tree[i] always equals the sum of the first i elements.", why_wrong: "It only holds the sum of the block of size lowbit(i) ending at i."}
+    answer: [a, b]
+    explanation: "The structure is compact and relies on subtraction for range sums, which is why it suits invertible operations."
+    misconception_tag: fenwick_properties
+    diagnoses_prereq: prefix_sums
+
+  - id: fenwick_tree-q06
+    type: true_false
+    difficulty: 2
+    prompt: "True or false: in a Fenwick tree, tree[6] stores the sum of positions 5 and 6."
+    answer: true
+    explanation: "lowbit(6) = 2, so tree[6] covers the two positions ending at 6, which are 5 and 6."
+    misconception_tag: fenwick_block_range
+    diagnoses_prereq: bit_manipulation
+
+  - id: fenwick_tree-q07
+    type: code_output
+    difficulty: 2
+    prompt: "What does this program print?"
+    code: |
+      print([i & -i for i in [1, 2, 3, 4, 6, 8, 12]])
+    answer: "[1, 2, 1, 4, 2, 8, 4]"
+    explanation: "The lowest set bit of each number: 1 -> 1, 2 -> 2, 3 (11) -> 1, 4 -> 4, 6 (110) -> 2, 8 -> 8, 12 (1100) -> 4."
+    misconception_tag: lowbit_trace
+    diagnoses_prereq: bit_manipulation
+
+  - id: fenwick_tree-q08
+    type: short_answer
+    difficulty: 3
+    prompt: "Explain how a Fenwick tree uses the binary representation of an index to answer a prefix-sum query in O(log n) steps."
+    answer: "Each entry tree[i] stores the sum of the block of lowbit(i) elements ending at i. To compute prefix(i), add tree[i], then clear the lowest set bit of i (i -= i & -i) to jump to the next block that ends just before the previous one, and repeat until i is 0. Each step removes one set bit, so there are at most log2 n steps."
+    explanation: "A good answer mentions the block that each entry covers and that every step clears a bit."
+    rubric:
+      key_points:
+        - "tree[i] stores the sum of a block of size lowbit(i) ending at i"
+        - "each step clears the lowest set bit to move to the next block"
+        - "the number of set bits is at most log2 n"
+      max_score: 1
+      partial_credit: true
+    misconception_tag: fenwick_mechanism
+    diagnoses_prereq: bit_manipulation

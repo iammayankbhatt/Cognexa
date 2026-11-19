@@ -1,0 +1,121 @@
+concept_id: red_black_tree
+questions:
+  - id: red_black_tree-q01
+    type: mcq
+    difficulty: 1
+    prompt: "Which rule is part of the red-black tree definition?"
+    options:
+      - {id: a, text: "A red node cannot have a red child"}
+      - {id: b, text: "The root must be red", why_wrong: "The root must be black."}
+      - {id: c, text: "Black nodes cannot have black children", why_wrong: "Black nodes can have any colour of child."}
+      - {id: d, text: "All leaves are at the same depth", why_wrong: "That is a perfect tree; red-black trees only balance black counts."}
+    answer: a
+    explanation: "No two red nodes can be adjacent on a path. The root is black and every path has the same number of black nodes."
+    misconception_tag: rb_rules
+    diagnoses_prereq: avl_tree
+
+  - id: red_black_tree-q02
+    type: mcq
+    difficulty: 1
+    prompt: "What is the worst-case time for search in a red-black tree with n nodes?"
+    options:
+      - {id: a, text: "O(log n)"}
+      - {id: b, text: "O(n)", why_wrong: "The colour rules prevent chain-shaped trees."}
+      - {id: c, text: "O(1)", why_wrong: "Search follows a root-to-node path."}
+      - {id: d, text: "O(sqrt n)", why_wrong: "The height is logarithmic, not square-root."}
+    answer: a
+    explanation: "The height is at most 2 log2(n + 1), so every search path has logarithmic length."
+    misconception_tag: rb_search_cost
+    diagnoses_prereq: avl_tree
+
+  - id: red_black_tree-q03
+    type: mcq
+    difficulty: 2
+    prompt: "What colour is a newly inserted node before any repair, and why?"
+    options:
+      - {id: a, text: "Red, because it leaves the black height of every path unchanged"}
+      - {id: b, text: "Black, because the root is black", why_wrong: "A black new node adds one black node to one path and breaks the equal black-count rule."}
+      - {id: c, text: "The same colour as its parent", why_wrong: "A colour copied from the parent could produce either error."}
+      - {id: d, text: "Either, chosen at random", why_wrong: "The algorithm is deterministic."}
+    answer: a
+    explanation: "Adding a red node cannot change the number of black nodes on any path. At worst it creates a red-red violation, which has a local fix."
+    misconception_tag: rb_insert_color
+    diagnoses_prereq: avl_tree
+
+  - id: red_black_tree-q04
+    type: mcq
+    difficulty: 2
+    prompt: "How does the maximum height of a red-black tree compare with that of an AVL tree with the same number of keys?"
+    options:
+      - {id: a, text: "Red-black trees can be up to about 40 percent taller, so AVL trees search slightly faster"}
+      - {id: b, text: "They are always exactly equal", why_wrong: "AVL is balanced more strictly."}
+      - {id: c, text: "Red-black trees are always shorter", why_wrong: "Red-black rules are looser, so the worst case is taller."}
+      - {id: d, text: "Red-black trees have linear height", why_wrong: "Their height is still logarithmic."}
+    answer: a
+    explanation: "AVL height is at most about 1.44 log2 n and red-black height at most 2 log2 n. The looser rule means fewer rotations on update."
+    misconception_tag: rb_vs_avl
+    diagnoses_prereq: avl_tree
+
+  - id: red_black_tree-q05
+    type: multi_select
+    difficulty: 3
+    prompt: "Select every true statement about red-black trees."
+    options:
+      - {id: a, text: "Every path from a node to its null descendants has the same number of black nodes."}
+      - {id: b, text: "The longest root-to-leaf path is at most twice the shortest."}
+      - {id: c, text: "The tree is always perfectly balanced.", why_wrong: "Only the black count per path is equal; the tree can be uneven."}
+      - {id: d, text: "The root may be coloured red.", why_wrong: "The root is always black."}
+    answer: [a, b]
+    explanation: "Equal black height plus no consecutive reds bounds the longest path by twice the shortest."
+    misconception_tag: rb_properties
+    diagnoses_prereq: avl_tree
+
+  - id: red_black_tree-q06
+    type: true_false
+    difficulty: 2
+    prompt: "True or false: red-black trees use rotations to restore their rules after an insertion."
+    answer: true
+    explanation: "Insertion uses recolouring and at most two rotations. These are the same rotations used by AVL trees and preserve the BST ordering."
+    misconception_tag: rb_rotations
+    diagnoses_prereq: avl_tree
+
+  - id: red_black_tree-q07
+    type: code_output
+    difficulty: 2
+    prompt: "What does this program print? (Ignore the colour; it counts how many black nodes lie on the leftmost path.)"
+    code: |
+      class N:
+          def __init__(self, black):
+              self.black, self.left, self.right = black, None, None
+
+      root = N(True)
+      root.left = N(False)
+      root.left.left = N(True)
+      root.right = N(True)
+
+      n, count = root, 0
+      while n is not None:
+          if n.black:
+              count += 1
+          n = n.left
+      print(count)
+    answer: "2"
+    explanation: "The leftmost path visits the root (black), its left child (red) and the grandchild (black), so two black nodes are counted."
+    misconception_tag: rb_black_height
+    diagnoses_prereq: bst
+
+  - id: red_black_tree-q08
+    type: short_answer
+    difficulty: 3
+    prompt: "Explain why the rules of a red-black tree force its height to be O(log n)."
+    answer: "Every path has the same number of black nodes, called the black height b, so the tree contains at least 2^b - 1 nodes and b is at most log2(n + 1). Because a red node cannot have a red child, at most every second node on any path is red, so the longest path has at most 2b nodes. Thus the height is at most 2 log2(n + 1)."
+    explanation: "A good answer uses both the equal black count and the no-two-reds rule."
+    rubric:
+      key_points:
+        - "equal black count on every path gives black height b of at most log2(n + 1)"
+        - "no two consecutive reds means a path has at most twice as many nodes as black nodes"
+        - "so the height is at most about 2 log2(n + 1)"
+      max_score: 1
+      partial_credit: true
+    misconception_tag: rb_height_proof
+    diagnoses_prereq: avl_tree

@@ -1,0 +1,122 @@
+concept_id: level_order_traversal
+questions:
+  - id: level_order_traversal-q01
+    type: mcq
+    difficulty: 1
+    prompt: "Which data structure is used to implement level-order traversal?"
+    options:
+      - {id: a, text: "A queue"}
+      - {id: b, text: "A stack", why_wrong: "A stack gives depth-first order, going deep along one branch first."}
+      - {id: c, text: "A min-heap", why_wrong: "A heap orders by key, not by the order nodes were discovered."}
+      - {id: d, text: "A hash set", why_wrong: "A set has no first-in first-out order."}
+    answer: a
+    explanation: "A queue serves nodes in the order they were added, so all of one level is processed before the next."
+    misconception_tag: queue_vs_stack
+    diagnoses_prereq: queue
+
+  - id: level_order_traversal-q02
+    type: mcq
+    difficulty: 1
+    prompt: "What is the level-order output for a tree with root 1, left child 2 and right child 3, where 2 has a left child 4?"
+    options:
+      - {id: a, text: "1, 2, 3, 4"}
+      - {id: b, text: "1, 2, 4, 3", why_wrong: "That is preorder, which goes deep first."}
+      - {id: c, text: "4, 2, 3, 1", why_wrong: "That is postorder."}
+      - {id: d, text: "4, 2, 1, 3", why_wrong: "That is inorder."}
+    answer: a
+    explanation: "Level order lists depth 0 (1), depth 1 (2, 3) and then depth 2 (4)."
+    misconception_tag: level_vs_dfs_orders
+    diagnoses_prereq: binary_tree
+
+  - id: level_order_traversal-q03
+    type: mcq
+    difficulty: 2
+    prompt: "A level-order function uses a Python list and calls pop(0) to remove from the front. It is correct but becomes very slow on big trees. Why?"
+    options:
+      - {id: a, text: "pop(0) is O(n) because it shifts all remaining items, making the traversal quadratic"}
+      - {id: b, text: "pop(0) gives the wrong order", why_wrong: "The order is correct; only the speed suffers."}
+      - {id: c, text: "Lists cannot hold node objects", why_wrong: "Lists hold any objects."}
+      - {id: d, text: "The recursion depth is too high", why_wrong: "This version is iterative and uses no recursion."}
+    answer: a
+    explanation: "Removing the first element of a list shifts everything left. A collections.deque supports popleft in O(1)."
+    misconception_tag: list_pop_front_cost
+    diagnoses_prereq: queue
+
+  - id: level_order_traversal-q04
+    type: mcq
+    difficulty: 2
+    prompt: "A student's level-order code mixes nodes from different levels in the same inner list. Their loop is `while queue: for _ in range(len(queue)): ...` but they wrote `while len(queue) > 0: node = queue.popleft(); level.append(node.value)` with no inner loop. What is missing?"
+    options:
+      - {id: a, text: "A snapshot of the queue size at the start of each level, used to process exactly that many nodes"}
+      - {id: b, text: "A recursive call for each child", why_wrong: "Level-order is iterative and does not need recursion."}
+      - {id: c, text: "A visited set", why_wrong: "A tree has no cycles, so no visited set is needed."}
+      - {id: d, text: "Sorting the queue before each pop", why_wrong: "Sorting changes the order and is not needed."}
+    answer: a
+    explanation: "Without the per-level count there is no boundary between levels. Capture len(queue) before the level and process that many nodes."
+    misconception_tag: level_boundary
+    diagnoses_prereq: queue
+
+  - id: level_order_traversal-q05
+    type: multi_select
+    difficulty: 2
+    prompt: "Select every true statement about level-order traversal of a binary tree with n nodes."
+    options:
+      - {id: a, text: "It runs in O(n) time."}
+      - {id: b, text: "Its queue holds at most one level of nodes at a time, so extra space is O(maximum width)."}
+      - {id: c, text: "It requires recursion.", why_wrong: "It is naturally iterative with a queue."}
+      - {id: d, text: "It always uses less memory than preorder.", why_wrong: "For a wide tree the queue is larger than a depth-first stack."}
+    answer: [a, b]
+    explanation: "Each node is enqueued and dequeued once. Space follows the widest level, which can be larger than the height."
+    misconception_tag: level_order_complexity
+    diagnoses_prereq: queue
+
+  - id: level_order_traversal-q06
+    type: true_false
+    difficulty: 1
+    prompt: "True or false: replacing the queue with a stack in the level-order algorithm gives a depth-first traversal."
+    answer: true
+    explanation: "A stack returns the most recently added node, so the walk goes deep before wide. The queue is what enforces level by level."
+    misconception_tag: queue_vs_stack
+    diagnoses_prereq: queue
+
+  - id: level_order_traversal-q07
+    type: code_output
+    difficulty: 2
+    prompt: "What does this program print?"
+    code: |
+      from collections import deque
+
+      class Node:
+          def __init__(self, v, l=None, r=None):
+              self.v, self.l, self.r = v, l, r
+
+      t = Node(1, Node(2, Node(4)), Node(3, Node(5), Node(6)))
+      q = deque([t])
+      out = []
+      while q:
+          n = q.popleft()
+          out.append(n.v)
+          for c in (n.l, n.r):
+              if c:
+                  q.append(c)
+      print(out)
+    answer: "[1, 2, 3, 4, 5, 6]"
+    explanation: "Level 0 is 1, level 1 is 2 and 3, and level 2 holds 4 (child of 2) followed by 5 and 6 (children of 3), left to right."
+    misconception_tag: level_order_trace
+    diagnoses_prereq: queue
+
+  - id: level_order_traversal-q08
+    type: short_answer
+    difficulty: 3
+    prompt: "A tree is very wide but shallow. Compare the extra memory used by level-order and by recursive depth-first traversal on it, and explain why."
+    answer: "Level-order keeps an entire level in its queue, so on a wide tree it needs O(w) memory, which can be about n / 2. Recursive depth-first traversal only keeps the current root-to-node path on the call stack, which is O(h) and small for a shallow tree. So depth-first is cheaper here, and the situation reverses for a tall, narrow tree."
+    explanation: "A good answer compares O(width) for the queue against O(height) for the stack."
+    rubric:
+      key_points:
+        - "level-order queue size is the maximum width of a level"
+        - "depth-first stack size is the height"
+        - "so depth-first uses less memory on a wide shallow tree"
+      max_score: 1
+      partial_credit: true
+    misconception_tag: bfs_vs_dfs_space
+    diagnoses_prereq: queue

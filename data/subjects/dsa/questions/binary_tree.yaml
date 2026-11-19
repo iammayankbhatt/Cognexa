@@ -1,0 +1,122 @@
+concept_id: binary_tree
+questions:
+  - id: binary_tree-q01
+    type: mcq
+    difficulty: 1
+    prompt: "How many nodes does a perfect binary tree of height 3 contain (height counted in edges)?"
+    options:
+      - {id: a, text: "15"}
+      - {id: b, text: "8", why_wrong: "8 is the number of leaves at height 3, not all nodes."}
+      - {id: c, text: "7", why_wrong: "7 is the size of a perfect tree of height 2."}
+      - {id: d, text: "16", why_wrong: "A perfect tree has 2^(h+1) - 1 nodes, one fewer than 2^(h+1)."}
+    answer: a
+    explanation: "Levels 0 to 3 hold 1, 2, 4 and 8 nodes, which sum to 15 = 2^4 - 1."
+    misconception_tag: perfect_tree_count
+    diagnoses_prereq: tree_basics
+
+  - id: binary_tree-q02
+    type: mcq
+    difficulty: 1
+    prompt: "In an array-stored complete binary tree (zero-based), where is the parent of the node at index 5?"
+    options:
+      - {id: a, text: "Index 2"}
+      - {id: b, text: "Index 3", why_wrong: "That would be (5 - 1) // 2 + 1, an off-by-one in the formula."}
+      - {id: c, text: "Index 1", why_wrong: "Index 1 is the parent of indexes 3 and 4."}
+      - {id: d, text: "Index 4", why_wrong: "Neighbours in the array are not necessarily parent and child."}
+    answer: a
+    explanation: "The parent of index i is (i - 1) // 2, and (5 - 1) // 2 = 2."
+    misconception_tag: array_parent_index
+    diagnoses_prereq: tree_basics
+
+  - id: binary_tree-q03
+    type: mcq
+    difficulty: 2
+    prompt: "Which description fits a full binary tree?"
+    options:
+      - {id: a, text: "Every node has either 0 or 2 children"}
+      - {id: b, text: "All levels are completely filled", why_wrong: "That describes a perfect tree."}
+      - {id: c, text: "Every level except the last is filled and the last is filled from the left", why_wrong: "That describes a complete tree."}
+      - {id: d, text: "Every node has exactly one child", why_wrong: "That describes a degenerate tree."}
+    answer: a
+    explanation: "Full means no node has exactly one child. Perfect and complete are different, stronger or different conditions."
+    misconception_tag: full_vs_complete
+    diagnoses_prereq: tree_basics
+
+  - id: binary_tree-q04
+    type: mcq
+    difficulty: 2
+    prompt: "A recursive size function crashes with a RecursionError when run on a tree built by inserting the numbers 1 to 100000 in order into a plain binary search tree. What is the most likely cause?"
+    options:
+      - {id: a, text: "The tree is degenerate, so its height is about 100000 and the recursion goes that deep"}
+      - {id: b, text: "Binary trees cannot hold more than 65535 nodes", why_wrong: "There is no such limit on a pointer-based tree."}
+      - {id: c, text: "The size function counts nodes twice", why_wrong: "Double counting gives a wrong number, not a recursion crash."}
+      - {id: d, text: "The tree is perfect", why_wrong: "A perfect tree of that size is only about 17 levels deep."}
+    answer: a
+    explanation: "Inserting sorted values without rebalancing creates a chain. Recursion depth equals tree height, so it exceeds the interpreter's limit."
+    misconception_tag: skewed_recursion_depth
+    diagnoses_prereq: tree_basics
+
+  - id: binary_tree-q05
+    type: multi_select
+    difficulty: 2
+    prompt: "Select every true statement about a binary tree with n nodes."
+    options:
+      - {id: a, text: "Its height is at most n - 1."}
+      - {id: b, text: "Its height is at least floor(log2 n)."}
+      - {id: c, text: "It always has height O(log n).", why_wrong: "A skewed tree has height n - 1."}
+      - {id: d, text: "A node may have up to three children.", why_wrong: "A binary tree node has at most two children."}
+    answer: [a, b]
+    explanation: "Height ranges from floor(log2 n) for a complete tree to n - 1 for a chain. Balance is not guaranteed by the definition."
+    misconception_tag: height_bounds
+    diagnoses_prereq: tree_basics
+
+  - id: binary_tree-q06
+    type: true_false
+    difficulty: 2
+    prompt: "True or false: in a full binary tree, the number of leaves is one more than the number of internal nodes."
+    answer: true
+    explanation: "Each internal node has two children, so with i internal nodes there are 2i + 1 nodes in total and therefore i + 1 leaves."
+    misconception_tag: full_tree_leaf_count
+    diagnoses_prereq: tree_basics
+
+  - id: binary_tree-q07
+    type: code_output
+    difficulty: 2
+    prompt: "What does this program print?"
+    code: |
+      class Node:
+          def __init__(self, v, l=None, r=None):
+              self.v, self.l, self.r = v, l, r
+
+      def height(n):
+          return -1 if n is None else 1 + max(height(n.l), height(n.r))
+
+      def leaves(n):
+          if n is None:
+              return 0
+          if n.l is None and n.r is None:
+              return 1
+          return leaves(n.l) + leaves(n.r)
+
+      t = Node(1, Node(2, Node(4), Node(5)), Node(3, None, Node(6)))
+      print(height(t), leaves(t))
+    answer: "2 3"
+    explanation: "The longest path is 1, 2, 4, which is 2 edges. The leaves are 4, 5 and 6, which makes 3."
+    misconception_tag: binary_tree_trace
+    diagnoses_prereq: tree_basics
+
+  - id: binary_tree-q08
+    type: short_answer
+    difficulty: 3
+    prompt: "Why is an array a good storage layout for a complete binary tree but a poor one for an arbitrary binary tree?"
+    answer: "In a complete tree there are no gaps, so every index from 0 to n - 1 is used and the parent and children can be found with the arithmetic 2i + 1, 2i + 2 and (i - 1) // 2 with no pointers. In an arbitrary tree, missing children leave unused slots, and a skewed tree of n nodes would need about 2^n slots, wasting huge amounts of memory."
+    explanation: "A good answer mentions the index arithmetic and that gaps cause wasted space."
+    rubric:
+      key_points:
+        - "complete trees have no gaps so the array is fully used"
+        - "children and parent are found by index arithmetic"
+        - "arbitrary shapes leave empty slots and waste memory"
+      max_score: 1
+      partial_credit: true
+    misconception_tag: array_layout_tradeoff
+    diagnoses_prereq: tree_basics

@@ -1,0 +1,112 @@
+concept_id: b_tree
+questions:
+  - id: b_tree-q01
+    type: mcq
+    difficulty: 1
+    prompt: "Why are B-trees commonly used for database indexes stored on disk?"
+    options:
+      - {id: a, text: "They are very short, so a search reads few disk blocks"}
+      - {id: b, text: "They need no balancing", why_wrong: "B-trees stay balanced through splits and merges."}
+      - {id: c, text: "They store each key in its own file", why_wrong: "A B-tree node packs many keys into one block."}
+      - {id: d, text: "They only work for numbers", why_wrong: "Any ordered keys can be indexed."}
+    answer: a
+    explanation: "Each node holds many keys and has many children, so the height is small and each level costs one block read."
+    misconception_tag: btree_purpose
+    diagnoses_prereq: bst
+
+  - id: b_tree-q02
+    type: mcq
+    difficulty: 1
+    prompt: "In a B-tree, how many children does an internal node with k keys have?"
+    options:
+      - {id: a, text: "k + 1"}
+      - {id: b, text: "k", why_wrong: "k keys create k + 1 gaps, and each gap needs a child."}
+      - {id: c, text: "k - 1", why_wrong: "That would leave a gap without a child."}
+      - {id: d, text: "2", why_wrong: "That is a binary tree node."}
+    answer: a
+    explanation: "k sorted keys divide the key range into k + 1 intervals, with one child per interval."
+    misconception_tag: btree_child_count
+    diagnoses_prereq: bst
+
+  - id: b_tree-q03
+    type: mcq
+    difficulty: 2
+    prompt: "A B-tree has minimum degree t = 3. What is the maximum number of keys in a node?"
+    options:
+      - {id: a, text: "5"}
+      - {id: b, text: "3", why_wrong: "3 is t, not the maximum key count."}
+      - {id: c, text: "6", why_wrong: "6 is 2t; the maximum number of keys is 2t - 1."}
+      - {id: d, text: "7", why_wrong: "That would be 2t + 1."}
+    answer: a
+    explanation: "A node holds between t - 1 and 2t - 1 keys, so with t = 3 the range is 2 to 5."
+    misconception_tag: btree_min_degree
+    diagnoses_prereq: bst
+
+  - id: b_tree-q04
+    type: mcq
+    difficulty: 2
+    prompt: "A student's B-tree split moves the upper half of the keys to a new node but leaves all the children in the old node. What goes wrong?"
+    options:
+      - {id: a, text: "The new node has keys but no matching children, so searches go to the wrong subtrees"}
+      - {id: b, text: "The tree becomes taller than necessary", why_wrong: "The problem is a mismatch between keys and children, not the height."}
+      - {id: c, text: "The keys are no longer sorted", why_wrong: "Key order within each node is unchanged."}
+      - {id: d, text: "Nothing, the children are found by key anyway", why_wrong: "Children are located by position, not by key."}
+    answer: a
+    explanation: "A node with k keys must have k + 1 children, and they must be the matching half. Moving only the keys breaks that link."
+    misconception_tag: btree_split_children
+    diagnoses_prereq: bst
+
+  - id: b_tree-q05
+    type: multi_select
+    difficulty: 2
+    prompt: "Select every true statement about B-trees."
+    options:
+      - {id: a, text: "All leaves are at the same depth."}
+      - {id: b, text: "The tree gets taller only when the root splits."}
+      - {id: c, text: "Every node must be completely full.", why_wrong: "Nodes need only be at least half full, apart from the root."}
+      - {id: d, text: "They use rotations like AVL trees to stay balanced.", why_wrong: "B-trees balance by splitting and merging nodes."}
+    answer: [a, b]
+    explanation: "Growth at the root keeps every leaf at the same depth. Balance comes from splits and merges."
+    misconception_tag: btree_properties
+    diagnoses_prereq: bst
+
+  - id: b_tree-q06
+    type: true_false
+    difficulty: 1
+    prompt: "True or false: with a large minimum degree, a B-tree storing a billion keys can have a height of only a few levels."
+    answer: true
+    explanation: "The height is O(log_t n). With t in the hundreds, only about four or five levels are needed for a billion keys."
+    misconception_tag: btree_height
+    diagnoses_prereq: bst
+
+  - id: b_tree-q07
+    type: code_output
+    difficulty: 3
+    prompt: "What does this program print? It splits a full node of a B-tree with minimum degree t = 2."
+    code: |
+      t = 2
+      y_keys = [10, 20, 30]
+      median = y_keys[t - 1]
+      right = y_keys[t:]
+      left = y_keys[: t - 1]
+      print(left, median, right)
+    answer: "[10] 20 [30]"
+    explanation: "With t = 2 the median is at index 1, which is 20. The keys before it stay in the left node and the keys after it go to the new right node."
+    misconception_tag: btree_split_trace
+    diagnoses_prereq: bst
+
+  - id: b_tree-q08
+    type: short_answer
+    difficulty: 3
+    prompt: "Why does a B-tree grow in height only at the root, and why does that keep all leaves at the same depth?"
+    answer: "Keys are always inserted into leaves, and full nodes are split by promoting the median key to the parent. Only when the root itself is full does a split create a new root above it. Adding a level on top increases the depth of every leaf by one at the same time, so all leaves remain at the same depth."
+    explanation: "A good answer explains the promotion of the median and that a new root deepens all leaves equally."
+    rubric:
+      key_points:
+        - "full nodes split and promote the median to the parent"
+        - "only a root split creates a new level, above the old root"
+        - "adding a level on top raises all leaf depths equally"
+      max_score: 1
+      partial_credit: true
+    misconception_tag: btree_growth
+    diagnoses_prereq: bst

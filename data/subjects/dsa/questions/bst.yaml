@@ -1,0 +1,126 @@
+concept_id: bst
+questions:
+  - id: bst-q01
+    type: mcq
+    difficulty: 1
+    prompt: "What property must every node of a binary search tree satisfy?"
+    options:
+      - {id: a, text: "All keys in its left subtree are smaller and all keys in its right subtree are larger"}
+      - {id: b, text: "Its left child is smaller and its right child is larger, and nothing more", why_wrong: "The rule covers the entire subtrees, not only the immediate children."}
+      - {id: c, text: "Its key is the largest in the tree", why_wrong: "Only the rightmost node is the largest."}
+      - {id: d, text: "Both children have the same height", why_wrong: "That is a balance condition, not the BST ordering rule."}
+    answer: a
+    explanation: "The ordering rule is about whole subtrees, which is what makes searching by comparison valid."
+    misconception_tag: bst_subtree_rule
+    diagnoses_prereq: binary_tree
+
+  - id: bst-q02
+    type: mcq
+    difficulty: 1
+    prompt: "In a BST, where is the minimum key?"
+    options:
+      - {id: a, text: "At the leftmost node, found by following left children from the root"}
+      - {id: b, text: "At the root", why_wrong: "The root is only the minimum if it has no left child."}
+      - {id: c, text: "At the deepest leaf", why_wrong: "The deepest leaf can be anywhere in the key order."}
+      - {id: d, text: "At the rightmost node", why_wrong: "The rightmost node holds the maximum."}
+    answer: a
+    explanation: "Smaller keys always go left, so following left references ends at the smallest key."
+    misconception_tag: bst_minimum
+    diagnoses_prereq: binary_tree
+
+  - id: bst-q03
+    type: mcq
+    difficulty: 2
+    prompt: "The keys 1, 2, 3, 4, 5 are inserted in this order into an initially empty plain BST. How tall is the resulting tree (edges)?"
+    options:
+      - {id: a, text: "4"}
+      - {id: b, text: "2", why_wrong: "That would be a balanced shape, which a plain BST does not create by itself."}
+      - {id: c, text: "3", why_wrong: "Every key goes to the right of the previous one, giving 4 edges."}
+      - {id: d, text: "5", why_wrong: "Five nodes in a chain have 4 edges."}
+    answer: a
+    explanation: "Each new key is larger than all existing keys, so it is attached as the right child of the last node. The result is a chain of height 4."
+    misconception_tag: bst_degenerate
+    diagnoses_prereq: binary_tree
+
+  - id: bst-q04
+    type: mcq
+    difficulty: 2
+    prompt: "To delete a node with two children from a BST, which replacement keeps the ordering valid?"
+    options:
+      - {id: a, text: "The inorder successor (minimum of the right subtree) or the inorder predecessor"}
+      - {id: b, text: "Its left child", why_wrong: "Promoting the left child would lose the right subtree or break the ordering."}
+      - {id: c, text: "Any leaf", why_wrong: "An arbitrary leaf may be outside the allowed key range for that position."}
+      - {id: d, text: "The root of the whole tree", why_wrong: "The root is generally not between the left and right subtree keys of this node."}
+    answer: a
+    explanation: "The successor is the smallest key larger than the deleted key, so it fits between the left and right subtrees."
+    misconception_tag: bst_delete_two_children
+    diagnoses_prereq: binary_tree
+
+  - id: bst-q05
+    type: multi_select
+    difficulty: 3
+    prompt: "Select every true statement about binary search trees."
+    options:
+      - {id: a, text: "Search takes O(h) time where h is the height."}
+      - {id: b, text: "Inorder traversal visits the keys in sorted order."}
+      - {id: c, text: "Search is always O(log n).", why_wrong: "A skewed tree has height n - 1, so search is O(n) in the worst case."}
+      - {id: d, text: "A node's right child being larger than the node guarantees the BST property.", why_wrong: "The right subtree as a whole must be larger, and so must everything below the left subtree stay smaller."}
+    answer: [a, b]
+    explanation: "Cost follows height, which is only logarithmic when the tree is balanced. Sorted output is a key property of inorder on a valid BST."
+    misconception_tag: bst_facts
+    diagnoses_prereq: binary_search
+
+  - id: bst-q06
+    type: true_false
+    difficulty: 2
+    prompt: "True or false: a tree where every node is larger than its left child and smaller than its right child is always a valid binary search tree."
+    answer: false
+    explanation: "A deeper node can violate the rule. For example, a right child's left child can be smaller than the root, which makes the tree invalid even though every parent-child pair looks correct."
+    misconception_tag: bst_local_check
+    diagnoses_prereq: binary_tree
+
+  - id: bst-q07
+    type: code_output
+    difficulty: 2
+    prompt: "What does this program print?"
+    code: |
+      class Node:
+          def __init__(self, k):
+              self.k, self.l, self.r = k, None, None
+
+      def insert(n, k):
+          if n is None:
+              return Node(k)
+          if k < n.k:
+              n.l = insert(n.l, k)
+          else:
+              n.r = insert(n.r, k)
+          return n
+
+      def inorder(n):
+          return inorder(n.l) + [n.k] + inorder(n.r) if n else []
+
+      root = None
+      for k in [5, 2, 8, 1, 9, 3]:
+          root = insert(root, k)
+      print(inorder(root), root.l.r.k)
+    answer: "[1, 2, 3, 5, 8, 9] 3"
+    explanation: "Inorder of a BST is sorted. Key 3 is less than 5 and greater than 2, so it is the right child of 2, which is root.l.r."
+    misconception_tag: bst_insert_trace
+    diagnoses_prereq: binary_tree
+
+  - id: bst-q08
+    type: short_answer
+    difficulty: 3
+    prompt: "Why can a plain binary search tree have O(n) search time, and what is the cure?"
+    answer: "Search follows one root-to-node path, so it costs O(h). A plain BST does not control its shape, and inserting keys in sorted order produces a chain with height n - 1, so the path is O(n) long. The cure is a self-balancing tree such as an AVL or red-black tree, which rebalances with rotations to keep the height O(log n)."
+    explanation: "A good answer connects the cost to height, names the chain case and mentions balancing."
+    rubric:
+      key_points:
+        - "search cost is proportional to the height"
+        - "sorted insertions create a chain of height n - 1"
+        - "self-balancing trees keep height O(log n)"
+      max_score: 1
+      partial_credit: true
+    misconception_tag: bst_worst_case
+    diagnoses_prereq: binary_search
