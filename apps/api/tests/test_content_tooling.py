@@ -429,3 +429,17 @@ def test_cpp_compile_errors_are_reported(tmp_path: Path, monkeypatch: pytest.Mon
     assert (
         results["top_1.cpp"].status == "failed" and "compile error" in results["top_1.cpp"].detail
     )
+
+
+def test_stray_self_correction_text_is_rejected(subject: Path) -> None:
+    note = subject / "content" / "mid.md"
+    note.write_text(
+        note_text("mid").replace("word word", "wait, that is wrong word", 1), encoding="utf-8"
+    )
+    assert "unfinished or self-correcting text" in errors()
+    note.write_text(note_text("mid"), encoding="utf-8")
+    assert errors() == ""
+    data = valid_questions("mid", "base")
+    data["questions"][0]["explanation"] = "Hmm, let me check the code again before answering this."
+    write_questions(subject, "mid", data)
+    assert "mid-q01: contains unfinished or self-correcting text" in errors()

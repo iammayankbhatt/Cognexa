@@ -37,6 +37,21 @@ from app.graph.models import ConceptDef
 
 STUDY_SET_SIZE = 20
 
+# Phrases that signal an unfinished thought or self-correction left in authored text.
+_NOT_LETTER_BEFORE = "(?<![A-Za-z])"
+_NOT_LETTER_AFTER = "(?![A-Za-z])"
+STRAY_PHRASES = re.compile(
+    _NOT_LETTER_BEFORE
+    + "(wait[,.!]|hmm+|oops|let me (re)?check|checking the code|on second thought)"
+    + _NOT_LETTER_AFTER,
+    re.IGNORECASE,
+)
+
+
+def find_stray_phrase(text: str) -> str | None:
+    m = STRAY_PHRASES.search(text)
+    return m.group(0) if m else None
+
 
 @dataclass
 class ConceptRow:
@@ -134,6 +149,10 @@ def _check_note(
     elif row.words < 600:
         rep.warnings.append(f"{c.id}: {row.words} words (target 600-1200)")
 
+    stray = find_stray_phrase(path.read_text(encoding="utf-8"))
+    if stray:
+        err(f"contains unfinished or self-correcting text ('{stray}')")
+
     sec = {s.kind: s.text for s in note.sections}
     for kind, text in sec.items():
         if len(text.strip()) < 20:
@@ -190,6 +209,9 @@ def _check_questions(
     if len({q.difficulty for q in qf.questions}) < 2:
         rep.errors.append(f"{c.id}: questions must span at least 2 difficulty levels")
     for q in qf.questions:
+        stray = find_stray_phrase(f"{q.prompt} {q.explanation} {q.answer}")
+        if stray:
+            rep.errors.append(f"{q.id}: contains unfinished or self-correcting text ('{stray}')")
         if not q.id.startswith(f"{c.id}-q"):
             rep.errors.append(f"{q.id}: id must start with '{c.id}-q'")
         if q.id in seen_ids:
