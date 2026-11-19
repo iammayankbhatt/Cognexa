@@ -1,0 +1,111 @@
+concept_id: prefix_sums
+questions:
+  - id: prefix_sums-q01
+    type: mcq
+    difficulty: 1
+    prompt: "With prefix = [0, 3, 4, 8, 9, 14] built from [3, 1, 4, 1, 5], what is the sum of the elements at indexes 1 through 3?"
+    options:
+      - {id: a, text: "6"}
+      - {id: b, text: "9", why_wrong: "That is prefix[4]; the earlier prefix value must still be subtracted."}
+      - {id: c, text: "8", why_wrong: "That is prefix[3], the sum of indexes 0 through 2."}
+      - {id: d, text: "5", why_wrong: "That is the sum 4 + 1 (indexes 2 and 3 only)."}
+    answer: a
+    explanation: "prefix[4] - prefix[1] = 9 - 3 = 6, which is 1 + 4 + 1."
+    misconception_tag: range_sum_formula
+    diagnoses_prereq: arrays
+
+  - id: prefix_sums-q02
+    type: mcq
+    difficulty: 1
+    prompt: "Using the same prefix = [0, 3, 4, 8, 9, 14], what is the sum of the whole array?"
+    options:
+      - {id: a, text: "14"}
+      - {id: b, text: "9", why_wrong: "prefix[4] covers only the first four elements."}
+      - {id: c, text: "0", why_wrong: "prefix[0] is the empty prefix, not the total."}
+      - {id: d, text: "17", why_wrong: "That adds prefix values together, which has no meaning here."}
+    answer: a
+    explanation: "The total is prefix[5] - prefix[0] = 14 - 0 = 14."
+    misconception_tag: range_sum_formula
+    diagnoses_prereq: arrays
+
+  - id: prefix_sums-q03
+    type: mcq
+    difficulty: 2
+    prompt: "A program answers q range-sum queries on an array of n numbers that never changes. Which approach is fastest overall?"
+    options:
+      - {id: a, text: "Build a prefix sum array once, then answer each query in O(1)"}
+      - {id: b, text: "Loop over each query's range and add the elements", why_wrong: "That costs O(n) per query, O(n * q) overall."}
+      - {id: c, text: "Sort the array first", why_wrong: "Sorting destroys positions and does not help range sums."}
+      - {id: d, text: "Use binary search for each query", why_wrong: "Binary search finds values, it does not sum ranges."}
+    answer: a
+    explanation: "O(n) preprocessing plus O(1) per query gives O(n + q) total."
+    misconception_tag: when_to_use_prefix
+    diagnoses_prereq: arrays
+
+  - id: prefix_sums-q04
+    type: mcq
+    difficulty: 2
+    prompt: "Counting subarrays with sum k using a hash map of prefix counts must start with {0: 1}. Why?"
+    options:
+      - {id: a, text: "So that subarrays starting at index 0 are counted via the empty prefix"}
+      - {id: b, text: "To avoid division by zero", why_wrong: "No division is involved."}
+      - {id: c, text: "To make the map non-empty for Python", why_wrong: "An empty dictionary works fine; the seed is needed for correctness."}
+      - {id: d, text: "It is optional and only speeds things up", why_wrong: "Without it, subarrays beginning at index 0 are missed."}
+    answer: a
+    explanation: "A subarray from index 0 to r has sum k when prefix[r + 1] - 0 = k, which needs the empty prefix recorded once."
+    misconception_tag: empty_prefix_seed
+    diagnoses_prereq: arrays
+
+  - id: prefix_sums-q05
+    type: multi_select
+    difficulty: 2
+    prompt: "Select every true statement about prefix sums."
+    options:
+      - {id: a, text: "Building the array takes O(n) time."}
+      - {id: b, text: "Each range-sum query then takes O(1) time."}
+      - {id: c, text: "Updating one element is O(1), because only that prefix changes.", why_wrong: "All later prefix values change too, so an update costs O(n)."}
+      - {id: d, text: "The method cannot handle negative numbers.", why_wrong: "Prefix sums work with negative values; it is the sliding window that struggles with them."}
+    answer: [a, b]
+    explanation: "Linear build and constant-time queries are the point. Updates are costly and negatives are fine."
+    misconception_tag: prefix_facts
+    diagnoses_prereq: null
+
+  - id: prefix_sums-q06
+    type: true_false
+    difficulty: 1
+    prompt: "True or false: a prefix sum array for n elements normally has n + 1 entries when it starts with a leading zero."
+    answer: true
+    explanation: "The extra leading zero (the empty prefix) removes special cases for ranges that start at index 0."
+    misconception_tag: leading_zero
+    diagnoses_prereq: arrays
+
+  - id: prefix_sums-q07
+    type: code_output
+    difficulty: 2
+    prompt: "What does this program print?"
+    code: |
+      values = [3, 1, 4, 1, 5]
+      prefix = [0]
+      for v in values:
+          prefix.append(prefix[-1] + v)
+      print(prefix, prefix[4] - prefix[1])
+    answer: "[0, 3, 4, 8, 9, 14] 6"
+    explanation: "The running totals are 3, 4, 8, 9, 14 after the leading zero. prefix[4] - prefix[1] is 9 - 3 = 6."
+    misconception_tag: build_prefix_trace
+    diagnoses_prereq: arrays
+
+  - id: prefix_sums-q08
+    type: short_answer
+    difficulty: 3
+    prompt: "Explain why prefix[r + 1] - prefix[l] gives the sum of a[l..r], and what advantage this has over summing the range directly."
+    answer: "prefix[r + 1] holds the sum of all elements from index 0 through r, and prefix[l] holds the sum of all elements before l. Subtracting removes everything before l and leaves exactly a[l..r]. Each query then takes O(1) instead of O(length of range), which matters when there are many queries."
+    explanation: "Look for the subtraction argument and the constant-time query benefit."
+    rubric:
+      key_points:
+        - "prefix[r+1] is the sum of elements 0 through r"
+        - "subtracting prefix[l] removes the elements before l"
+        - "O(1) per query instead of O(range length)"
+      max_score: 1
+      partial_credit: true
+    misconception_tag: why_subtraction_works
+    diagnoses_prereq: arrays

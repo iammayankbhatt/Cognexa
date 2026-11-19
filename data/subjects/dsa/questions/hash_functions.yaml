@@ -1,0 +1,113 @@
+concept_id: hash_functions
+questions:
+  - id: hash_functions-q01
+    type: mcq
+    difficulty: 1
+    prompt: "What must be true of the hash values of two equal keys?"
+    options:
+      - {id: a, text: "They must be equal"}
+      - {id: b, text: "They must be different", why_wrong: "Equal keys must map to the same position, otherwise lookups would fail."}
+      - {id: c, text: "They must be random each time", why_wrong: "Hash functions are deterministic within a run."}
+      - {id: d, text: "They must be negative", why_wrong: "The sign of a hash value has no bearing on correctness."}
+    answer: a
+    explanation: "A hash function is deterministic: the same key always produces the same hash within a run, so the key can be found again."
+    misconception_tag: determinism
+    diagnoses_prereq: arrays
+
+  - id: hash_functions-q02
+    type: mcq
+    difficulty: 1
+    prompt: "What is a hash collision?"
+    options:
+      - {id: a, text: "Two different keys producing the same hash value (or table index)"}
+      - {id: b, text: "A hash function returning an error", why_wrong: "A collision is about shared values, not errors."}
+      - {id: c, text: "Two equal keys producing different hash values", why_wrong: "That would break correctness; it is not a collision."}
+      - {id: d, text: "A table that has no free slots", why_wrong: "That is a full table, a different concept."}
+    answer: a
+    explanation: "Because there are more possible keys than hash values, different keys can share a value."
+    misconception_tag: collision_definition
+    diagnoses_prereq: arrays
+
+  - id: hash_functions-q03
+    type: mcq
+    difficulty: 2
+    prompt: "A string hash that simply sums the character codes is used in a hash table. What is the main problem?"
+    options:
+      - {id: a, text: "All anagrams of a word collide, causing crowded slots"}
+      - {id: b, text: "It cannot handle strings longer than 10 characters", why_wrong: "Length is not a limitation of summing."}
+      - {id: c, text: "It is too slow to compute", why_wrong: "Summing is very fast; the issue is distribution."}
+      - {id: d, text: "It gives different results on each run", why_wrong: "Summing is deterministic."}
+    answer: a
+    explanation: "Summation ignores character order, so strings that are rearrangements of each other always share the same hash."
+    misconception_tag: bad_string_hash
+    diagnoses_prereq: discrete_math_basics
+
+  - id: hash_functions-q04
+    type: mcq
+    difficulty: 2
+    prompt: "Python raises `TypeError: unhashable type: 'list'` for `{[1, 2]: 'x'}`. What is the reason?"
+    options:
+      - {id: a, text: "Lists are mutable, so their hash could change after being used as a key"}
+      - {id: b, text: "Lists are too long to hash", why_wrong: "Length is not the reason; mutability is."}
+      - {id: c, text: "Dictionary keys must be strings", why_wrong: "Integers, tuples and other immutable values are valid keys too."}
+      - {id: d, text: "Python cannot hash numbers", why_wrong: "Numbers are perfectly hashable."}
+    answer: a
+    explanation: "A key whose hash changes after insertion could never be found again, so Python only allows hashable (immutable) keys."
+    misconception_tag: unhashable_types
+    diagnoses_prereq: arrays
+
+  - id: hash_functions-q05
+    type: multi_select
+    difficulty: 2
+    prompt: "Select every true statement about hash functions."
+    options:
+      - {id: a, text: "A good hash function spreads keys evenly over the table positions."}
+      - {id: b, text: "Collisions cannot be avoided completely when there are more keys than slots."}
+      - {id: c, text: "If a == b, then hash(a) may differ from hash(b).", why_wrong: "Equal keys must have equal hashes, otherwise tables break."}
+      - {id: d, text: "Cryptographic hash functions are the best choice for ordinary hash tables.", why_wrong: "They are much slower; simple fast hashes are used for tables."}
+    answer: [a, b]
+    explanation: "Uniformity and unavoidable collisions are core facts. Equality must imply equal hashes and cryptographic hashes are overkill for tables."
+    misconception_tag: hash_facts
+    diagnoses_prereq: null
+
+  - id: hash_functions-q06
+    type: true_false
+    difficulty: 1
+    prompt: "True or false: Python's built-in string hash values are guaranteed to be the same every time a program runs."
+    answer: false
+    explanation: "String hashing is randomised per process for security, so you must never rely on or store the values."
+    misconception_tag: hash_randomisation
+    diagnoses_prereq: null
+
+  - id: hash_functions-q07
+    type: code_output
+    difficulty: 2
+    prompt: "What does this program print?"
+    code: |
+      def h(text, m):
+          total = 0
+          for ch in text:
+              total = (total * 31 + ord(ch)) % m
+          return total
+
+      print(h("ab", 100), h("ba", 100))
+    answer: "5 35"
+    explanation: "For ab: 97, then 97 * 31 + 98 = 3105, which is 5 mod 100. For ba: 98, then 98 * 31 + 97 = 3135, which is 35 mod 100."
+    misconception_tag: polynomial_hash_trace
+    diagnoses_prereq: discrete_math_basics
+
+  - id: hash_functions-q08
+    type: short_answer
+    difficulty: 3
+    prompt: "Explain why collisions are unavoidable in a hash table and what makes a hash function good despite them."
+    answer: "There are far more possible keys than table positions, so by the pigeonhole principle some different keys must share a hash value or index. A good hash function is deterministic, fast and spreads keys uniformly, so collisions are rare and evenly distributed, keeping lookups close to constant time."
+    explanation: "Look for the counting (pigeonhole) argument and the properties of a good function: deterministic, uniform, fast."
+    rubric:
+      key_points:
+        - "more possible keys than positions, so collisions must occur"
+        - "a good hash is deterministic and fast"
+        - "uniform spread keeps collisions rare and chains short"
+      max_score: 1
+      partial_credit: true
+    misconception_tag: collisions_unavoidable
+    diagnoses_prereq: discrete_math_basics

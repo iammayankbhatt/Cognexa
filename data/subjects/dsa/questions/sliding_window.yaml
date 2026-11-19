@@ -1,0 +1,114 @@
+concept_id: sliding_window
+questions:
+  - id: sliding_window-q01
+    type: mcq
+    difficulty: 1
+    prompt: "A fixed window of size k slides one step to the right. How is its running sum updated?"
+    options:
+      - {id: a, text: "Add the entering element and subtract the leaving element"}
+      - {id: b, text: "Recompute the sum of all k elements", why_wrong: "That works but costs O(k) per step; the sliding window avoids it."}
+      - {id: c, text: "Add the leaving element and subtract the entering one", why_wrong: "The roles are reversed."}
+      - {id: d, text: "Multiply the sum by k", why_wrong: "Sums are not rescaled when the window moves."}
+    answer: a
+    explanation: "Only two elements change: one enters on the right and one leaves on the left, so a constant-time update suffices."
+    misconception_tag: window_update
+    diagnoses_prereq: two_pointers
+
+  - id: sliding_window-q02
+    type: mcq
+    difficulty: 1
+    prompt: "A window covers indexes left through right inclusive. What is its length?"
+    options:
+      - {id: a, text: "right - left", why_wrong: "That counts the gaps, one less than the number of elements."}
+      - {id: b, text: "right - left + 1"}
+      - {id: c, text: "right + left", why_wrong: "Adding indexes does not give a count."}
+      - {id: d, text: "left - right + 1", why_wrong: "That is negative whenever right exceeds left."}
+    answer: b
+    explanation: "A range with inclusive endpoints contains right - left + 1 elements."
+    misconception_tag: window_length
+    diagnoses_prereq: two_pointers
+
+  - id: sliding_window-q03
+    type: mcq
+    difficulty: 2
+    prompt: "Why is the variable-size sliding window scan O(n) even though a while loop sits inside a for loop?"
+    options:
+      - {id: a, text: "Each element enters the window once and leaves at most once"}
+      - {id: b, text: "The inner loop always runs at most once per iteration", why_wrong: "The inner loop can run many times for one outer step."}
+      - {id: c, text: "Python optimises nested loops", why_wrong: "Language optimisation does not change algorithmic complexity."}
+      - {id: d, text: "It is actually O(n squared)", why_wrong: "Pointer moves total at most 2n, which is linear."}
+    answer: a
+    explanation: "Both pointers only move forward, so the total number of pointer moves is bounded by 2n."
+    misconception_tag: amortized_window
+    diagnoses_prereq: two_pointers
+
+  - id: sliding_window-q04
+    type: mcq
+    difficulty: 2
+    prompt: "A variable-size window is used to find the shortest subarray with sum at least a target, but the array contains negative numbers. What happens?"
+    options:
+      - {id: a, text: "The method can give wrong answers, because shrinking the window may increase the sum"}
+      - {id: b, text: "It still works perfectly", why_wrong: "The monotone property fails when negative numbers are present."}
+      - {id: c, text: "It becomes O(n squared) but stays correct", why_wrong: "The problem is correctness, not just speed."}
+      - {id: d, text: "It raises an exception", why_wrong: "Nothing raises an error; the logic quietly gives wrong results."}
+    answer: a
+    explanation: "The technique assumes that removing elements from the left cannot raise the sum, which holds only for non-negative values."
+    misconception_tag: negative_numbers
+    diagnoses_prereq: two_pointers
+
+  - id: sliding_window-q05
+    type: multi_select
+    difficulty: 2
+    prompt: "Select every true statement about the sliding window technique."
+    options:
+      - {id: a, text: "A fixed window of size k avoids recomputing each window's sum from scratch."}
+      - {id: b, text: "A variable window's two pointers only move to the right."}
+      - {id: c, text: "Using sum(values[i:i+k]) in the loop keeps the solution O(n).", why_wrong: "Each slice sum costs O(k), making the total O(n * k)."}
+      - {id: d, text: "The window length equals right - left.", why_wrong: "With inclusive endpoints it is right - left + 1."}
+    answer: [a, b]
+    explanation: "Incremental updates and forward-only pointers are the heart of the method. Recomputing sums and the length formula are classic mistakes."
+    misconception_tag: sliding_window_facts
+    diagnoses_prereq: null
+
+  - id: sliding_window-q06
+    type: true_false
+    difficulty: 1
+    prompt: "True or false: for the longest substring without repeating characters, the window must shrink from the left when the new character already appears inside the window."
+    answer: true
+    explanation: "A repeated character violates the distinctness condition, so the left side advances until the duplicate is outside the window."
+    misconception_tag: shrink_condition
+    diagnoses_prereq: two_pointers
+
+  - id: sliding_window-q07
+    type: code_output
+    difficulty: 2
+    prompt: "What does this program print?"
+    code: |
+      values = [2, 1, 5, 1, 3, 2]
+      k = 3
+      window = sum(values[:k])
+      best = window
+      for i in range(k, len(values)):
+          window += values[i] - values[i - k]
+          best = max(best, window)
+      print(best, window)
+    answer: "9 6"
+    explanation: "The window sums are 8, 7, 9 and 6 as it slides. The best is 9 and the final window [1, 3, 2] sums to 6."
+    misconception_tag: window_trace
+    diagnoses_prereq: two_pointers
+
+  - id: sliding_window-q08
+    type: short_answer
+    difficulty: 3
+    prompt: "Explain how a variable-size sliding window finds the length of the longest substring without repeating characters, and why it runs in linear time."
+    answer: "Expand the right pointer one character at a time, tracking which characters are in the window. When the new character is already in the window, move the left pointer past its earlier occurrence, then update the best length. Each character enters and leaves the window at most once, so the total work is O(n)."
+    explanation: "A full answer covers expanding right, shrinking left on a repeat, updating the best, and the amortized linear bound."
+    rubric:
+      key_points:
+        - "expand right and track characters in the window"
+        - "on a repeated character move left past the earlier occurrence"
+        - "each element enters and leaves once, so O(n)"
+      max_score: 1
+      partial_credit: true
+    misconception_tag: variable_window
+    diagnoses_prereq: two_pointers

@@ -1,0 +1,111 @@
+concept_id: hash_sets_maps
+questions:
+  - id: hash_sets_maps-q01
+    type: mcq
+    difficulty: 1
+    prompt: "What is the expected time of the membership test `x in s` for a Python set s of n items?"
+    options:
+      - {id: a, text: "O(1)"}
+      - {id: b, text: "O(n)", why_wrong: "That is the cost for a list, which must scan its items."}
+      - {id: c, text: "O(log n)", why_wrong: "Sets are hash-based, not tree-based, so no halving is involved."}
+      - {id: d, text: "O(n log n)", why_wrong: "A single membership test never needs sorting."}
+    answer: a
+    explanation: "A set hashes the item to find its slot, so membership is expected constant time."
+    misconception_tag: set_membership_cost
+    diagnoses_prereq: hash_tables
+
+  - id: hash_sets_maps-q02
+    type: mcq
+    difficulty: 1
+    prompt: "What happens when you read a missing key with `d['missing']` on a Python dict?"
+    options:
+      - {id: a, text: "KeyError is raised"}
+      - {id: b, text: "None is returned", why_wrong: "That is what d.get('missing') does."}
+      - {id: c, text: "0 is returned", why_wrong: "No default value is supplied automatically."}
+      - {id: d, text: "The key is created with an empty value", why_wrong: "Plain dicts do not create entries on read; defaultdict does."}
+    answer: a
+    explanation: "Indexing a missing key raises KeyError; use get, setdefault or defaultdict to avoid it."
+    misconception_tag: keyerror
+    diagnoses_prereq: hash_tables
+
+  - id: hash_sets_maps-q03
+    type: mcq
+    difficulty: 2
+    prompt: "A loop runs `for x in data: if x in seen_list: ...` where seen_list is a Python list that grows to n items. What is the best improvement?"
+    options:
+      - {id: a, text: "Use a set instead of a list for seen items, making each test O(1) expected"}
+      - {id: b, text: "Sort the list on every iteration", why_wrong: "Sorting is more expensive and does not make membership constant time."}
+      - {id: c, text: "Use a longer list", why_wrong: "A longer list makes scanning slower."}
+      - {id: d, text: "Call len(seen_list) first", why_wrong: "Checking the length does not speed up membership tests."}
+    answer: a
+    explanation: "List membership scans in O(n), making the loop O(n squared). A set test is O(1) expected, making the loop O(n)."
+    misconception_tag: list_vs_set_membership
+    diagnoses_prereq: hash_tables
+
+  - id: hash_sets_maps-q04
+    type: mcq
+    difficulty: 2
+    prompt: "In the one-pass two-sum with a dictionary, what is stored in the dictionary while scanning?"
+    options:
+      - {id: a, text: "Each earlier value mapped to its index"}
+      - {id: b, text: "Every pair of values", why_wrong: "Storing all pairs would cost O(n squared)."}
+      - {id: c, text: "The sorted array", why_wrong: "Sorting is not needed; hashing replaces it."}
+      - {id: d, text: "Only the target", why_wrong: "The target is a single number that is not stored in the map."}
+    answer: a
+    explanation: "For each x we look up target - x among earlier values; the dictionary maps earlier values to indexes so the answer can be reported."
+    misconception_tag: two_sum_hash_map
+    diagnoses_prereq: hash_tables
+
+  - id: hash_sets_maps-q05
+    type: multi_select
+    difficulty: 2
+    prompt: "Select every true statement about sets and dictionaries in Python."
+    options:
+      - {id: a, text: "Dictionary keys must be hashable."}
+      - {id: b, text: "Changing a dictionary's size while iterating over it raises RuntimeError."}
+      - {id: c, text: "A set stores items in the order they were added and guarantees it.", why_wrong: "Sets give no ordering guarantee."}
+      - {id: d, text: "Lists can be used as dictionary keys.", why_wrong: "Lists are mutable and unhashable, so they raise TypeError."}
+    answer: [a, b]
+    explanation: "Hashability and the iteration restriction are real rules. Sets are unordered and lists cannot be keys."
+    misconception_tag: dict_set_rules
+    diagnoses_prereq: null
+
+  - id: hash_sets_maps-q06
+    type: true_false
+    difficulty: 1
+    prompt: "True or false: in C++, std::map and std::unordered_map both keep their keys in sorted order."
+    answer: false
+    explanation: "std::map is a balanced tree with sorted keys, while std::unordered_map is a hash table with no ordering."
+    misconception_tag: map_vs_unordered_map
+    diagnoses_prereq: null
+
+  - id: hash_sets_maps-q07
+    type: code_output
+    difficulty: 2
+    prompt: "What does this program print?"
+    code: |
+      words = ["a", "b", "a", "c", "a", "b"]
+      counts = {}
+      for w in words:
+          counts[w] = counts.get(w, 0) + 1
+      print(counts, len(set(words)))
+    answer: "{'a': 3, 'b': 2, 'c': 1} 3"
+    explanation: "a appears three times, b twice and c once, and the dictionary keeps insertion order. There are three distinct words."
+    misconception_tag: word_count_trace
+    diagnoses_prereq: hash_tables
+
+  - id: hash_sets_maps-q08
+    type: short_answer
+    difficulty: 3
+    prompt: "Explain how a dictionary can solve the two-sum problem in O(n) time instead of O(n squared)."
+    answer: "Scan the array once. For each value x, check whether target - x is already a key in a dictionary of earlier values (an O(1) expected lookup); if so, report that earlier index and the current one. Otherwise store x with its index. One pass with constant-time lookups gives O(n) time."
+    explanation: "A full answer describes the complement lookup, storing earlier values, and the linear total."
+    rubric:
+      key_points:
+        - "for each x look up target - x among previously seen values"
+        - "store seen values with their indexes in a dictionary"
+        - "O(1) expected lookups in one pass give O(n) overall"
+      max_score: 1
+      partial_credit: true
+    misconception_tag: two_sum_complement
+    diagnoses_prereq: hash_tables

@@ -1,0 +1,111 @@
+concept_id: hash_tables
+questions:
+  - id: hash_tables-q01
+    type: mcq
+    difficulty: 1
+    prompt: "What is the expected time of a lookup in a hash table with a good hash function and a low load factor?"
+    options:
+      - {id: a, text: "O(1)"}
+      - {id: b, text: "O(n)", why_wrong: "That is the worst case when all keys collide."}
+      - {id: c, text: "O(log n)", why_wrong: "Logarithmic time describes balanced trees and binary search, not hashing."}
+      - {id: d, text: "O(n squared)", why_wrong: "Lookup never needs quadratic work."}
+    answer: a
+    explanation: "The hash gives the slot directly and chains or probe runs are short on average."
+    misconception_tag: hash_lookup_cost
+    diagnoses_prereq: hash_functions
+
+  - id: hash_tables-q02
+    type: mcq
+    difficulty: 1
+    prompt: "In separate chaining, what does each slot of the table hold?"
+    options:
+      - {id: a, text: "A list of all pairs whose keys hash to that slot"}
+      - {id: b, text: "Exactly one pair, with collisions rejected", why_wrong: "Chaining accepts collisions by storing several pairs per slot."}
+      - {id: c, text: "The table's load factor", why_wrong: "The load factor is a property of the whole table."}
+      - {id: d, text: "A sorted copy of all keys", why_wrong: "Slots hold only the pairs that hash to them."}
+    answer: a
+    explanation: "Each slot keeps a small collection, often a linked list, of the pairs that collided there."
+    misconception_tag: chaining_slots
+    diagnoses_prereq: singly_linked_list
+
+  - id: hash_tables-q03
+    type: mcq
+    difficulty: 2
+    prompt: "A hash table with 8 slots stores 6 items using chaining. What is its load factor?"
+    options:
+      - {id: a, text: "0.75"}
+      - {id: b, text: "1.33", why_wrong: "That is slots divided by items; the load factor is items divided by slots."}
+      - {id: c, text: "6", why_wrong: "The load factor is a ratio, not the item count."}
+      - {id: d, text: "8", why_wrong: "That is the number of slots."}
+    answer: a
+    explanation: "Load factor = items / slots = 6 / 8 = 0.75."
+    misconception_tag: load_factor
+    diagnoses_prereq: hash_functions
+
+  - id: hash_tables-q04
+    type: mcq
+    difficulty: 2
+    prompt: "With open addressing and linear probing, why must a deleted slot be marked with a tombstone instead of being emptied?"
+    options:
+      - {id: a, text: "Emptying it would break the probe chain, so keys stored later in the chain could no longer be found"}
+      - {id: b, text: "It saves memory", why_wrong: "A tombstone uses the same space as an empty slot."}
+      - {id: c, text: "Tombstones speed up insertion", why_wrong: "They exist for correctness of lookups, not for speed."}
+      - {id: d, text: "Hash tables cannot delete otherwise", why_wrong: "Deletion is possible; the tombstone is how it is done safely."}
+    answer: a
+    explanation: "A lookup stops at the first empty slot. If a deleted slot were emptied, a lookup for a key placed after it would stop too early."
+    misconception_tag: tombstones
+    diagnoses_prereq: hash_functions
+
+  - id: hash_tables-q05
+    type: multi_select
+    difficulty: 2
+    prompt: "Select every true statement about hash tables."
+    options:
+      - {id: a, text: "Resizing changes every key's index, so keys must be reinserted."}
+      - {id: b, text: "In the worst case, when all keys collide, a lookup can take O(n)."}
+      - {id: c, text: "Hash tables keep keys in sorted order.", why_wrong: "They do not maintain sorted order; use a tree for ordered traversal."}
+      - {id: d, text: "A load factor above 1 is impossible with separate chaining.", why_wrong: "Chaining can hold more items than slots; chains just get longer."}
+    answer: [a, b]
+    explanation: "Index depends on the table size, and heavy collisions degrade to linear scans. No ordering is kept and chaining tolerates load factors above 1."
+    misconception_tag: hash_table_facts
+    diagnoses_prereq: null
+
+  - id: hash_tables-q06
+    type: true_false
+    difficulty: 1
+    prompt: "True or false: inserting n items into a hash table that doubles when its load factor is exceeded costs O(1) amortized per insertion."
+    answer: true
+    explanation: "Resizes are rare and double each time, so the total reinsertion work is O(n), the same argument as for dynamic arrays."
+    misconception_tag: amortized_insert
+    diagnoses_prereq: null
+
+  - id: hash_tables-q07
+    type: code_output
+    difficulty: 2
+    prompt: "What does this program print?"
+    code: |
+      m = 4
+      table = [[] for _ in range(m)]
+      for key in [1, 5, 9, 2]:
+          table[key % m].append(key)
+      print(table)
+    answer: "[[], [1, 5, 9], [2], []]"
+    explanation: "1, 5 and 9 all leave remainder 1 when divided by 4, so they share slot 1. 2 goes to slot 2. Slots 0 and 3 stay empty."
+    misconception_tag: chaining_trace
+    diagnoses_prereq: hash_functions
+
+  - id: hash_tables-q08
+    type: short_answer
+    difficulty: 3
+    prompt: "Compare separate chaining with open addressing as collision strategies."
+    answer: "Chaining stores all keys that hash to a slot in a list at that slot, so the table can exceed a load factor of 1 and deletion is simple. Open addressing stores every pair in the array itself and probes for another free slot on a collision; it avoids pointers but needs the load factor kept well below 1, suffers from clustering and needs tombstones for deletion."
+    explanation: "A good answer contrasts storage, load factor limits, clustering and deletion handling."
+    rubric:
+      key_points:
+        - "chaining keeps a list per slot; open addressing probes for another slot in the array"
+        - "open addressing needs low load factor and suffers clustering"
+        - "deletion: simple in chaining, needs tombstones in open addressing"
+      max_score: 1
+      partial_credit: true
+    misconception_tag: collision_strategies
+    diagnoses_prereq: hash_functions

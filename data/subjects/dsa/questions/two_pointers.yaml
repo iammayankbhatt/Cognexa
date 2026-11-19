@@ -1,0 +1,118 @@
+concept_id: two_pointers
+questions:
+  - id: two_pointers-q01
+    type: mcq
+    difficulty: 1
+    prompt: "For a sorted array and a target sum, the left pointer is at the smallest value and the right pointer at the largest. If their sum is greater than the target, which pointer should move?"
+    options:
+      - {id: a, text: "Move the right pointer down to a smaller value"}
+      - {id: b, text: "Move the left pointer up", why_wrong: "That would make the sum larger, moving further from the target."}
+      - {id: c, text: "Move both pointers inward", why_wrong: "Moving both skips possible pairs without justification."}
+      - {id: d, text: "Stop; no pair exists", why_wrong: "A smaller right value may still give the target."}
+    answer: a
+    explanation: "The sum is too big, so a smaller value is needed; the right pointer holds the largest value and moving it down reduces the sum."
+    misconception_tag: pointer_direction
+    diagnoses_prereq: arrays
+
+  - id: two_pointers-q02
+    type: mcq
+    difficulty: 1
+    prompt: "What is the time complexity of two-pointer pair-sum on a sorted array of n elements?"
+    options:
+      - {id: a, text: "O(n)"}
+      - {id: b, text: "O(n squared)", why_wrong: "That is the brute force over all pairs; the pointers avoid it."}
+      - {id: c, text: "O(log n)", why_wrong: "Every element may need to be visited, so it is not logarithmic."}
+      - {id: d, text: "O(1)", why_wrong: "The scan visits up to n positions."}
+    answer: a
+    explanation: "Each pointer moves in one direction and never backtracks, so there are at most n moves."
+    misconception_tag: two_pointer_complexity
+    diagnoses_prereq: arrays
+
+  - id: two_pointers-q03
+    type: mcq
+    difficulty: 2
+    prompt: "A student applies the opposite-end two-pointer pair-sum method to the unsorted array [5, 1, 9, 3] with target 8. What is the risk?"
+    options:
+      - {id: a, text: "Moving a pointer can skip valid pairs, so a correct pair may be missed silently"}
+      - {id: b, text: "The program raises an IndexError", why_wrong: "The indexes stay in range; the logic is what fails."}
+      - {id: c, text: "The method becomes O(n squared)", why_wrong: "It still runs in linear time; it is merely incorrect."}
+      - {id: d, text: "There is no risk; sorting is optional", why_wrong: "Sorted order is exactly what justifies discarding candidates."}
+    answer: a
+    explanation: "Without sorted order a larger or smaller sum does not tell you which pointer to move, so valid pairs (here 5 and 3) can be skipped."
+    misconception_tag: needs_sorted
+    diagnoses_prereq: arrays
+
+  - id: two_pointers-q04
+    type: mcq
+    difficulty: 2
+    prompt: "In the same-direction method for removing duplicates from a sorted array in place, what does the slow pointer represent?"
+    options:
+      - {id: a, text: "The position of the last unique value written so far"}
+      - {id: b, text: "The next element to be read", why_wrong: "That is the fast pointer."}
+      - {id: c, text: "The total count of duplicates", why_wrong: "It indexes the unique prefix, not a count of duplicates."}
+      - {id: d, text: "The middle of the array", why_wrong: "It has nothing to do with the middle."}
+    answer: a
+    explanation: "slow marks the end of the unique prefix; fast scans ahead, and each new value is copied to slow + 1."
+    misconception_tag: slow_fast_pointers
+    diagnoses_prereq: arrays
+
+  - id: two_pointers-q05
+    type: multi_select
+    difficulty: 2
+    prompt: "Select every true statement about the two pointers technique."
+    options:
+      - {id: a, text: "It often replaces a nested loop with a single linear pass."}
+      - {id: b, text: "It usually needs O(1) extra space."}
+      - {id: c, text: "It works on any array regardless of order for pair-sum problems.", why_wrong: "Opposite-end pair-sum requires a sorted array."}
+      - {id: d, text: "Both pointers must always move in every iteration.", why_wrong: "Usually only one pointer moves per step, chosen by a rule."}
+    answer: [a, b]
+    explanation: "A single scan with two indexes gives linear time and constant space. The sortedness requirement and single-pointer moves are common details."
+    misconception_tag: two_pointer_facts
+    diagnoses_prereq: null
+
+  - id: two_pointers-q06
+    type: true_false
+    difficulty: 1
+    prompt: "True or false: using the loop condition `left <= right` in pair-sum would allow an element to be paired with itself."
+    answer: true
+    explanation: "When left equals right the same index is used twice, so the condition must be left < right."
+    misconception_tag: loop_condition
+    diagnoses_prereq: arrays
+
+  - id: two_pointers-q07
+    type: code_output
+    difficulty: 2
+    prompt: "What does this program print?"
+    code: |
+      values = [1, 2, 4, 7, 11, 15]
+      left, right = 0, len(values) - 1
+      target = 15
+      while left < right:
+          s = values[left] + values[right]
+          if s == target:
+              break
+          if s < target:
+              left += 1
+          else:
+              right -= 1
+      print(left, right)
+    answer: "2 4"
+    explanation: "1 + 15 = 16 is too big so right moves to 4. 1 + 11 = 12 and 2 + 11 = 13 are too small so left moves to 2. Then 4 + 11 = 15 matches at indexes 2 and 4."
+    misconception_tag: pair_sum_trace
+    diagnoses_prereq: arrays
+
+  - id: two_pointers-q08
+    type: short_answer
+    difficulty: 3
+    prompt: "Explain why moving the left pointer up when the pair sum is too small cannot cause a valid pair to be missed in a sorted array."
+    answer: "The right pointer holds the largest remaining value, so the current left value paired with any remaining right value gives a sum no bigger than the current one, which is already too small. Therefore the current left element cannot be part of any answer among the remaining candidates and can be safely discarded."
+    explanation: "A good answer uses sortedness to show that the current left element can only produce sums that are too small."
+    rubric:
+      key_points:
+        - "the array is sorted so the right pointer is the largest remaining value"
+        - "the left value paired with any remaining right value is too small"
+        - "so the left element can be discarded safely"
+      max_score: 1
+      partial_credit: true
+    misconception_tag: discard_argument
+    diagnoses_prereq: arrays

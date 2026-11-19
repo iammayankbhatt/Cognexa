@@ -1,0 +1,119 @@
+concept_id: binary_search
+questions:
+  - id: binary_search-q01
+    type: mcq
+    difficulty: 1
+    prompt: "What must be true about an array before binary search can be applied?"
+    options:
+      - {id: a, text: "It must be sorted"}
+      - {id: b, text: "It must contain no duplicates", why_wrong: "Duplicates are allowed; they only affect which match is found."}
+      - {id: c, text: "It must have an even length", why_wrong: "Any length works."}
+      - {id: d, text: "It must contain only positive numbers", why_wrong: "The sign of values is irrelevant; the order is what matters."}
+    answer: a
+    explanation: "Binary search discards half the range based on a comparison with the middle, which is only valid when the data is sorted."
+    misconception_tag: sorted_precondition
+    diagnoses_prereq: arrays
+
+  - id: binary_search-q02
+    type: mcq
+    difficulty: 1
+    prompt: "About how many comparisons does binary search need in the worst case for 1,024 sorted elements?"
+    options:
+      - {id: a, text: "1,024", why_wrong: "That would be linear search."}
+      - {id: b, text: "512", why_wrong: "Binary search discards half of the range each step, so far fewer comparisons are needed."}
+      - {id: c, text: "About 10 or 11"}
+      - {id: d, text: "32", why_wrong: "log2 of 1,024 is 10, not 32."}
+    answer: c
+    explanation: "1,024 equals 2 to the power 10, so ten halvings (plus one final check) suffice."
+    misconception_tag: logarithmic_steps
+    diagnoses_prereq: time_complexity
+
+  - id: binary_search-q03
+    type: mcq
+    difficulty: 2
+    prompt: "A binary search with `while low <= high` sets `low = mid` when values[mid] < target. What goes wrong?"
+    options:
+      - {id: a, text: "It can loop forever, because low may not advance when low and mid are equal"}
+      - {id: b, text: "It always returns -1", why_wrong: "The loop may never end, so it does not return at all."}
+      - {id: c, text: "It sorts the array", why_wrong: "Binary search never modifies the array."}
+      - {id: d, text: "Nothing; low = mid is the correct update", why_wrong: "mid has already been compared, so the range must move past it with mid + 1."}
+    answer: a
+    explanation: "When low equals mid the range does not shrink. Using mid + 1 guarantees progress."
+    misconception_tag: infinite_loop_update
+    diagnoses_prereq: control_flow
+
+  - id: binary_search-q04
+    type: mcq
+    difficulty: 2
+    prompt: "A program applies binary search to an unsorted list. What happens?"
+    options:
+      - {id: a, text: "It may return wrong answers, even though it runs without raising an error"}
+      - {id: b, text: "It automatically sorts the list first", why_wrong: "The algorithm never sorts."}
+      - {id: c, text: "It raises an error immediately", why_wrong: "There is no check for sortedness, so no error is raised."}
+      - {id: d, text: "It becomes linear search", why_wrong: "It still discards halves based on the middle, which is invalid for unsorted data."}
+    answer: a
+    explanation: "Without sorted order the discarded half may contain the target, so results are unreliable."
+    misconception_tag: unsorted_input
+    diagnoses_prereq: arrays
+
+  - id: binary_search-q05
+    type: multi_select
+    difficulty: 2
+    prompt: "Select every true statement about binary search."
+    options:
+      - {id: a, text: "Its worst-case time is O(log n)."}
+      - {id: b, text: "It needs constant-time access by index, so it suits arrays rather than linked lists."}
+      - {id: c, text: "It always returns the first occurrence of a duplicated value.", why_wrong: "Plain binary search may return any matching index; a lower bound variant finds the first."}
+      - {id: d, text: "It works correctly on any list, sorted or not.", why_wrong: "The data must be sorted."}
+    answer: [a, b]
+    explanation: "Halving gives logarithmic time and random access is essential. Duplicates need a lower bound and sorting is required."
+    misconception_tag: binary_search_facts
+    diagnoses_prereq: null
+
+  - id: binary_search-q06
+    type: true_false
+    difficulty: 1
+    prompt: "True or false: writing mid = low + (high - low) // 2 avoids integer overflow that (low + high) // 2 could cause in languages with fixed-width integers."
+    answer: true
+    explanation: "low + high can exceed the integer maximum for huge arrays, while high - low never does."
+    misconception_tag: overflow_in_mid
+    diagnoses_prereq: variables_memory
+
+  - id: binary_search-q07
+    type: code_output
+    difficulty: 2
+    prompt: "What does this program print?"
+    code: |
+      values = [2, 5, 8, 12, 16, 23, 38]
+      low, high, steps = 0, len(values) - 1, 0
+      target = 23
+      while low <= high:
+          mid = (low + high) // 2
+          steps += 1
+          if values[mid] == target:
+              break
+          if values[mid] < target:
+              low = mid + 1
+          else:
+              high = mid - 1
+      print(mid, steps)
+    answer: "5 2"
+    explanation: "Step 1: mid = 3 holds 12, which is smaller than 23, so low becomes 4. Step 2: mid = (4 + 6) // 2 = 5 holds 23, a match. The program prints mid = 5 after 2 steps."
+    misconception_tag: binary_search_trace
+    diagnoses_prereq: arrays
+
+  - id: binary_search-q08
+    type: short_answer
+    difficulty: 3
+    prompt: "Explain why binary search takes O(log n) time and why it cannot be used efficiently on a linked list."
+    answer: "Each comparison discards half of the remaining range, so after k steps about n / 2^k elements remain and the search ends after about log2 n steps. It needs constant-time access to the middle element; a linked list must walk node by node to reach the middle, costing O(n) per step, which removes the advantage."
+    explanation: "Look for the halving argument and the need for random access."
+    rubric:
+      key_points:
+        - "each step halves the remaining range, giving about log2 n steps"
+        - "needs O(1) access to the middle element (random access)"
+        - "linked lists reach the middle in O(n), losing the benefit"
+      max_score: 1
+      partial_credit: true
+    misconception_tag: why_logarithmic
+    diagnoses_prereq: time_complexity

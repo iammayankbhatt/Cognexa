@@ -29,15 +29,15 @@
 - [x] 3.2 Cluster: foundations (11 concepts)
 - [x] 3.3 Cluster: complexity (5)
 - [x] 3.4 Cluster: linear (9)
-- [ ] 3.5 Cluster: searching_hashing (8)
+- [x] 3.5 Cluster: searching_hashing (8)
 - [ ] 3.6 Cluster: sorting (7)
 - [ ] 3.7 Cluster: trees (13)
 - [ ] 3.8 Cluster: graphs (10) and paradigms (6)
 - [ ] 3.9 Eval test set (80 items) + study sets, chunk seeding, `seed_vectors.py`, wrap-up
 
-**Next action:** 3.5 searching_hashing cluster (8 concepts)
+**Next action:** 3.6 sorting cluster (7 concepts)
 
-**Last cluster note:** linear 9/9 written; 25/69 concepts total; verifier caught a wrong answer key in stack-q07 (replaced) and YAML comma typos
+**Last cluster note:** searching_hashing 8/8 written; 33/69 concepts total; verifier caught a wrong key in binary_search-q07; stray self-correction text found in a note and now rejected by the validator
 **Blockers:** none
 **Human Action Needed:** see the table below (grows as phases complete)
 
@@ -577,14 +577,14 @@ _(Claude Code: keep this in sync with both .env.example files.)_
 | linear | priority_queue_adt | notes + questions | ☐ | ☐ |  |  |
 | linear | expression_evaluation | notes + questions | ☐ | ☐ |  |  |
 | linear | monotonic_stack | notes + questions | ☐ | ☐ |  |  |
-| searching_hashing | linear_search | pending | ☐ | ☐ |  |  |
-| searching_hashing | binary_search | pending | ☐ | ☐ |  |  |
-| searching_hashing | two_pointers | pending | ☐ | ☐ |  |  |
-| searching_hashing | sliding_window | pending | ☐ | ☐ |  |  |
-| searching_hashing | prefix_sums | pending | ☐ | ☐ |  |  |
-| searching_hashing | hash_functions | pending | ☐ | ☐ |  |  |
-| searching_hashing | hash_tables | pending | ☐ | ☐ |  |  |
-| searching_hashing | hash_sets_maps | pending | ☐ | ☐ |  |  |
+| searching_hashing | linear_search | notes + questions | ☐ | ☐ |  |  |
+| searching_hashing | binary_search | notes + questions | ☐ | ☐ |  |  |
+| searching_hashing | two_pointers | notes + questions | ☐ | ☐ |  |  |
+| searching_hashing | sliding_window | notes + questions | ☐ | ☐ |  |  |
+| searching_hashing | prefix_sums | notes + questions | ☐ | ☐ |  |  |
+| searching_hashing | hash_functions | notes + questions | ☐ | ☐ |  |  |
+| searching_hashing | hash_tables | notes + questions | ☐ | ☐ |  |  |
+| searching_hashing | hash_sets_maps | notes + questions | ☐ | ☐ |  |  |
 | sorting | elementary_sorts | pending | ☐ | ☐ |  |  |
 | sorting | divide_and_conquer | pending | ☐ | ☐ |  |  |
 | sorting | merge_sort | pending | ☐ | ☐ |  |  |
