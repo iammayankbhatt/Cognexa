@@ -86,6 +86,24 @@ describe("api()", () => {
     });
   });
 
+  it("keeps error details (e.g. the quota reset time)", async () => {
+    fetchMock.mockResolvedValueOnce(
+      json(429, {
+        error: {
+          code: "QUOTA_EXCEEDED",
+          message: "limit",
+          request_id: "r9",
+          details: { reset_at: "2026-11-21T00:00:00+00:00", retry_after_s: 7200 },
+        },
+      }),
+    );
+    const err = (await api("/admin/llm/check", { method: "POST" }).catch(
+      (e: unknown) => e,
+    )) as ApiError;
+    expect(err.status).toBe(429);
+    expect(err.details).toEqual({ reset_at: "2026-11-21T00:00:00+00:00", retry_after_s: 7200 });
+  });
+
   it("handles non-JSON error bodies and network failures", async () => {
     fetchMock.mockResolvedValueOnce(
       new Response("oops", { status: 502, statusText: "Bad Gateway" }),

@@ -1,4 +1,5 @@
 import {
+  BarChart3,
   BookOpen,
   ClipboardCheck,
   LayoutDashboard,
@@ -7,6 +8,7 @@ import {
   RefreshCcw,
   Settings,
   Shield,
+  SlidersHorizontal,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -30,4 +32,6 @@ export const MAIN_NAV: NavItem[] = [
 export const ADMIN_NAV: NavItem[] = [
   { href: "/admin", label: "Overview", icon: Shield },
   { href: "/admin/users", label: "Users", icon: Users },
+  { href: "/admin/usage", label: "AI usage", icon: BarChart3 },
+  { href: "/admin/settings", label: "AI settings", icon: SlidersHorizontal },
 ];

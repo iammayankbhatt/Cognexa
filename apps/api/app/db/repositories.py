@@ -25,6 +25,20 @@ DEFAULT_APP_SETTINGS: dict[str, dict[str, Any]] = {
     },
     "quota.role_multipliers": {"student": 1, "reviewer": 5, "admin": 5},
     "quota.global_daily_cap": {"ai_requests": 1500},
+    "cache": {
+        "enabled": True,
+        "response_ttl_days": 7,
+        "classification_ttl_days": 7,
+        "embedding_ttl_days": 30,
+    },
+    # Runtime feature flags (admins edit them in /admin/settings).
+    "features": {
+        "AGENTIC_MODE": True,
+        "STUDY_MODE": False,
+        "PLAIN_RAG_VISIBLE_TO_STUDENTS": False,
+    },
+    # Notional $/1M tokens, see app/llm/pricing.py. Per-model entries use the env model ids.
+    "llm.pricing": {"default": {"input_per_1m": 0.5, "output_per_1m": 1.5}, "models": {}},
 }
 
 
@@ -125,6 +139,25 @@ class ContentRepository:
 
     def __init__(self, session: AsyncSession) -> None:
         self._s = session
+
+    async def changed_concepts(self, chunks: list[Chunk]) -> set[str]:
+        """Concepts whose stored chunks differ from `chunks` (new, edited or removed chunks).
+        Call before upsert_chunks; used to invalidate cached answers for exactly those concepts."""
+        concept_ids = {c.concept_id for c in chunks}
+        if not concept_ids:
+            return set()
+        stored: dict[str, set[tuple[str, str | None]]] = {}
+        rows = await self._s.execute(
+            select(
+                content_chunks.c.concept_id, content_chunks.c.id, content_chunks.c.content_hash
+            ).where(content_chunks.c.concept_id.in_(concept_ids))
+        )
+        for concept_id, chunk_id, content_hash in rows:
+            stored.setdefault(concept_id, set()).add((chunk_id, content_hash))
+        wanted: dict[str, set[tuple[str, str | None]]] = {}
+        for c in chunks:
+            wanted.setdefault(c.concept_id, set()).add((c.id, c.content_hash))
+        return {cid for cid in concept_ids if stored.get(cid, set()) != wanted.get(cid, set())}
 
     async def upsert_chunks(self, chunks: list[Chunk]) -> int:
         """Insert or update chunks. A chunk whose text changed loses its (now stale) embedding.

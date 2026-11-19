@@ -1,6 +1,7 @@
 """Consistent error responses: {"error": {"code", "message", "request_id"}}."""
 
 import logging
+from typing import Any
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -20,26 +21,51 @@ _HTTP_CODES = {
 
 
 class AppError(Exception):
-    def __init__(self, code: str, message: str, status_code: int = 400) -> None:
+    """An expected error. `details` (optional) is added to the envelope as error.details;
+    `headers` (optional) are sent with the response, e.g. Retry-After on 429."""
+
+    def __init__(
+        self,
+        code: str,
+        message: str,
+        status_code: int = 400,
+        *,
+        details: dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
+    ) -> None:
         super().__init__(message)
         self.code = code
         self.message = message
         self.status_code = status_code
+        self.details = details
+        self.headers = headers
 
 
-def error_response(status_code: int, code: str, message: str) -> JSONResponse:
+def error_response(
+    status_code: int,
+    code: str,
+    message: str,
+    *,
+    details: dict[str, Any] | None = None,
+    headers: dict[str, str] | None = None,
+) -> JSONResponse:
     rid = request_id_ctx.get()
+    error: dict[str, Any] = {"code": code, "message": message, "request_id": rid}
+    if details:
+        error["details"] = details
     return JSONResponse(
         status_code=status_code,
-        content={"error": {"code": code, "message": message, "request_id": rid}},
-        headers={"X-Request-ID": rid},
+        content={"error": error},
+        headers={"X-Request-ID": rid, **(headers or {})},
     )
 
 
 def register_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(AppError)
     async def _app_error(_: Request, exc: AppError) -> JSONResponse:
-        return error_response(exc.status_code, exc.code, exc.message)
+        return error_response(
+            exc.status_code, exc.code, exc.message, details=exc.details, headers=exc.headers
+        )
 
     @app.exception_handler(StarletteHTTPException)
     async def _http_error(_: Request, exc: StarletteHTTPException) -> JSONResponse:

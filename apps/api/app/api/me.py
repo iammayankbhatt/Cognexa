@@ -14,7 +14,10 @@ from app.auth.deps import CurrentUser, ProfileCache, get_current_user
 from app.core.config import Settings, get_settings
 from app.core.errors import AppError
 from app.db.profiles import ProfileRepository
+from app.db.repositories import AppSettingsRepository
 from app.db.session import get_session
+from app.llm.deps import get_usage_guard
+from app.usage.guard import UsageGuard, load_limits
 
 router = APIRouter(tags=["me"])
 
@@ -28,6 +31,32 @@ class Usage(BaseModel):
     tokens_in: int
     tokens_out: int
     daily_quota: int
+
+
+class UsageDay(BaseModel):
+    date: dt.date
+    ai_requests: int
+    tokens_in: int
+    tokens_out: int
+    est_cost_usd: float
+
+
+class UsageToday(UsageDay):
+    remaining: int
+    resets_at: dt.datetime
+
+
+class UsageLimits(BaseModel):
+    daily_ai_requests: int
+    per_minute: int
+    max_input_chars: int
+    max_output_tokens: int
+
+
+class UsageOut(BaseModel):
+    today: UsageToday
+    limits: UsageLimits
+    history: list[UsageDay]
 
 
 class MeOut(BaseModel):
@@ -70,7 +99,8 @@ async def build_me(session: AsyncSession, user: CurrentUser, profile: dict[str, 
     repo = ProfileRepository(session)
     today = _utc_today()
     usage = await repo.usage_today(user.id, today)
-    quota = await repo.daily_quota(str(profile["role"]), profile.get("quota_override"))
+    fresh = CurrentUser(id=user.id, email=user.email, role=str(profile["role"]), profile=profile)
+    quota = (await load_limits(AppSettingsRepository(session), fresh)).daily
     return MeOut(
         id=str(user.id),
         email=user.email,
@@ -88,6 +118,15 @@ async def build_me(session: AsyncSession, user: CurrentUser, profile: dict[str, 
 def _cache(request: Request) -> ProfileCache:
     cache: ProfileCache = request.app.state.profile_cache
     return cache
+
+
+@router.get("/me/usage", response_model=UsageOut)
+async def get_my_usage(
+    user: Annotated[CurrentUser, Depends(get_current_user)],
+    guard: Annotated[UsageGuard, Depends(get_usage_guard)],
+) -> UsageOut:
+    """Today's usage with limits and reset time, plus the last 30 days."""
+    return UsageOut.model_validate(await guard.usage_summary(user, days=30))
 
 
 @router.get("/me", response_model=MeOut)

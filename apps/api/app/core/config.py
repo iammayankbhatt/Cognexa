@@ -46,6 +46,29 @@ class Settings(BaseSettings):
     jwks_cache_ttl_s: int = 600
     profile_cache_ttl_s: float = 30.0
 
+    # LLM providers (app/llm). Provider ids: fake | groq | gemini. Model ids come only from env.
+    llm_primary_provider: str = "fake"
+    llm_primary_model: str = "fake-model"
+    llm_fallback_provider: str | None = "fake"
+    llm_fallback_model: str | None = "fake-model"
+    llm_judge_provider: str = "fake"
+    llm_judge_model: str = "fake-model"
+    groq_api_key: str | None = None
+    gemini_api_key: str | None = None
+    groq_base_url: str = "https://api.groq.com/openai/v1"
+    # Empty = the google-genai SDK default; set "v1beta" if a model/feature needs the beta API.
+    gemini_api_version: str | None = None
+    llm_timeout_s: float = 30.0
+    llm_max_attempts: int = 3  # per provider, including the first try
+    llm_backoff_base_s: float = 0.5
+    llm_backoff_max_s: float = 8.0
+    llm_breaker_threshold: int = 3  # consecutive failed calls before a provider is skipped
+    llm_breaker_cooldown_s: float = 60.0
+
+    # Feature flags (defaults; admins can override them in app_settings at runtime).
+    agentic_mode: bool = True
+    study_mode: bool = False
+
     @field_validator(
         "supabase_url",
         "supabase_service_role_key",
@@ -53,6 +76,11 @@ class Settings(BaseSettings):
         "supabase_jwt_secret",
         "database_url",
         "test_database_url",
+        "groq_api_key",
+        "gemini_api_key",
+        "gemini_api_version",
+        "llm_fallback_provider",
+        "llm_fallback_model",
         mode="after",
     )
     @classmethod

@@ -385,3 +385,20 @@ audit_log = Table(
     Column("details", JSONB),
     _now(),
 )
+
+llm_calls = Table(
+    "llm_calls",
+    metadata,
+    Column("id", BigInteger, primary_key=True, autoincrement=True),
+    Column("user_id", UUID(as_uuid=True), ForeignKey("profiles.id")),
+    _now(),
+    Column("purpose", Text, nullable=False),
+    Column("provider", Text, nullable=False),
+    Column("model", Text, nullable=False),
+    Column("tokens_in", Integer, nullable=False, server_default="0"),
+    Column("tokens_out", Integer, nullable=False, server_default="0"),
+    Column("est_cost_usd", Numeric(12, 6), nullable=False, server_default="0"),
+    Column("latency_ms", Integer, nullable=False, server_default="0"),
+    Column("cached", Boolean, nullable=False, server_default="false"),
+    Column("fallback_used", Boolean, nullable=False, server_default="false"),
+)

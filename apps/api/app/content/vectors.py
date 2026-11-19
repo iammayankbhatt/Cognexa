@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.tables import EMBEDDING_DIM, concepts, content_chunks
 from app.llm.embeddings import EmbeddingProvider
+from app.llm.errors import FatalLLMError
 
 BATCH_SIZE = 32
 MAX_ATTEMPTS = 4
@@ -66,6 +67,8 @@ async def _embed_with_retry(
     for attempt in range(1, MAX_ATTEMPTS + 1):
         try:
             vectors = await provider.embed(texts)
+        except FatalLLMError:
+            raise  # bad key, unknown model, wrong dimension: retrying cannot help
         except Exception:
             if attempt == MAX_ATTEMPTS:
                 raise

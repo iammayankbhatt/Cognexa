@@ -1,13 +1,14 @@
 import { API_URL } from "@/lib/env";
 import { getSupabase } from "@/lib/supabase/client";
 
-/** Shape of every error the backend returns: {error: {code, message, request_id}}. */
+/** Shape of every error the backend returns: {error: {code, message, request_id, details?}}. */
 export class ApiError extends Error {
   constructor(
     public readonly status: number,
     public readonly code: string,
     message: string,
     public readonly requestId?: string,
+    public readonly details?: Record<string, unknown>,
   ) {
     super(message);
     this.name = "ApiError";
@@ -29,7 +30,12 @@ const notify = () => listeners.forEach((l) => l(inflightSlow > 0));
 async function parseError(res: Response): Promise<ApiError> {
   try {
     const body = (await res.json()) as {
-      error?: { code?: string; message?: string; request_id?: string };
+      error?: {
+        code?: string;
+        message?: string;
+        request_id?: string;
+        details?: Record<string, unknown>;
+      };
     };
     const e = body.error;
     if (e)
@@ -38,6 +44,7 @@ async function parseError(res: Response): Promise<ApiError> {
         e.code ?? "http_error",
         e.message ?? res.statusText,
         e.request_id,
+        e.details,
       );
   } catch {
     // not JSON
@@ -130,4 +137,22 @@ export interface Me {
   experience_level: string | null;
   created_at: string | null;
   usage: Usage;
+}
+
+export interface UsageDay {
+  date: string;
+  ai_requests: number;
+  tokens_in: number;
+  tokens_out: number;
+  est_cost_usd: number;
+}
+export interface UsageSummary {
+  today: UsageDay & { remaining: number; resets_at: string };
+  limits: {
+    daily_ai_requests: number;
+    per_minute: number;
+    max_input_chars: number;
+    max_output_tokens: number;
+  };
+  history: UsageDay[];
 }

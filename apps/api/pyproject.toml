@@ -6,6 +6,7 @@ requires-python = ">=3.12,<3.13"
 dependencies = [
     "asyncpg>=0.32.0",
     "fastapi>=0.165.0",
+    "google-genai>=3.6.1",
     "httpx>=0.28.1",
     "neo4j>=6.4.1",
     "pgvector>=0.5.1",

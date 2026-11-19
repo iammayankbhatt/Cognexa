@@ -7,6 +7,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { ME_KEY, useMe } from "@/components/app/me-provider";
+import { UsageCard } from "@/components/app/usage-card";
 import { FormMessage } from "@/components/auth/auth-shell";
 import { PageHeader } from "@/components/shared/page-header";
 import { useTheme } from "@/components/theme/theme-provider";
@@ -227,7 +228,7 @@ export default function SettingsPage() {
   const { data: me, isPending } = useMe();
   return (
     <div className="space-y-6">
-      <PageHeader title="Settings" description="Your profile, appearance and data." />
+      <PageHeader title="Settings" description="Your profile, appearance, AI usage and data." />
       {isPending || !me ? (
         <Skeleton className="h-64 w-full" />
       ) : (
@@ -246,6 +247,7 @@ export default function SettingsPage() {
             </div>
           </section>
           <DataCard />
+          <UsageCard />
         </div>
       )}
     </div>

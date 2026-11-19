@@ -44,6 +44,7 @@ class QuotaOverride(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     daily_ai_requests: int = Field(ge=0, le=10000)
+    per_minute: int | None = Field(default=None, ge=0, le=1000)
 
 
 class UserPatch(BaseModel):
@@ -107,7 +108,7 @@ async def update_user(
     if body.study_group is not None:
         changes["study_group"] = body.study_group
     if body.quota_override is not None:
-        changes["quota_override"] = body.quota_override.model_dump()
+        changes["quota_override"] = body.quota_override.model_dump(exclude_none=True)
     elif body.clear_quota_override:
         changes["quota_override"] = None
     if not changes:

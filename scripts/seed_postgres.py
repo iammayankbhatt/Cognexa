@@ -14,9 +14,10 @@ import asyncio
 import sys
 from urllib.parse import urlparse
 
+from app.cache.repository import CacheRepository
+from app.content.loader import load_chunks, load_questions
 from app.core.config import Settings
 from app.db.engine import engine_from_settings, session_factory
-from app.content.loader import load_chunks, load_questions
 from app.db.repositories import (
     AppSettingsRepository,
     ConceptMirrorRepository,
@@ -51,7 +52,13 @@ async def run(args: argparse.Namespace) -> int:
             _, n_concepts = await ConceptMirrorRepository(session).upsert_from_file(doc)
             inserted = await AppSettingsRepository(session).ensure_defaults()
             content = ContentRepository(session)
-            n_chunks = await content.upsert_chunks(load_chunks(args.subject))
+            chunks = load_chunks(args.subject)
+            changed = await content.changed_concepts(chunks)
+            n_chunks = await content.upsert_chunks(chunks)
+            # Cached answers/classifications built from old content must not be served again.
+            n_invalidated = await CacheRepository(session).invalidate_concepts(
+                changed, ("resp", "cls")
+            )
             n_questions = await content.upsert_questions(
                 [(doc.subject.id, cid, q) for cid, q in load_questions(args.subject)]
             )
@@ -59,7 +66,8 @@ async def run(args: argparse.Namespace) -> int:
         await engine.dispose()
     print(
         f"Seeded Postgres: subject '{doc.subject.id}', {n_concepts} concepts, "
-        f"{inserted} default setting(s) inserted, {n_chunks} chunks, {n_questions} questions"
+        f"{inserted} default setting(s) inserted, {n_chunks} chunks, {n_questions} questions; "
+        f"{len(changed)} concept(s) with changed content, {n_invalidated} cache entries invalidated"
     )
     return 0
 

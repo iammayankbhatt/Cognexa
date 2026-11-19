@@ -77,8 +77,23 @@ def test_provider_factory() -> None:
         Settings(_env_file=None, embedding_provider="fake", embedding_dim=32)
     )
     assert p.dim == 32
-    with pytest.raises(EmbeddingProviderUnavailableError, match="Phase 5"):
-        get_embedding_provider(Settings(_env_file=None, embedding_provider="gemini"))
+    # Phase 5: Gemini is a real provider now, but only with a key.
+    with pytest.raises(EmbeddingProviderUnavailableError, match="GEMINI_API_KEY"):
+        get_embedding_provider(
+            Settings(_env_file=None, embedding_provider="gemini", gemini_api_key=None)
+        )
+    real = get_embedding_provider(
+        Settings(
+            _env_file=None,
+            embedding_provider="gemini",
+            embedding_model="some-embedding-model",
+            embedding_dim=768,
+            gemini_api_key="test-key",
+        )
+    )
+    assert (real.model, real.dim) == ("some-embedding-model", 768)
+    with pytest.raises(EmbeddingProviderUnavailableError, match="unknown"):
+        get_embedding_provider(Settings(_env_file=None, embedding_provider="nope"))
 
 
 # ------------------------------------------------------------------ retry logic (no database)
@@ -111,6 +126,25 @@ async def test_retry_gives_up_after_max_attempts() -> None:
     with pytest.raises(ConnectionError):
         await _embed_with_retry(p, ["a"], no_sleep)
     assert p.calls == 4
+
+
+async def test_fatal_provider_errors_are_not_retried() -> None:
+    from app.llm.errors import FatalLLMError
+
+    class BadKey(FlakyProvider):
+        async def embed(self, texts: list[str]) -> list[list[float]]:
+            self.calls += 1
+            raise FatalLLMError("401 invalid key", status=401)
+
+    sleeps: list[float] = []
+
+    async def record_sleep(s: float) -> None:
+        sleeps.append(s)
+
+    p = BadKey(0)
+    with pytest.raises(FatalLLMError):
+        await _embed_with_retry(p, ["a"], record_sleep)
+    assert p.calls == 1 and sleeps == []
 
 
 async def test_wrong_size_vectors_are_rejected() -> None:

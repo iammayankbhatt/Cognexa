@@ -13,7 +13,7 @@
 **Mode:** autopilot, main only, no tags. One commit per phase (`feat(phase-NN): ...`), then `git push origin main` (explicitly authorised for autopilot; if push fails, log it under Human Action Needed and continue). No `gh` CLI and no Supabase CLI were found on this machine at start; CI runs are checked through the public GitHub API when possible.
 **Environment notes:** local `apps/api/.env` and `apps/web/.env.local` exist (created from the examples; fake LLM/embedding providers, `REPLACE_ME` for cloud values). Never open or print them; use `uv run --project apps/api python scripts/check_env.py`.
 **Phase order:** core 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 12 → 15 (prep only), then extras 11 → 13 → 14 → 16.
-**Current phase:** 5 — LLM layer, quotas, cost, cache, guardrails (not started). Phase 4 complete (Session 8): auth, roles, app shell, public pages.
+**Current phase:** 6 — GraphRAG pipeline, plain-RAG baseline, bounded agentic step (not started). Phase 5 complete (Session 9).
 
 **Phase 2 checkpoints (done)**
 - [x] 2.1 Env files, `scripts/check_env.py`, `.env.example` for all phases
@@ -45,17 +45,17 @@
 - [x] 4.7 Verified: backend 161 tests, frontend 103 unit + 24 e2e (incl. 6 live auth tests against the local Supabase stack, twice from a cold dev server), screenshots in `docs/screenshots/phase4/`, Lighthouse (desktop 100/100/100/100; mobile perf 74-80, see LIM-015); BUG-015 to BUG-017 fixed; committed as `feat(phase-04)`
 
 **Phase 5 checkpoints**
-- [ ] 5.1 `app/llm/` core: message/result/usage types, `LLMProvider` interface (complete, stream, embed), errors (retryable vs fatal), pricing table, `FakeProvider` (scriptable for tests; deterministic default answers built from the supplied context)
-- [ ] 5.2 Real providers: `GroqProvider` (OpenAI-compatible HTTP via httpx: JSON mode, SSE streaming, usage) and `GeminiProvider` (google-genai SDK: complete, stream, embed); real embedding provider in `embeddings.py`; tests with mocked transports (no network)
-- [ ] 5.3 Router: retries with exponential backoff + jitter (429/5xx/timeouts, max 3), fallback provider, 60 s circuit breaker, JSON-schema validation with one repair re-ask, token metering callback
-- [ ] 5.4 Usage guard (`app/usage/`): global cap → user daily quota → per-minute sliding window → max input chars; 429 `QUOTA_EXCEEDED`/`RATE_LIMITED`/`GLOBAL_CAP` with reset time; atomic upserts into `usage_daily` + `global_usage_daily`; `GET /me/usage` (today + 30 days); concurrency test (20 parallel)
-- [ ] 5.5 Caches (`app/cache/`): response cache (sha256 of normalised text + mode + concepts + personalisation bucket, TTL from settings, `cached=true`, still 1 quota request), classification + query-embedding caches, invalidation by concept / message
-- [ ] 5.6 Guardrails (`app/guardrails/`): length limit, control-character stripping, `<student_question>` templates with the ignore-instructions rule, output checks (system-prompt leak, harmful content)
-- [ ] 5.7 Admin: `GET /admin/usage` (by day, user, provider/model, est. cost, cache hit rate), `GET/PUT /admin/settings` (quotas, global cap, cache TTL, flags AGENTIC_MODE / STUDY_MODE / PLAIN_RAG_VISIBLE_TO_STUDENTS), admin LLM health check endpoint; web: friendly 429 messages with reset time, admin usage + settings pages
-- [ ] 5.8 `scripts/llm_smoke.py` (real call per provider; live run → Human Action), `seed_vectors.py` wired to the real embedding provider (fake stays default)
-- [ ] 5.9 Full verification, wrap-up, commit `feat(phase-05)`, push, CI
+- [x] 5.1 `app/llm/` core: message/result/usage types, `LLMProvider` interface (complete, stream, embed), errors (retryable vs fatal), pricing table, `FakeProvider` (scriptable for tests; deterministic default answers built from the supplied context)
+- [x] 5.2 Real providers: `GroqProvider` (OpenAI-compatible HTTP via httpx: JSON mode, SSE streaming, usage) and `GeminiProvider` (google-genai SDK: complete, stream, embed); real embedding provider in `embeddings.py`; tests with mocked transports (no network)
+- [x] 5.3 Router: retries with exponential backoff + jitter (429/5xx/timeouts, max 3), fallback provider, 60 s circuit breaker, JSON-schema validation with one repair re-ask, token metering callback
+- [x] 5.4 Usage guard (`app/usage/`): global cap → user daily quota → per-minute sliding window → max input chars; 429 `QUOTA_EXCEEDED`/`RATE_LIMITED`/`GLOBAL_CAP` with reset time; atomic upserts into `usage_daily` + `global_usage_daily`; `GET /me/usage` (today + 30 days); concurrency test (20 parallel)
+- [x] 5.5 Caches (`app/cache/`): response cache (sha256 of normalised text + mode + concepts + personalisation bucket, TTL from settings, `cached=true`, still 1 quota request), classification + query-embedding caches, invalidation by concept / message
+- [x] 5.6 Guardrails (`app/guardrails/`): length limit, control-character stripping, `<student_question>` templates with the ignore-instructions rule, output checks (system-prompt leak, harmful content)
+- [x] 5.7 Admin: `GET /admin/usage` (by day, user, provider/model, est. cost, cache hit rate), `GET/PUT /admin/settings` (quotas, global cap, cache TTL, flags AGENTIC_MODE / STUDY_MODE / PLAIN_RAG_VISIBLE_TO_STUDENTS), admin LLM health check endpoint; web: friendly 429 messages with reset time, admin usage + settings pages
+- [x] 5.8 `scripts/llm_smoke.py` (real call per provider; live run → Human Action), `seed_vectors.py` wired to the real embedding provider (fake stays default)
+- [x] 5.9 Full verification, wrap-up, commit `feat(phase-05)`, push, CI
 
-**Next action:** 5.1 (`app/llm/` core + FakeProvider).
+**Next action:** Phase 6 (GraphRAG pipeline, plain-RAG baseline, bounded agentic step): split it into checkpoints from docs/COGNEXA_PROMPTS.md. Use `app/llm/deps.get_llm`, `UsageGuard.request`, `guardrails.prompts.tutor_messages`, `guardrails.input.clean_user_text`, `LLMCache` and `CachedQueryEmbedder` from Phase 5.
 **Local stack:** `npx supabase start -x realtime,storage-api,imgproxy,studio,edge-runtime,logflare,vector,supavisor,postgres-meta` (mail UI http://127.0.0.1:54324); schema changes: `npx supabase migration up` (local Supabase) and `DATABASE_URL=<docker url> uv run ... scripts/migrate.py` (docker test DB)
 
 **Last cluster note:** Phase 3 content complete; 69/69 concepts
@@ -75,6 +75,8 @@
 | 9 | dashboards | Custom SMTP (optional, for other users) | Built-in Supabase email only reaches organisation members. To let other students sign up, configure custom SMTP (Authentication → SMTP Settings), for example with a free Brevo or Resend account. |
 | 10 | live checks | Google sign-in | After item 8: on the live site click "Continue with Google", finish the consent screen, and check that you land on `/app/onboarding` and that a `profiles` row exists. Cannot be tested locally without a Google OAuth client. |
 | 11 | live checks | Lighthouse on the deployed landing page | After Phase 15: run Lighthouse (mobile) on the Vercel URL. The local lab score on this laptop was performance 74-80 (desktop 100); target 90+. If it is still below 90 on Vercel, tell Claude Code (LIM-015). |
+| 13 | live checks | Real LLM and embedding calls (Phase 5) | After adding `GROQ_API_KEY` and `GEMINI_API_KEY` and setting `LLM_PRIMARY_PROVIDER=groq`, `LLM_PRIMARY_MODEL=<current Groq model id>`, `LLM_FALLBACK_PROVIDER=gemini`, `LLM_FALLBACK_MODEL=<current Gemini model id>`, `EMBEDDING_PROVIDER=gemini`, `EMBEDDING_MODEL=<Gemini embedding model id>` (keep `EMBEDDING_DIM=768`) in `apps/api/.env`: run `uv run --project apps/api python scripts/llm_smoke.py`. Every line must say `ok`. If the Gemini `json` check fails with HTTP 400, set `GEMINI_API_VERSION=v1beta` and re-run. Then re-run `scripts/seed_vectors.py` (re-embeds with the real model, item 5) and, signed in as admin, press **Run live check** on /admin/usage. |
+| 14 | live checks | Quota message in the browser | Signed in as a student on the deployed site, set your own daily quota to 1 under Admin → Users (as admin), ask the tutor twice (Phase 7) and check the friendly "Daily AI limit reached" message with the reset time. Locally this is covered by API and unit tests. |
 | 12 | live checks | Make yourself admin | After signing up on the cloud project: Supabase SQL editor → `update public.profiles set role = 'admin' where id = (select id from auth.users where email = '<your email>');` Wait 30 s (role cache) and reload; the Admin link appears. |
 
 ---
@@ -92,7 +94,7 @@
 | Repository | https://github.com/iammayankbhatt/Cognexa |
 | Live web app | _TBD (Vercel)_ |
 | Live API | _TBD (Render)_ |
-| Current phase | Phases 1 to 4 complete; next: Phase 5 (LLM layer, quotas, guardrails). Workflow: single developer, `main` only (DEC-013), autopilot (DEC-019) |
+| Current phase | Phases 1 to 5 complete; next: Phase 6 (GraphRAG pipeline). Workflow: single developer, `main` only (DEC-013), autopilot (DEC-019) |
 | Overall status | 🟡 In progress |
 
 Status legend: 🔴 Not started · 🟡 In progress · 🟢 Done + verified · ⚠️ Done with known issues · ⏸️ Blocked
@@ -136,10 +138,10 @@ Update the **Status** and **Where in code** columns as phases complete. Examiner
 | Three themes (Neon Noir, Titanium Dark, Titanium Light) | 1, 4 | 🟢 incl. profile sync (`components/app/theme-sync.tsx`, e2e "theme follows the user") | `apps/web/src/app/globals.css`, `src/components/theme/`, `/design` route, `docs/screenshots/phase1/` |
 | Landing, How-it-works, About, Privacy, Terms pages | 4 | 🟢 | `src/app/(marketing)/`, `src/components/marketing/`, public `GET /graph` (`app/api/graph.py`), `docs/screenshots/phase4/` |
 | Onboarding + diagnostic quiz | 4, 8 | 🟡 onboarding flow done; the diagnostic step is a marked placeholder until Phase 8 | `src/app/app/onboarding/`, `POST /me/onboarding-complete` |
-| LLM provider layer with fallback, retries, circuit breaker | 5 | 🔴 | |
-| Per-user quotas, rate limits, global cap, cost metering | 5 | 🔴 | |
-| Response / classification / embedding caching | 5 | 🔴 | |
-| Prompt-injection guardrails, off-topic handling | 5, 6, 13 | 🔴 | |
+| LLM provider layer with fallback, retries, circuit breaker | 5 | 🟢 locally (real providers: live check pending) | `apps/api/app/llm/` (router, groq, gemini, fake, registry, pricing), `scripts/llm_smoke.py`, `tests/test_llm_router.py`, `tests/test_llm_providers.py` |
+| Per-user quotas, rate limits, global cap, cost metering | 5 | 🟢 | `apps/api/app/usage/`, `llm_calls` table (migration 10), `GET /me/usage`, `/admin/usage`, `tests/test_usage_guard.py` (20 parallel requests, exact limits) |
+| Response / classification / embedding caching | 5 | 🟢 infrastructure (used by the tutor in Phase 6) | `apps/api/app/cache/`, `scripts/seed_postgres.py` invalidation, `tests/test_cache.py` |
+| Prompt-injection guardrails, off-topic handling | 5, 6, 13 | 🟡 input cleaning, delimiter-safe templates, output checks done; off-topic check comes with the Phase 6 classifier | `apps/api/app/guardrails/`, `tests/test_guardrails.py`, `tests/test_source_hygiene.py` |
 | Chat history (threads: search, rename, archive, delete) | 7 | 🔴 | |
 | Streaming answers, citations, follow-ups, regenerate | 7 | 🔴 | |
 | Thumbs up/down + report bad answer → moderation | 7, 11 | 🔴 | |
@@ -205,8 +207,8 @@ Key flows (details in docs/ARCHITECTURE.md once written):
 | 1 | Scaffold, design system, CI | ⚠️ | 2026-11-19 | 2026-11-19 | `fb019e9` (PR #1 merge); CI fix `2fabc20` | | Merged. First GitHub CI run failed at typecheck (BUG-005); fix verified in a fresh clone, awaiting a green run on GitHub, then tag v0.1. |
 | 2 | Databases + DSA concept graph | 🟢 | 2026-11-19 | 2026-11-19 | `0f2d90d` `feat(phase-02): databases and the DSA concept graph` | | Verified locally (79 tests) and on GitHub Actions (run 44499463362: backend + frontend jobs success). Supabase-specific behaviour (CLI `db push`, real `auth` schema) still untested (LIM-013). |
 | 3 | Content, question bank, eval test set | 🟢 | 2026-11-19 | 2026-11-19 | cluster commits (DEC-020) `67fc84b`…`0fb67d4` + `feat(phase-03)` wrap-up | | 69/69 notes, 552 questions, 138 snippets run, 69 code_output keys verified, study sets, 85-item eval set; validate_content `--strict` in CI. Content still `reviewed: false` (human review pending). |
-| 4 | Auth, roles, app shell, public pages | 🟢 | 2026-11-19 | 2026-11-20 | `fbbdc49` `feat(phase-04): auth, roles, app shell, public pages` | | Verified locally: backend 161 tests, web 103 unit + 24 e2e (live auth cycle on the Supabase local stack), build without env vars (CI parity). Google OAuth and cloud Supabase are live checks (Human Action 2, 7-10, 12). |
-| 5 | LLM layer, quotas, cost, cache, guardrails | 🔴 | | | | | |
+| 4 | Auth, roles, app shell, public pages | 🟢 | 2026-11-19 | 2026-11-20 | `fbbdc49` `feat(phase-04): auth, roles, app shell, public pages` | | Verified locally: backend 161 tests, web 103 unit + 24 e2e (live auth cycle on the Supabase local stack), build without env vars (CI parity). GitHub Actions: first run red (BUG-018, test relied on seeded local Neo4j), green after `3e5419b` (run 44596309127). Google OAuth and cloud Supabase are live checks (Human Action 2, 7-10, 12). |
+| 5 | LLM layer, quotas, cost, cache, guardrails | 🟢 | 2026-11-20 | 2026-11-20 | `feat(phase-05): LLM layer, quotas, cost, cache, guardrails` | | Verified locally: backend 240 passed (CI-identical run: empty Neo4j, fresh DB, no keys), web 119 unit + 29 e2e from a cold server, builds with and without env. Real provider calls are a live check (Human Action 13). |
 | 6 | GraphRAG + plain RAG + agentic step | 🔴 | | | | | |
 | 7 | Tutor chat UI | 🔴 | | | | | |
 | 8 | Quiz engine, grading, mastery | 🔴 | | | | | |
@@ -422,6 +424,29 @@ git tag -a v0.1 -m "Phase 1: Scaffold, design system, CI" && git push --tags   #
 - Turbopack's dev cache can serve stale CSS after a file is restored with identical content. When the browser disagrees with the source, check what is actually served.
 - Next.js `<Link>` prefetch adds the target route's JS to the current page's cost: public pages linking to the auth pages were loading supabase-js and zod until prefetch was turned off for those links.
 **Next step:** Phase 5: LLM layer, quotas, cost, cache, guardrails.
+
+### Session 9 — 2026-11-20 — Phase 5: LLM layer, quotas, cost, cache, guardrails (autopilot)
+**Goal:** The AI infrastructure every later feature uses: one provider layer with retries, fallback and metering; a usage guard on every AI request; caches; guardrails; admin visibility.
+**Built:**
+- `app/llm/`: `LLMProvider` interface (complete, stream with a final usage record), `FakeProvider` (deterministic answers built from the prompt's `<context>`, minimal valid JSON for a schema, scriptable errors and mid-stream failures), `GroqProvider` (OpenAI-compatible HTTP over httpx: JSON mode, SSE streaming, usage from `usage` or `x_groq.usage`), `GeminiProvider` + `GeminiEmbeddingProvider` (google-genai 3.6.1: generate_content, generate_content_stream, batchEmbedContents with output_dimensionality, L2-normalised; SDK retries disabled), `LLMRouter` (exponential backoff + jitter on 429/5xx/timeouts with Retry-After, max 3 calls per provider, fallback, 60 s circuit breaker, JSON validated against a Pydantic model with one repair re-ask, streaming retries only before the first token), registry (model ids only from env), notional pricing table in app_settings.
+- `app/usage/`: guard checks global cap → user daily quota (role multipliers, per-user override) → per-minute sliding window → input length; atomic conditional reservations in Postgres (both counters in one transaction), tokens/cost after the call, refund when the call fails, 429 `QUOTA_EXCEEDED` / `RATE_LIMITED` / `GLOBAL_CAP` with `error.details.reset_at` and `Retry-After`. `GET /me/usage` (today, limits, 30 days). `llm_calls` log (migration 10) for per-model stats and cache hit rate. `AppError` gained optional `details` and `headers`.
+- `app/cache/`: kind-prefixed sha256 keys over normalised text + mode + concepts + personalisation bucket; answers and classifications invalidated by concept (content or edge change) and by reported message; query-embedding cache (memory LRU + database); TTLs and on/off in app_settings; `seed_postgres.py` invalidates exactly the concepts whose content changed.
+- `app/guardrails/`: control-character and bidi stripping, our delimiter tags neutralised inside user text, length limits, injection-signal detection (log only), `<student_question>` / `<context>` templates with a canary marker, output checks (system-prompt leak, harmful content).
+- Admin: `GET /admin/usage`, `GET/PUT /admin/settings` (quotas, role multipliers, global cap, cache, feature flags, pricing; audit-logged), `POST /admin/llm/check`; per-minute overrides in `/admin/users`. Web: friendly 429 messages with reset time (`lib/errors.ts`), `/admin/usage` (stat tiles, Recharts daily bars, providers with live check, per-model and top-user tables), `/admin/settings` (zod-validated section forms, key status as booleans only), an "AI usage" card in settings. Chart colour validated with the dataviz palette validator (`--primary` passes in all three themes; `--accent` failed in the Titanium themes).
+- `scripts/llm_smoke.py` (direct call per provider: complete, JSON, stream, embeddings); `seed_vectors.py` now works with `EMBEDDING_PROVIDER=gemini` and does not retry fatal errors.
+**Files touched:** `apps/api/app/{llm,usage,cache,guardrails}/`, `app/api/{admin_ai,me,admin_users}.py`, `app/core/{config,errors,flags}.py`, `app/db/{repositories,profiles,tables}.py`, `app/content/vectors.py`, `app/main.py`, `supabase/migrations/20260101000010_llm_calls.sql`, `apps/api/tests/test_{llm_router,llm_providers,usage_guard,cache,guardrails,admin_ai,source_hygiene,graph_api,content_db}.py`, `apps/api/pyproject.toml` + `uv.lock` (google-genai), `apps/api/.env.example`, `scripts/{llm_smoke,check_env,seed_postgres}.py`, `apps/web/src/lib/{api,errors,usage,admin-settings}.ts` (+ tests), `apps/web/src/components/app/{usage-chart,usage-card,nav}`, `apps/web/src/app/admin/{usage,settings}/`, `apps/web/src/app/app/settings/page.tsx`, `apps/web/e2e/{ai-usage.spec.ts,helpers.ts,screenshots.spec.ts}`, `apps/web/package.json` (recharts 3.11.0), `docs/screenshots/phase5/`, `CLAUDE.md`, `progressfile.md`.
+**Commands run & results:** ruff ✅ · ruff format ✅ · mypy ✅ (67 files) · pytest ✅ 240 passed in a CI-identical setup (throwaway empty `neo4j:5`, fresh database, no Supabase or LLM keys) · web lint ✅ · typecheck ✅ · prettier ✅ · vitest ✅ 119 · build ✅ (also with empty `NEXT_PUBLIC_*`) · Playwright ✅ 29/29 from a deleted `.next` · `scripts/llm_smoke.py` ✅ offline (fake), and exits 1 with a clear message when Groq is selected without a key · `npx supabase migration up` ✅ (migration 10) · seed_postgres ×2 ✅ (3 new default settings, then 0; idempotent).
+**Manual verification:** signed in as admin on the local stack: ran the live check (toast, meter refresh, per-model row, top-user row), switched 7/30/90 days, edited the global cap (empty field rejected, save audit-logged), checked the student AI-usage card and its table view; screenshots in `docs/screenshots/phase5/` checked by eye (Neon Noir and Titanium Light).
+**Bugs found this session:** BUG-018 (CI only, fixed in `3e5419b`), BUG-019, BUG-020, BUG-021
+**Decisions:** DEC-025 to DEC-028
+**Human action needed:** Autopilot State items 13 and 14 (plus earlier ones).
+**What we learned:**
+- Concurrency tests find real bugs: 20 parallel requests produced a Postgres deadlock because two code paths locked the same two rows in opposite orders (BUG-019). One lock order everywhere fixed it.
+- Conditional upserts (`ON CONFLICT DO UPDATE ... WHERE count < limit RETURNING`) give exact quotas under concurrency without explicit locks or a separate counter service.
+- Tools can turn an escape like `\u202e` into the real invisible character. A test that scans source files for format/control characters makes this impossible to miss (BUG-020).
+- A green local suite can hide dependencies on local data and environment variables; run the suite against empty services before pushing (BUG-018).
+- Chart colours are checkable: the validator rejected the grey accent of the Titanium themes as a data colour, so bars use `--primary`.
+**Next step:** Phase 6: GraphRAG pipeline, plain-RAG baseline, bounded agentic step.
 ---
 
 ## 7. Bug Log
@@ -449,6 +474,9 @@ Severity: **S1** critical (data loss, security, app down) · **S2** major (featu
 | BUG-015 | 2026-11-20 | 4 | S4 | e2e | Live auth e2e tests failed intermittently right after the dev server started: still on `/login` or `/app` when the 5 s URL assertion gave up | Fixed | `feat(phase-04)` | `e2e/auth.spec.ts` passes on two consecutive cold starts and 30/30 repeated runs |
 | BUG-016 | 2026-11-20 | 4 | S3 | frontend / a11y | With reduced motion, the landing page's failure-case diagram hid its key node (Call Stack) for 2.8 s; the screenshot showed an arrow pointing at nothing | Fixed | `feat(phase-04)` | `e2e/design.spec.ts` "reduced motion shows the landing page's final state immediately" |
 | BUG-017 | 2026-11-20 | 4 | S4 | e2e | Theme-sync e2e test could hang until timeout: `waitForResponse` for `PATCH /me` was registered after the click, so a fast response was missed | Fixed | `feat(phase-04)` | the test itself (promise created before the click) |
+| BUG-019 | 2026-11-20 | 5 | S2 | usage / db | 20 parallel AI requests for one user failed with `deadlock detected` | Fixed | `feat(phase-05)` | `tests/test_usage_guard.py::test_parallel_requests_cannot_exceed_the_daily_quota` (3 consecutive runs) |
+| BUG-020 | 2026-11-20 | 5 | S2 | security / tooling | Bidi-override and zero-width characters (U+200B..U+200F, U+202A..U+202E, U+2066..U+2069) were written literally into `guardrails/input.py` and a test instead of as escapes | Fixed | `feat(phase-05)` | `tests/test_source_hygiene.py` (fails on a planted U+202E) |
+| BUG-021 | 2026-11-20 | 5 | S4 | frontend | After an admin live check the top-bar usage meter still showed the old count | Fixed | `feat(phase-05)` | `e2e/ai-usage.spec.ts` meter assertion (fails without the fix) |
 | BUG-018 | 2026-11-20 | 4 | S2 | ci / tests | GitHub Actions backend job failed at pytest after the Phase 4 push (run 44593254858); everything passed locally | Fixed | `fix(ci)` after `fbbdc49` | CI-identical local run: empty Neo4j container, fresh database, no Supabase env (161 passed) |
 
 ### 7.2 Bug details
@@ -671,6 +699,39 @@ Severity: **S1** critical (data loss, security, app down) · **S2** major (featu
 - **Commit:** `fix(ci)` after `fbbdc49`
 - **Lesson / pattern to avoid:** Before pushing, run the backend suite against empty services, not just the seeded dev ones. `_env_file=None` does not isolate a test from the environment; pass the values that matter explicitly.
 
+#### BUG-019 — Deadlock between usage reservation and token metering
+- **Found:** 2026-11-20, Phase 5, by the concurrency test
+- **Severity / Area:** S2 / usage, database
+- **Symptom:** `DeadlockDetectedError: deadlock detected` on `INSERT INTO usage_daily ... ON CONFLICT ... WHERE ai_requests < $5` when 20 requests ran at once.
+- **Root cause:** `admit` locked the `global_usage_daily` row and then the user's `usage_daily` row; `add_tokens` and `refund` locked the user row first and the global row second. Two transactions could each hold one row and wait for the other.
+- **Fix:** every transaction touches the global row before the user row (documented in `app/usage/repository.py`).
+- **Files changed:** `apps/api/app/usage/repository.py`
+- **Regression test:** `test_parallel_requests_cannot_exceed_the_daily_quota` (20 parallel requests with recording; exactly 5 succeed), run 3 times.
+- **Commit:** `feat(phase-05)`
+- **Lesson / pattern to avoid:** When several code paths update the same rows, give them one lock order.
+
+#### BUG-020 — Invisible bidi/zero-width characters written literally into source
+- **Found:** 2026-11-20, Phase 5, noticed in a formatter diff of a test file
+- **Severity / Area:** S2 / security hygiene ("Trojan Source")
+- **Symptom:** `_CONTROL = re.compile(r"[...\u200b-\u200f\u202a-\u202e...]")` was stored with the real characters, invisible in editors; one test string held a real U+200B.
+- **Root cause:** escapes in content sent through a JSON-based file-writing tool were decoded into characters before reaching the file.
+- **Fix:** replaced them with escapes (the regex behaves the same, since `re` understands `\uXXXX`); added a repository-wide hygiene test for format/control characters in Python, TypeScript, CSS and SQL sources.
+- **Files changed:** `apps/api/app/guardrails/input.py`, `apps/api/tests/test_guardrails.py`, new `apps/api/tests/test_source_hygiene.py`
+- **Regression test:** `test_no_invisible_or_bidi_characters_in_source` (verified to fail on a planted U+202E)
+- **Commit:** `feat(phase-05)`
+- **Lesson / pattern to avoid:** Never type invisible characters into source; write escapes, and let a test enforce it.
+
+#### BUG-021 — Usage meter not refreshed after an admin live check
+- **Found:** 2026-11-20, Phase 5, in the generated screenshots (meter at 0/200 next to a table showing the call)
+- **Severity / Area:** S4 / frontend
+- **Symptom:** the top-bar meter kept the old count until a reload.
+- **Root cause:** the live-check mutation invalidated only the admin usage query; the meter reads `/me`.
+- **Fix:** also invalidate the `me` and `me/usage` queries after the call.
+- **Files changed:** `apps/web/src/app/admin/usage/usage-dashboard.tsx`
+- **Regression test:** meter assertion in `e2e/ai-usage.spec.ts` (fails without the fix)
+- **Commit:** `feat(phase-05)`
+- **Lesson / pattern to avoid:** Anything that spends quota must refresh every view of that quota.
+
 ---
 
 ## 8. Decisions Log (lightweight ADRs)
@@ -700,6 +761,10 @@ Severity: **S1** critical (data loss, security, app down) · **S2** major (featu
 | DEC-021 | 2026-11-19 | Question conventions: q01 and q02 are parallel difficulty-1 MCQs; q03 and q04 are parallel difficulty-2 MCQs; q05 multi_select, q06 true_false, q07 code_output, q08 short_answer. Parallel pairs feed the pre/post study sets and quiz variety. `code_output` answers are machine-verified by running the program; incorrect MCQ options must carry `why_wrong` | Free-form question sets | Makes matched study forms possible and keeps answer keys honest | Authoring cost is higher; schema enforces the rules |
 | DEC-023 | 2026-11-19 | Auth: Supabase access tokens are verified in FastAPI against the project JWKS (asymmetric keys), with HS256 only if a legacy secret is configured; roles are read from `public.profiles` (cached 30 s), never from token claims; account deletion goes through the Auth admin API with the service-role key | Trust a role claim in the JWT; verify with the shared secret only | Supabase now issues asymmetric signing keys; an admin must be able to change roles without re-issuing tokens | A role change takes up to 30 s to apply (LIM-016); the service-role key stays backend-only |
 | DEC-024 | 2026-11-20 | Keep `cacheComponents` + `partialPrefetching` on with Supabase SSR (closes LIM-011): session refresh lives in `src/proxy.ts`, app pages read the user client-side through TanStack Query, so prerendered shells stay static. Marketing links to `/login` and `/signup` use `prefetch={false}`; `/admin/users` exports `instant = false` (client page behind a gate) | Turn both flags off; prefetch everything | Every route except `/auth/callback` still prerenders; prefetching the auth pages loaded supabase-js + zod on every public page view | Signed-in pages show skeletons until `/me` resolves; the auth pages' JS is fetched on click |
+| DEC-025 | 2026-11-20 | Groq through its OpenAI-compatible HTTP API with plain httpx (no SDK); Gemini through the official google-genai SDK with its own retries disabled; the router owns retries, fallback and the circuit breaker | Groq SDK / OpenAI SDK; SDK-level retries | One retry policy in one place; httpx is already a dependency and is easy to mock; the Gemini SDK handles auth and request shapes | `GEMINI_API_VERSION` can switch the Gemini API version without code changes |
+| DEC-026 | 2026-11-20 | Quotas are reserved atomically in Postgres before the model call (conditional upserts, global row first) and refunded on failure; the per-minute limit stays in memory | Check-then-record; Redis | Exact limits under concurrency with the existing database; a failed call costs the student nothing | Per-minute limiting is per instance (LIM-003) |
+| DEC-027 | 2026-11-20 | One `response_cache` table with kind-prefixed keys (`resp:`, `cls:`, `emb:`); concept ids stored per entry for targeted invalidation; query embeddings also cached in an in-memory LRU | Separate tables; Redis | Uses the existing schema; invalidation by concept is one indexed array-overlap update | Embedding entries are about 15 KB each; TTL 30 days keeps the table small |
+| DEC-028 | 2026-11-20 | Per-call log table `llm_calls` (migration 10) next to the per-user daily counters | Derive stats from chat messages (Phase 7) | Admin stats by provider/model, cache hit rate and fallback rate are needed before the chat exists, and also cover non-chat calls (grading, checks) | One extra insert per AI request |
 | DEC-022 | 2026-11-19 | Content code samples are C++14 (not 17) and Python 3.12; every snippet is a complete program that asserts its own claims and is compiled/run by the test suite | C++17 | The only local compiler is MinGW GCC 6.3 (no `-std=c++17`); C++14 also works on every CI compiler | Notes avoid C++17 features (structured bindings, `std::optional`) |
 
 ---
@@ -723,6 +788,8 @@ Severity: **S1** critical (data loss, security, app down) · **S2** major (featu
 | LIM-013 | Migrations were tested on plain Postgres 16 + shim, not on a real Supabase project or the Supabase CLI. **Update 2026-11-19:** all 9 apply cleanly on the Supabase CLI local stack (Postgres 17); a cloud project is still untested | Supabase-specific differences (extension schema, default grants, managed roles) could surface at deploy | Phase 4 tries the Supabase local stack; Phase 15 runbook includes `supabase db push` on dev first |
 | LIM-014 | `/health/deep` and tests share one local Neo4j/Postgres that also holds dev data | A test bug could touch dev data | Tests use unique ids/subjects and throwaway databases; never `wipe()` in tests |
 | LIM-015 | Lighthouse mobile performance on the landing page is 74-80 locally (desktop 100; accessibility, best practices and SEO 100). The cost is React hydration (~770 ms under 4× CPU throttling) and layout, measured on a busy dev laptop | Below the 90 target in lab conditions | Re-measure on Vercel (Human Action 11); if still low, Phase 13 options: keep TanStack/Toaster providers out of marketing routes (separate root layouts), lighter hero |
+| LIM-017 | Real Groq/Gemini calls are tested only against mocked HTTP with the documented wire format (request shapes verified against google-genai 3.6.1); no real key was available | A provider-side difference (e.g. JSON schema support in the default Gemini API version) could surface | `scripts/llm_smoke.py` live run (Human Action 13); `GEMINI_API_VERSION` override |
+| LIM-018 | Harmful-output and injection checks are small pattern lists | Clever phrasing passes the regexes | The prompt rules do most of the work; Phase 13 hardening reviews them with the eval set's injection items |
 | LIM-016 | Role changes take up to 30 s to apply (profile cache, DEC-023) | A demoted admin keeps access for up to 30 s | Acceptable for this app; revisit if roles ever guard sensitive data |
 
 ---
@@ -904,6 +971,10 @@ Run ID / date / models used: _TBD_
 | JWKS | A public list of signing keys published by the auth server; the API verifies tokens with it without holding any secret | `app/auth/jwks.py`, `app/auth/tokens.py` |
 | Open-redirect guard | Only same-site relative paths are accepted as the post-login destination, so a crafted link cannot send users to another site | `safeNext` in `src/lib/auth-schemas.ts` |
 | Reduced motion | Users can ask the OS for less animation; the CSS removes durations and delays so content appears at once | `globals.css`, BUG-016 |
+| Circuit breaker | After repeated failures a provider is skipped for a cooldown period instead of being called again and again | `app/llm/router.py` |
+| Exponential backoff with jitter | Wait 0.5 s, 1 s, 2 s ... (randomised a little) between retries so many clients do not retry in lockstep | `LLMRouter.backoff_s` |
+| Atomic conditional upsert | `INSERT ... ON CONFLICT DO UPDATE ... WHERE count < limit RETURNING` increments only while under the limit, in one statement | `app/usage/repository.py` |
+| Trojan Source | Invisible Unicode (bidi overrides, zero-width) that makes code display differently from how it runs | `tests/test_source_hygiene.py` |
 | Route prefetching | Next.js loads a linked page's code in the background; useful, but it adds that code to the current page's cost | DEC-024 |
 
 ---

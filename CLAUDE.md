@@ -89,6 +89,7 @@ uv run --project apps/api python scripts/check_env.py            # which env var
 uv run --project apps/api python scripts/validate_graph.py
 uv run --project apps/api python scripts/migrate.py            # plain Postgres only; Supabase uses `supabase db push`
 uv run --project apps/api python scripts/seed_neo4j.py && uv run --project apps/api python scripts/seed_postgres.py && uv run --project apps/api python scripts/seed_vectors.py
+uv run --project apps/api python scripts/llm_smoke.py           # one real call per configured LLM/embedding provider (offline in fake mode)
 # e2e
 cd apps/web && npx playwright test
 ```

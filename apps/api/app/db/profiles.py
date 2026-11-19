@@ -12,7 +12,6 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.repositories import DEFAULT_APP_SETTINGS, AppSettingsRepository
 from app.db.tables import (
     audit_log,
     chat_messages,
@@ -113,17 +112,6 @@ class ProfileRepository:
         if row is None:
             return {"ai_requests": 0, "tokens_in": 0, "tokens_out": 0}
         return {"ai_requests": row[0], "tokens_in": int(row[1]), "tokens_out": int(row[2])}
-
-    async def daily_quota(self, role: str, override: dict[str, Any] | None) -> int:
-        settings = AppSettingsRepository(self._s)
-        base = await settings.get("quota.student") or DEFAULT_APP_SETTINGS["quota.student"]
-        mult = (
-            await settings.get("quota.role_multipliers")
-            or DEFAULT_APP_SETTINGS["quota.role_multipliers"]
-        )
-        if override and isinstance(override.get("daily_ai_requests"), int):
-            return int(override["daily_ai_requests"])
-        return int(base.get("daily_ai_requests", 40)) * int(mult.get(role, 1))
 
     # ------------------------------------------------------------------ admin
     async def list_users(

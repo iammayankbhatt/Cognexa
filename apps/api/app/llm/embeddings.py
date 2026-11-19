@@ -1,8 +1,7 @@
 """Embedding providers (part of the LLM provider layer, CLAUDE.md rule 1).
 
-Phase 3 ships the interface and the deterministic FakeEmbeddingProvider so content can be embedded
-and plain RAG works locally without keys. The real Gemini provider (with retries, fallback and
-metering) is added to this layer in Phase 5.
+FakeEmbeddingProvider (deterministic, offline) is the default so content can be embedded and plain
+RAG works locally without keys. The real provider is GeminiEmbeddingProvider (app/llm/gemini.py).
 """
 
 from __future__ import annotations
@@ -63,9 +62,23 @@ class FakeEmbeddingProvider(EmbeddingProvider):
 
 
 def get_embedding_provider(settings: Settings) -> EmbeddingProvider:
+    """EMBEDDING_PROVIDER=fake (default, offline) or gemini (needs GEMINI_API_KEY)."""
     if settings.embedding_provider == "fake":
         return FakeEmbeddingProvider(settings.embedding_dim, settings.embedding_model)
+    if settings.embedding_provider == "gemini":
+        if not settings.gemini_api_key:
+            raise EmbeddingProviderUnavailableError(
+                "EMBEDDING_PROVIDER=gemini needs GEMINI_API_KEY (or use EMBEDDING_PROVIDER=fake)"
+            )
+        from app.llm.gemini import GeminiEmbeddingProvider  # local import: avoids a cycle
+
+        return GeminiEmbeddingProvider(
+            settings.embedding_model,
+            settings.embedding_dim,
+            settings.gemini_api_key,
+            settings.llm_timeout_s,
+            api_version=settings.gemini_api_version,
+        )
     raise EmbeddingProviderUnavailableError(
-        f"embedding provider '{settings.embedding_provider}' is not available yet: "
-        "real providers are added to app/llm in Phase 5. Use EMBEDDING_PROVIDER=fake for now."
+        f"unknown embedding provider '{settings.embedding_provider}' (use fake or gemini)"
     )

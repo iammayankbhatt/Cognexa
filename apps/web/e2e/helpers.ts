@@ -91,3 +91,21 @@ export async function accessTokenFor(stack: LocalStack, email: string, password 
   if (!res.ok) throw new Error(`sign-in failed: ${res.status}`);
   return ((await res.json()) as { access_token: string }).access_token;
 }
+
+/**
+ * Update a profile row through the local Supabase REST API with the service key (local stack
+ * only). Do it before the user's first API call: the API caches roles for 30 s.
+ */
+export async function setProfile(stack: LocalStack, id: string, fields: Record<string, unknown>) {
+  const res = await fetch(`${stack.url}/rest/v1/profiles?id=eq.${id}`, {
+    method: "PATCH",
+    headers: {
+      apikey: stack.serviceKey,
+      Authorization: `Bearer ${stack.serviceKey}`,
+      "Content-Type": "application/json",
+      Prefer: "return=minimal",
+    },
+    body: JSON.stringify(fields),
+  });
+  if (!res.ok) throw new Error(`could not update profile: ${res.status} ${await res.text()}`);
+}
