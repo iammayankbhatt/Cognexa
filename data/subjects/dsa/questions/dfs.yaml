@@ -1,0 +1,119 @@
+concept_id: dfs
+questions:
+  - id: dfs-q01
+    type: mcq
+    difficulty: 1
+    prompt: "Which structure drives depth-first search, whether implicitly or explicitly?"
+    options:
+      - {id: a, text: "A stack"}
+      - {id: b, text: "A queue", why_wrong: "A queue gives breadth-first order."}
+      - {id: c, text: "A min-heap", why_wrong: "A heap orders by priority, as in Dijkstra's algorithm."}
+      - {id: d, text: "A hash table", why_wrong: "A hash table is useful for the visited set but does not choose the order."}
+    answer: a
+    explanation: "DFS follows the most recently discovered vertex first, which is last-in first-out behaviour."
+    misconception_tag: dfs_stack
+    diagnoses_prereq: stack
+
+  - id: dfs-q02
+    type: mcq
+    difficulty: 1
+    prompt: "What is the time complexity of DFS on an adjacency-list graph with V vertices and E edges?"
+    options:
+      - {id: a, text: "O(V + E)"}
+      - {id: b, text: "O(V * E)", why_wrong: "Each vertex and each adjacency entry is handled once."}
+      - {id: c, text: "O(E squared)", why_wrong: "The cost is linear in the graph size."}
+      - {id: d, text: "O(V log V)", why_wrong: "No sorting or heap operations are involved."}
+    answer: a
+    explanation: "Every vertex is entered once and every adjacency list is scanned once."
+    misconception_tag: dfs_complexity
+    diagnoses_prereq: graph_representation
+
+  - id: dfs-q03
+    type: mcq
+    difficulty: 2
+    prompt: "A recursive DFS on a grid with a million connected cells crashes with a stack overflow (RecursionError in Python). What is the best fix?"
+    options:
+      - {id: a, text: "Rewrite DFS iteratively with an explicit stack"}
+      - {id: b, text: "Remove the visited set", why_wrong: "That would cause infinite loops."}
+      - {id: c, text: "Use BFS with a list and pop(0)", why_wrong: "That changes the algorithm and is slow; the issue is recursion depth."}
+      - {id: d, text: "Sort the neighbours", why_wrong: "Neighbour order does not reduce depth."}
+    answer: a
+    explanation: "Recursion depth equals the length of the current path, which can reach the number of cells. An explicit stack on the heap has no such limit."
+    misconception_tag: dfs_recursion_limit
+    diagnoses_prereq: recursion
+
+  - id: dfs-q04
+    type: mcq
+    difficulty: 2
+    prompt: "A DFS on an undirected graph never terminates. The code has no visited set. Why does it loop?"
+    options:
+      - {id: a, text: "Every undirected edge leads back to the vertex we came from, so the search bounces back and forth"}
+      - {id: b, text: "The graph has too many vertices", why_wrong: "Size alone does not cause an infinite loop."}
+      - {id: c, text: "Adjacency lists are not sorted", why_wrong: "Order is irrelevant to termination."}
+      - {id: d, text: "DFS cannot handle undirected graphs", why_wrong: "It handles them with a visited set."}
+    answer: a
+    explanation: "An undirected edge appears in both adjacency lists, so a vertex sees its parent as a neighbour and returns there forever without a visited check."
+    misconception_tag: dfs_visited_needed
+    diagnoses_prereq: graph_representation
+
+  - id: dfs-q05
+    type: multi_select
+    difficulty: 2
+    prompt: "Select every true statement about DFS."
+    options:
+      - {id: a, text: "It can find all vertices reachable from a start vertex."}
+      - {id: b, text: "The back edge in a directed graph indicates a cycle."}
+      - {id: c, text: "It always finds the shortest path in an unweighted graph.", why_wrong: "BFS does that; DFS may find a long path first."}
+      - {id: d, text: "It requires the graph to be a tree.", why_wrong: "It works on general graphs when a visited set is used."}
+    answer: [a, b]
+    explanation: "DFS explores everything reachable and a back edge points to an ancestor still on the current path. It does not guarantee shortest paths."
+    misconception_tag: dfs_properties
+    diagnoses_prereq: graph_representation
+
+  - id: dfs-q06
+    type: true_false
+    difficulty: 2
+    prompt: "True or false: the time interval [discovery, finish] of any two vertices in a DFS is either nested or disjoint."
+    answer: true
+    explanation: "A vertex discovered while another is still active must finish before it does. This parenthesis structure underlies topological sort and SCC algorithms."
+    misconception_tag: dfs_timestamps
+    diagnoses_prereq: recursion
+
+  - id: dfs-q07
+    type: code_output
+    difficulty: 2
+    prompt: "What does this program print?"
+    code: |
+      adj = {0: [1, 2], 1: [3], 2: [3], 3: []}
+      seen = set()
+      order = []
+
+      def dfs(u):
+          seen.add(u)
+          for v in adj[u]:
+              if v not in seen:
+                  dfs(v)
+          order.append(u)
+
+      dfs(0)
+      print(order)
+    answer: "[3, 1, 2, 0]"
+    explanation: "The vertex is appended after its neighbours finish, so this is the finish order. DFS goes 0, 1, 3, finishes 3, then 1, then explores 2 (3 already seen), finishes 2 and finally 0."
+    misconception_tag: dfs_finish_order
+    diagnoses_prereq: recursion
+
+  - id: dfs-q08
+    type: short_answer
+    difficulty: 3
+    prompt: "Compare DFS and BFS: how do they explore a graph, what structure does each use, and what is each one good for?"
+    answer: "DFS goes as deep as possible along one path before backtracking, using a stack (or recursion), and is good for cycle detection, topological sort, components and backtracking. BFS explores layer by layer using a queue and is good for shortest paths in unweighted graphs. Both run in O(V + E)."
+    explanation: "A good answer names stack versus queue, deep versus layer-by-layer, and a use for each."
+    rubric:
+      key_points:
+        - "DFS uses a stack and goes deep first"
+        - "BFS uses a queue and goes layer by layer"
+        - "BFS gives shortest paths in unweighted graphs; DFS suits cycles, ordering and components"
+      max_score: 1
+      partial_credit: true
+    misconception_tag: dfs_vs_bfs
+    diagnoses_prereq: stack

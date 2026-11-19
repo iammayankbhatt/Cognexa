@@ -1,0 +1,115 @@
+concept_id: floyd_warshall
+questions:
+  - id: floyd_warshall-q01
+    type: mcq
+    difficulty: 1
+    prompt: "What does the Floyd-Warshall algorithm compute?"
+    options:
+      - {id: a, text: "Shortest path distances between every pair of vertices"}
+      - {id: b, text: "Shortest paths from one source only", why_wrong: "That is what Dijkstra and Bellman-Ford compute."}
+      - {id: c, text: "A minimum spanning tree", why_wrong: "That is Kruskal's or Prim's algorithm."}
+      - {id: d, text: "A topological order", why_wrong: "Topological sort orders vertices; it does not measure distances."}
+    answer: a
+    explanation: "It fills a V by V matrix with all-pairs shortest distances."
+    misconception_tag: fw_purpose
+    diagnoses_prereq: graph_representation
+
+  - id: floyd_warshall-q02
+    type: mcq
+    difficulty: 1
+    prompt: "What is the time complexity of Floyd-Warshall on a graph with V vertices?"
+    options:
+      - {id: a, text: "O(V cubed)"}
+      - {id: b, text: "O(V squared)", why_wrong: "There are three nested loops over the vertices."}
+      - {id: c, text: "O(V + E)", why_wrong: "It does not depend on E and is far more than linear."}
+      - {id: d, text: "O(E log V)", why_wrong: "That is a heap-based single-source bound."}
+    answer: a
+    explanation: "Loops over k, i and j each run V times."
+    misconception_tag: fw_complexity
+    diagnoses_prereq: dp_fundamentals
+
+  - id: floyd_warshall-q03
+    type: mcq
+    difficulty: 2
+    prompt: "A Floyd-Warshall implementation loops `for i: for j: for k:` and returns some wrong distances. What is the problem?"
+    options:
+      - {id: a, text: "The intermediate-vertex loop k must be the outermost loop"}
+      - {id: b, text: "The loops must go in reverse", why_wrong: "Direction is not the issue; the nesting order is."}
+      - {id: c, text: "It needs a priority queue", why_wrong: "Floyd-Warshall uses no priority queue."}
+      - {id: d, text: "The matrix should start as all zeros", why_wrong: "Missing edges must be infinity."}
+    answer: a
+    explanation: "The DP allows intermediate vertices one at a time. With k innermost, dist[i][k] and dist[k][j] may not yet be final for the earlier vertices."
+    misconception_tag: fw_loop_order
+    diagnoses_prereq: dp_fundamentals
+
+  - id: floyd_warshall-q04
+    type: mcq
+    difficulty: 2
+    prompt: "After running Floyd-Warshall, dist[3][3] equals -2. What does this mean?"
+    options:
+      - {id: a, text: "Vertex 3 lies on a negative cycle, so shortest paths through it are undefined"}
+      - {id: b, text: "There is a self-loop of weight -2 only", why_wrong: "Any negative cycle through 3 produces this, not just a self-loop."}
+      - {id: c, text: "The algorithm has a bug", why_wrong: "A negative diagonal is the expected signal of a negative cycle."}
+      - {id: d, text: "Vertex 3 is unreachable", why_wrong: "Unreachable pairs stay at infinity."}
+    answer: a
+    explanation: "A path from 3 back to 3 with negative total weight is a negative cycle."
+    misconception_tag: fw_negative_cycle
+    diagnoses_prereq: graph_representation
+
+  - id: floyd_warshall-q05
+    type: multi_select
+    difficulty: 2
+    prompt: "Select every true statement about Floyd-Warshall."
+    options:
+      - {id: a, text: "It allows negative edge weights when there is no negative cycle."}
+      - {id: b, text: "It is a dynamic programming algorithm."}
+      - {id: c, text: "It is always faster than running Dijkstra from every vertex.", why_wrong: "For large sparse graphs repeated Dijkstra is much faster."}
+      - {id: d, text: "It needs O(V + E) memory.", why_wrong: "It stores a V by V matrix, O(V squared)."}
+    answer: [a, b]
+    explanation: "Negative edges are fine and the k-step recurrence is classic DP. Its O(V cubed) time and O(V squared) memory suit small or dense graphs."
+    misconception_tag: fw_properties
+    diagnoses_prereq: dp_fundamentals
+
+  - id: floyd_warshall-q06
+    type: true_false
+    difficulty: 1
+    prompt: "True or false: in the initial distance matrix, missing edges are set to infinity and each diagonal entry is set to 0."
+    answer: true
+    explanation: "A vertex reaches itself at cost 0, and an absent edge means no direct path yet."
+    misconception_tag: fw_initialisation
+    diagnoses_prereq: graph_representation
+
+  - id: floyd_warshall-q07
+    type: code_output
+    difficulty: 2
+    prompt: "What does this program print?"
+    code: |
+      INF = float("inf")
+      d = [[0, 3, 7], [INF, 0, 1], [2, INF, 0]]
+      n = 3
+      for k in range(n):
+          for i in range(n):
+              for j in range(n):
+                  if d[i][k] + d[k][j] < d[i][j]:
+                      d[i][j] = d[i][k] + d[k][j]
+      print(d[0][2], d[1][0], d[2][1])
+    answer: "4 3 5"
+    explanation: "0->1->2 costs 4, 1->2->0 costs 3, and 2->0->1 costs 5."
+    misconception_tag: fw_trace
+    diagnoses_prereq: dp_fundamentals
+
+  - id: floyd_warshall-q08
+    type: short_answer
+    difficulty: 3
+    prompt: "State the recurrence behind Floyd-Warshall and explain what the subproblem d_k[i][j] means."
+    answer: "d_k[i][j] is the length of the shortest path from i to j that uses only vertices 0 to k - 1 as intermediate stops. The recurrence is d_(k+1)[i][j] = min(d_k[i][j], d_k[i][k] + d_k[k][j]): either the best path avoids vertex k, or it goes from i to k and from k to j using only earlier vertices. Starting from the edge weights and increasing k to V gives all-pairs shortest paths."
+    explanation: "A good answer defines the restricted-intermediates subproblem and the two-case recurrence."
+    rubric:
+      key_points:
+        - "subproblem restricts intermediate vertices to the first k"
+        - "recurrence takes the minimum of skipping k or going through k"
+        - "base case is the edge weights; final answer at k = V"
+      max_score: 1
+      partial_credit: true
+    misconception_tag: fw_recurrence
+    diagnoses_prereq: dp_fundamentals

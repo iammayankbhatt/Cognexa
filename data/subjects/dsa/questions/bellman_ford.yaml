@@ -1,0 +1,114 @@
+concept_id: bellman_ford
+questions:
+  - id: bellman_ford-q01
+    type: mcq
+    difficulty: 1
+    prompt: "What can Bellman-Ford handle that Dijkstra's algorithm cannot?"
+    options:
+      - {id: a, text: "Negative edge weights, and detection of negative cycles"}
+      - {id: b, text: "Undirected graphs", why_wrong: "Dijkstra handles undirected graphs with non-negative weights."}
+      - {id: c, text: "Graphs with cycles", why_wrong: "Dijkstra handles cycles with non-negative weights."}
+      - {id: d, text: "Very large graphs faster", why_wrong: "Bellman-Ford is slower, O(VE)."}
+    answer: a
+    explanation: "It relaxes every edge repeatedly instead of settling greedily, so negative edges are allowed and negative cycles are detected."
+    misconception_tag: bf_vs_dijkstra
+    diagnoses_prereq: dijkstra
+
+  - id: bellman_ford-q02
+    type: mcq
+    difficulty: 1
+    prompt: "What is the time complexity of Bellman-Ford on a graph with V vertices and E edges?"
+    options:
+      - {id: a, text: "O(VE)"}
+      - {id: b, text: "O((V + E) log V)", why_wrong: "That is Dijkstra with a binary heap."}
+      - {id: c, text: "O(V + E)", why_wrong: "Edges are relaxed in up to V - 1 rounds."}
+      - {id: d, text: "O(V cubed) for every graph", why_wrong: "V cubed is the dense-graph case of O(VE), not the general bound."}
+    answer: a
+    explanation: "V - 1 rounds, each relaxing all E edges."
+    misconception_tag: bf_complexity
+    diagnoses_prereq: graph_representation
+
+  - id: bellman_ford-q03
+    type: mcq
+    difficulty: 2
+    prompt: "Why are V - 1 rounds of relaxation enough when there is no negative cycle?"
+    options:
+      - {id: a, text: "A shortest simple path uses at most V - 1 edges, and round i fixes paths of up to i edges"}
+      - {id: b, text: "Each round settles exactly one vertex", why_wrong: "Several vertices can become correct in the same round."}
+      - {id: c, text: "Because the graph has V - 1 edges", why_wrong: "The number of edges can be much larger."}
+      - {id: d, text: "It is an arbitrary safety margin", why_wrong: "The bound follows from path length."}
+    answer: a
+    explanation: "Without negative cycles shortest paths repeat no vertex, so they have at most V - 1 edges."
+    misconception_tag: bf_rounds
+    diagnoses_prereq: dijkstra
+
+  - id: bellman_ford-q04
+    type: mcq
+    difficulty: 2
+    prompt: "A C++ Bellman-Ford using INT_MAX as infinity reports absurd negative distances for vertices not reachable from the source. What is the bug?"
+    options:
+      - {id: a, text: "It relaxes edges from unreachable vertices, and INT_MAX plus a negative weight looks like a real finite distance (or overflows)"}
+      - {id: b, text: "It runs too many rounds", why_wrong: "Extra rounds do not invent distances."}
+      - {id: c, text: "The edge list is not sorted", why_wrong: "Edge order does not affect correctness."}
+      - {id: d, text: "The source distance is 0", why_wrong: "That is correct."}
+    answer: a
+    explanation: "Skip edges whose start distance is still infinity so unreachable vertices never produce fake paths."
+    misconception_tag: bf_infinity_check
+    diagnoses_prereq: dijkstra
+
+  - id: bellman_ford-q05
+    type: multi_select
+    difficulty: 2
+    prompt: "Select every true statement about Bellman-Ford."
+    options:
+      - {id: a, text: "If any edge can still be relaxed after V - 1 rounds, a negative cycle is reachable."}
+      - {id: b, text: "The order in which edges are relaxed affects speed of convergence but not the final answer."}
+      - {id: c, text: "Any negative edge makes shortest paths undefined.", why_wrong: "Only a reachable negative cycle does."}
+      - {id: d, text: "It requires a priority queue.", why_wrong: "It just loops over the edge list."}
+    answer: [a, b]
+    explanation: "The extra pass detects negative cycles, and edge order matters only for how quickly distances settle."
+    misconception_tag: bf_properties
+    diagnoses_prereq: graph_representation
+
+  - id: bellman_ford-q06
+    type: true_false
+    difficulty: 2
+    prompt: "True or false: an undirected edge with a negative weight forms a negative cycle."
+    answer: true
+    explanation: "An undirected edge can be traversed back and forth, and each round trip has negative total weight."
+    misconception_tag: undirected_negative_edge
+    diagnoses_prereq: graph_representation
+
+  - id: bellman_ford-q07
+    type: code_output
+    difficulty: 2
+    prompt: "What does this program print?"
+    code: |
+      edges = [(0, 1, 4), (0, 2, 5), (2, 1, -3), (1, 3, 2)]
+      INF = float("inf")
+      dist = [0, INF, INF, INF]
+      for _ in range(3):
+          for u, v, w in edges:
+              if dist[u] + w < dist[v]:
+                  dist[v] = dist[u] + w
+      print(dist)
+    answer: "[0, 2, 5, 4]"
+    explanation: "In the first round 1 gets 4, 2 gets 5, then the negative edge lowers 1 to 2, and 3 becomes 4. Later rounds change nothing."
+    misconception_tag: bf_trace
+    diagnoses_prereq: dijkstra
+
+  - id: bellman_ford-q08
+    type: short_answer
+    difficulty: 3
+    prompt: "Explain why shortest paths are undefined when a negative cycle is reachable from the source, and how Bellman-Ford notices this."
+    answer: "If a reachable cycle has negative total weight, you can go around it as many times as you like, and each loop lowers the path cost, so there is no minimum. Bellman-Ford relaxes all edges V - 1 times, which is enough for any graph without negative cycles. It then does one more pass: if any distance can still decrease, the decrease must come from a negative cycle, so it reports one."
+    explanation: "A good answer explains unbounded decrease and the extra relaxation pass."
+    rubric:
+      key_points:
+        - "looping a negative cycle lowers the cost without bound"
+        - "V - 1 rounds suffice without negative cycles"
+        - "an improvement in an extra pass signals a negative cycle"
+      max_score: 1
+      partial_credit: true
+    misconception_tag: negative_cycle_reason
+    diagnoses_prereq: dijkstra

@@ -1,0 +1,125 @@
+concept_id: topological_sort
+questions:
+  - id: topological_sort-q01
+    type: mcq
+    difficulty: 1
+    prompt: "For which kind of graph does a topological ordering exist?"
+    options:
+      - {id: a, text: "A directed graph with no cycles (a DAG)"}
+      - {id: b, text: "Any undirected graph", why_wrong: "Topological order is defined by edge directions."}
+      - {id: c, text: "Any directed graph", why_wrong: "A directed cycle makes it impossible to order its vertices."}
+      - {id: d, text: "Only trees", why_wrong: "Many DAGs that are not trees have topological orders."}
+    answer: a
+    explanation: "Every edge u -> v requires u before v, and a cycle would require a vertex to come before itself."
+    misconception_tag: topo_requires_dag
+    diagnoses_prereq: dfs
+
+  - id: topological_sort-q02
+    type: mcq
+    difficulty: 1
+    prompt: "What is the time complexity of topological sort with an adjacency list?"
+    options:
+      - {id: a, text: "O(V + E)"}
+      - {id: b, text: "O(V log V)", why_wrong: "No sorting of the vertices is needed."}
+      - {id: c, text: "O(V squared)", why_wrong: "That is the cost with an adjacency matrix."}
+      - {id: d, text: "O(E squared)", why_wrong: "Each edge is handled a constant number of times."}
+    answer: a
+    explanation: "Each vertex and each edge is processed once in both Kahn's algorithm and the DFS method."
+    misconception_tag: topo_complexity
+    diagnoses_prereq: dfs
+
+  - id: topological_sort-q03
+    type: mcq
+    difficulty: 2
+    prompt: "In the DFS-based method, how do you obtain the topological order from the finish times?"
+    options:
+      - {id: a, text: "List the vertices in decreasing order of finish time (reverse of the finish order)"}
+      - {id: b, text: "List them in increasing order of finish time", why_wrong: "That puts dependencies after the vertices that need them."}
+      - {id: c, text: "List them by discovery time", why_wrong: "Discovery order does not guarantee that edges point forward."}
+      - {id: d, text: "List them by in-degree", why_wrong: "In-degree alone does not give a valid order."}
+    answer: a
+    explanation: "For an edge u -> v, v finishes before u, so reversing the finish order puts u before v."
+    misconception_tag: topo_reverse_finish
+    diagnoses_prereq: dfs
+
+  - id: topological_sort-q04
+    type: mcq
+    difficulty: 2
+    prompt: "Kahn's algorithm outputs only 3 of the 5 vertices of a graph. What does that tell you?"
+    options:
+      - {id: a, text: "The graph contains a cycle, so no topological order exists"}
+      - {id: b, text: "The queue was implemented incorrectly", why_wrong: "A correct implementation stops short exactly when a cycle blocks vertices."}
+      - {id: c, text: "The graph is disconnected", why_wrong: "Disconnected vertices with in-degree 0 are still output."}
+      - {id: d, text: "Two vertices have no edges", why_wrong: "Such vertices have in-degree 0 and are output."}
+    answer: a
+    explanation: "Vertices on a cycle, and those that depend on it, never reach in-degree 0 and so are never output."
+    misconception_tag: topo_cycle_detection
+    diagnoses_prereq: dfs
+
+  - id: topological_sort-q05
+    type: multi_select
+    difficulty: 2
+    prompt: "Select every true statement about topological sort."
+    options:
+      - {id: a, text: "A DAG can have more than one valid topological order."}
+      - {id: b, text: "Kahn's algorithm uses the in-degree of each vertex."}
+      - {id: c, text: "The order is always unique.", why_wrong: "Independent vertices can usually be placed in several ways."}
+      - {id: d, text: "It works on graphs with directed cycles.", why_wrong: "A cycle makes a valid order impossible."}
+    answer: [a, b]
+    explanation: "Only a DAG has an order, and independent vertices allow several choices. Kahn's repeatedly removes in-degree-zero vertices."
+    misconception_tag: topo_properties
+    diagnoses_prereq: dfs
+
+  - id: topological_sort-q06
+    type: true_false
+    difficulty: 1
+    prompt: "True or false: in a topological order of a DAG, for every edge u -> v the vertex u appears before v."
+    answer: true
+    explanation: "That is the definition of a topological order."
+    misconception_tag: topo_definition
+    diagnoses_prereq: dfs
+
+  - id: topological_sort-q07
+    type: code_output
+    difficulty: 2
+    prompt: "What does this program print?"
+    code: |
+      from collections import deque
+
+      edges = [(0, 1), (0, 2), (1, 3), (2, 3)]
+      n = 4
+      adj = [[] for _ in range(n)]
+      indeg = [0] * n
+      for u, v in edges:
+          adj[u].append(v)
+          indeg[v] += 1
+      q = deque(i for i in range(n) if indeg[i] == 0)
+      out = []
+      while q:
+          u = q.popleft()
+          out.append(u)
+          for v in adj[u]:
+              indeg[v] -= 1
+              if indeg[v] == 0:
+                  q.append(v)
+      print(out)
+    answer: "[0, 1, 2, 3]"
+    explanation: "Vertex 0 has in-degree 0 and is output first, releasing 1 and 2. Vertex 3 is released only after both of its predecessors are removed."
+    misconception_tag: kahn_trace
+    diagnoses_prereq: dfs
+
+  - id: topological_sort-q08
+    type: short_answer
+    difficulty: 3
+    prompt: "Explain how a DFS can detect that a directed graph has no topological order."
+    answer: "While running DFS, mark vertices that are on the current recursion path. If an edge leads to a vertex that is still on the current path, it is a back edge, meaning a directed cycle exists, so no topological order is possible. Vertices that are completely finished do not signal a cycle."
+    explanation: "A good answer mentions tracking the current path and that a back edge means a cycle."
+    rubric:
+      key_points:
+        - "track vertices currently on the recursion path"
+        - "an edge to a vertex on the current path is a back edge"
+        - "a back edge means a directed cycle, so no order exists"
+      max_score: 1
+      partial_credit: true
+    misconception_tag: topo_dfs_cycle
+    diagnoses_prereq: dfs

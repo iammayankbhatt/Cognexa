@@ -1,0 +1,120 @@
+concept_id: cycle_detection
+questions:
+  - id: cycle_detection-q01
+    type: mcq
+    difficulty: 1
+    prompt: "During a DFS of a directed graph, which kind of edge shows that the graph has a cycle?"
+    options:
+      - {id: a, text: "An edge to a vertex that is still on the current recursion path (a back edge)"}
+      - {id: b, text: "An edge to any previously visited vertex", why_wrong: "Edges to finished vertices (forward or cross edges) do not form cycles."}
+      - {id: c, text: "An edge to an unvisited vertex", why_wrong: "That is a tree edge, which extends the search."}
+      - {id: d, text: "Any edge out of the start vertex", why_wrong: "The start vertex is not special for cycles."}
+    answer: a
+    explanation: "Reaching an ancestor that is still active means the path can return to itself."
+    misconception_tag: back_edge_cycle
+    diagnoses_prereq: dfs
+
+  - id: cycle_detection-q02
+    type: mcq
+    difficulty: 1
+    prompt: "What is the time complexity of DFS-based cycle detection on a graph with V vertices and E edges?"
+    options:
+      - {id: a, text: "O(V + E)"}
+      - {id: b, text: "O(V squared) always", why_wrong: "With adjacency lists the cost is linear."}
+      - {id: c, text: "O(2^V)", why_wrong: "Deciding whether a cycle exists does not require listing all cycles."}
+      - {id: d, text: "O(E log E)", why_wrong: "No sorting is needed."}
+    answer: a
+    explanation: "It is a single DFS over the graph."
+    misconception_tag: cycle_detection_cost
+    diagnoses_prereq: dfs
+
+  - id: cycle_detection-q03
+    type: mcq
+    difficulty: 2
+    prompt: "A directed-graph cycle detector uses one visited flag and reports a cycle whenever it sees a visited vertex. On the graph 0->1, 0->2, 1->3, 2->3 it reports a cycle. Why is that wrong?"
+    options:
+      - {id: a, text: "Vertex 3 is reached twice through different paths, but it is already finished, so no cycle exists"}
+      - {id: b, text: "The graph really has a cycle through 3", why_wrong: "No path leads from 3 back to 0, 1 or 2."}
+      - {id: c, text: "DFS cannot run on directed graphs", why_wrong: "DFS works on directed graphs."}
+      - {id: d, text: "The visited flag should be reset each time", why_wrong: "Resetting would make the search exponential, not correct."}
+    answer: a
+    explanation: "Directed detection needs three states. Only an edge to a vertex that is still grey (on the current path) is a cycle."
+    misconception_tag: visited_vs_on_stack
+    diagnoses_prereq: dfs
+
+  - id: cycle_detection-q04
+    type: mcq
+    difficulty: 2
+    prompt: "An undirected cycle detector reports a cycle for a simple path graph 0-1-2. What did it forget?"
+    options:
+      - {id: a, text: "To ignore the parent vertex it just came from"}
+      - {id: b, text: "To use three colours", why_wrong: "Three colours are for directed graphs."}
+      - {id: c, text: "To sort the adjacency lists", why_wrong: "Order does not affect correctness."}
+      - {id: d, text: "To start at the last vertex", why_wrong: "The starting vertex does not change the result."}
+    answer: a
+    explanation: "Each undirected edge is stored in both lists, so the child always sees its parent as a visited neighbour."
+    misconception_tag: undirected_parent_skip
+    diagnoses_prereq: graph_representation
+
+  - id: cycle_detection-q05
+    type: multi_select
+    difficulty: 2
+    prompt: "Select every valid way to detect a cycle."
+    options:
+      - {id: a, text: "Union-find over the edges of an undirected graph"}
+      - {id: b, text: "Three-colour DFS on a directed graph"}
+      - {id: c, text: "Kahn's algorithm leaving some vertices unprocessed in a directed graph"}
+      - {id: d, text: "Checking whether the number of edges is even", why_wrong: "Edge count parity says nothing about cycles."}
+    answer: [a, b, c]
+    explanation: "All three are standard methods. Parity of the edge count is unrelated."
+    misconception_tag: cycle_detection_methods
+    diagnoses_prereq: dfs
+
+  - id: cycle_detection-q06
+    type: true_false
+    difficulty: 1
+    prompt: "True or false: a self-loop (an edge from a vertex to itself) counts as a cycle."
+    answer: true
+    explanation: "The path starts and ends at the same vertex, so it is a cycle of length one."
+    misconception_tag: self_loop
+    diagnoses_prereq: graph_representation
+
+  - id: cycle_detection-q07
+    type: code_output
+    difficulty: 2
+    prompt: "What does this program print?"
+    code: |
+      adj = {0: [1], 1: [2], 2: [0, 3], 3: []}
+      state = {v: 0 for v in adj}
+
+      def has_cycle(u):
+          state[u] = 1
+          for v in adj[u]:
+              if state[v] == 1:
+                  return True
+              if state[v] == 0 and has_cycle(v):
+                  return True
+          state[u] = 2
+          return False
+
+      print(has_cycle(0), state[3])
+    answer: "True 0"
+    explanation: "DFS goes 0, 1, 2 and finds the edge 2 -> 0 to a vertex that is still on the path, returning True at once. Vertex 3 was never visited, so its state is still 0."
+    misconception_tag: three_color_trace
+    diagnoses_prereq: recursion
+
+  - id: cycle_detection-q08
+    type: short_answer
+    difficulty: 3
+    prompt: "Why does directed cycle detection need three states (white, grey, black) instead of a simple visited flag?"
+    answer: "A visited vertex can be either still on the current DFS path (grey) or completely finished (black). An edge to a grey vertex returns to an ancestor and forms a cycle. An edge to a black vertex only joins a part of the graph that was already fully explored and cannot lead back, so it is not a cycle. A single flag cannot tell these apart and would report false cycles where two paths meet."
+    explanation: "A good answer distinguishes grey (on the path) from black (finished) and explains false alarms."
+    rubric:
+      key_points:
+        - "grey means on the current path, black means finished"
+        - "edge to grey is a back edge and a cycle"
+        - "edge to black is not a cycle, so one flag gives false alarms"
+      max_score: 1
+      partial_credit: true
+    misconception_tag: three_states_reason
+    diagnoses_prereq: dfs

@@ -1,0 +1,112 @@
+concept_id: graph_representation
+questions:
+  - id: graph_representation-q01
+    type: mcq
+    difficulty: 1
+    prompt: "How much memory does an adjacency list for a graph with V vertices and E edges use?"
+    options:
+      - {id: a, text: "O(V + E)"}
+      - {id: b, text: "O(V squared)", why_wrong: "That is the memory of an adjacency matrix."}
+      - {id: c, text: "O(E squared)", why_wrong: "Memory grows linearly with the number of edges."}
+      - {id: d, text: "O(V * E)", why_wrong: "Each edge is stored once or twice, not once per vertex."}
+    answer: a
+    explanation: "There is one list per vertex plus one entry per edge endpoint, so memory is linear in V + E."
+    misconception_tag: adjacency_list_space
+    diagnoses_prereq: arrays
+
+  - id: graph_representation-q02
+    type: mcq
+    difficulty: 1
+    prompt: "Which representation lets you check whether an edge (u, v) exists in O(1) time?"
+    options:
+      - {id: a, text: "Adjacency matrix"}
+      - {id: b, text: "Adjacency list with plain lists", why_wrong: "You must scan the neighbour list of u."}
+      - {id: c, text: "Edge list", why_wrong: "You must scan all edges."}
+      - {id: d, text: "None of them", why_wrong: "The matrix gives direct access by index."}
+    answer: a
+    explanation: "The cell matrix[u][v] answers the question by direct indexing."
+    misconception_tag: edge_lookup_cost
+    diagnoses_prereq: arrays
+
+  - id: graph_representation-q03
+    type: mcq
+    difficulty: 2
+    prompt: "A social network has 10 million users and each user has about 100 friends. Which representation is the sensible choice?"
+    options:
+      - {id: a, text: "Adjacency list, because the graph is very sparse"}
+      - {id: b, text: "Adjacency matrix, because lookups are O(1)", why_wrong: "A 10-million by 10-million matrix needs 10^14 cells, far too much memory."}
+      - {id: c, text: "Either, the memory is the same", why_wrong: "A matrix is O(V squared) and a list is O(V + E)."}
+      - {id: d, text: "A single array of users", why_wrong: "That cannot store the friendships."}
+    answer: a
+    explanation: "With E around 10^9 and V squared around 10^14, a list uses a small fraction of the memory."
+    misconception_tag: sparse_vs_dense
+    diagnoses_prereq: arrays
+
+  - id: graph_representation-q04
+    type: mcq
+    difficulty: 2
+    prompt: "A BFS on an undirected graph built by your code never reaches some vertices that are connected. add_edge(u, v) only does adj[u].append(v). What is the most likely fix?"
+    options:
+      - {id: a, text: "Also add adj[v].append(u) for undirected edges"}
+      - {id: b, text: "Use a matrix of size V", why_wrong: "The storage type is not the cause; the missing reverse edge is."}
+      - {id: c, text: "Sort the vertices first", why_wrong: "Sorting does not create missing edges."}
+      - {id: d, text: "Start the BFS from the highest vertex", why_wrong: "The same missing edges would still block traversal."}
+    answer: a
+    explanation: "An undirected edge must be stored in both endpoints' lists. With only one direction stored, the graph behaves as a directed one."
+    misconception_tag: undirected_both_directions
+    diagnoses_prereq: singly_linked_list
+
+  - id: graph_representation-q05
+    type: multi_select
+    difficulty: 2
+    prompt: "Select every true statement about graph representations."
+    options:
+      - {id: a, text: "The adjacency matrix of an undirected graph is symmetric."}
+      - {id: b, text: "Summing the lengths of all adjacency lists of an undirected graph gives 2E."}
+      - {id: c, text: "Listing the neighbours of a vertex in a matrix takes O(degree).", why_wrong: "You must scan the full row, which is O(V)."}
+      - {id: d, text: "An adjacency list always uses less memory than a matrix.", why_wrong: "For a dense graph with E near V squared, both are about the same size."}
+    answer: [a, b]
+    explanation: "Each undirected edge sets two matrix cells and appears in two lists. Scanning a matrix row costs O(V) regardless of degree."
+    misconception_tag: representation_facts
+    diagnoses_prereq: arrays
+
+  - id: graph_representation-q06
+    type: true_false
+    difficulty: 1
+    prompt: "True or false: a tree is a connected graph with no cycles."
+    answer: true
+    explanation: "A tree is exactly a connected acyclic undirected graph, which is why it has n - 1 edges."
+    misconception_tag: tree_is_graph
+    diagnoses_prereq: null
+
+  - id: graph_representation-q07
+    type: code_output
+    difficulty: 2
+    prompt: "What does this program print?"
+    code: |
+      n = 4
+      adj = [[] for _ in range(n)]
+      for u, v in [(0, 1), (0, 2), (1, 2), (2, 3)]:
+          adj[u].append(v)
+          adj[v].append(u)
+      print(len(adj[2]), sum(len(a) for a in adj))
+    answer: "3 8"
+    explanation: "Vertex 2 has neighbours 0, 1 and 3, so its degree is 3. Each of the four undirected edges is stored twice, giving 8 entries in total."
+    misconception_tag: degree_sum
+    diagnoses_prereq: arrays
+
+  - id: graph_representation-q08
+    type: short_answer
+    difficulty: 3
+    prompt: "Compare the adjacency list and adjacency matrix for a graph with V vertices: when would you choose each, and why?"
+    answer: "An adjacency list uses O(V + E) memory and visits neighbours in time proportional to the degree, so it is best for sparse graphs, which are most real graphs. An adjacency matrix uses O(V squared) memory but tests for an edge in O(1), so it suits small or dense graphs and algorithms that look at all pairs, such as Floyd-Warshall."
+    explanation: "A good answer gives the memory bounds, the lookup cost and ties the choice to graph density."
+    rubric:
+      key_points:
+        - "list is O(V + E) memory and suits sparse graphs"
+        - "matrix is O(V squared) memory with O(1) edge lookup"
+        - "matrix suits dense graphs or all-pairs algorithms"
+      max_score: 1
+      partial_credit: true
+    misconception_tag: list_vs_matrix
+    diagnoses_prereq: arrays

@@ -1,0 +1,126 @@
+concept_id: connectivity_scc
+questions:
+  - id: connectivity_scc-q01
+    type: mcq
+    difficulty: 1
+    prompt: "What defines a strongly connected component of a directed graph?"
+    options:
+      - {id: a, text: "A maximal set of vertices where every vertex can reach every other along directed edges"}
+      - {id: b, text: "A set of vertices connected when edge directions are ignored", why_wrong: "That is a weakly connected component."}
+      - {id: c, text: "A set of vertices with the same in-degree", why_wrong: "Degree has nothing to do with mutual reachability."}
+      - {id: d, text: "Any path in the graph", why_wrong: "A path alone does not guarantee travel back."}
+    answer: a
+    explanation: "Strong connectivity requires paths in both directions between every pair in the set."
+    misconception_tag: scc_definition
+    diagnoses_prereq: dfs
+
+  - id: connectivity_scc-q02
+    type: mcq
+    difficulty: 1
+    prompt: "How do you count the connected components of an undirected graph?"
+    options:
+      - {id: a, text: "Start a DFS or BFS from each unvisited vertex and count how many starts are needed"}
+      - {id: b, text: "Count the vertices with degree zero", why_wrong: "That counts only isolated vertices."}
+      - {id: c, text: "Count the edges", why_wrong: "Edge count does not determine the number of components."}
+      - {id: d, text: "Run one BFS from vertex 0", why_wrong: "That finds only the component containing vertex 0."}
+    answer: a
+    explanation: "Each new search covers exactly one component, so the number of searches is the number of components."
+    misconception_tag: count_components
+    diagnoses_prereq: dfs
+
+  - id: connectivity_scc-q03
+    type: mcq
+    difficulty: 2
+    prompt: "In Kosaraju's algorithm, on which graph and in which order is the second DFS pass run?"
+    options:
+      - {id: a, text: "On the reversed graph, in decreasing order of first-pass finish time"}
+      - {id: b, text: "On the original graph, in increasing finish order", why_wrong: "Using the original graph lets the search escape into downstream SCCs."}
+      - {id: c, text: "On the reversed graph, in vertex id order", why_wrong: "The order of finish times is essential."}
+      - {id: d, text: "On an undirected copy of the graph", why_wrong: "Ignoring directions finds weak components."}
+    answer: a
+    explanation: "The vertex finishing last is in a source SCC, and in the reversed graph a DFS from it cannot leave that SCC."
+    misconception_tag: kosaraju_order
+    diagnoses_prereq: dfs
+
+  - id: connectivity_scc-q04
+    type: mcq
+    difficulty: 2
+    prompt: "A student runs one DFS from vertex u in a directed graph and calls the visited set 'the SCC of u'. Why is this wrong?"
+    options:
+      - {id: a, text: "DFS finds everything u can reach, including vertices that cannot reach u back"}
+      - {id: b, text: "DFS misses vertices on cycles", why_wrong: "DFS reaches every vertex reachable from u."}
+      - {id: c, text: "DFS cannot run on directed graphs", why_wrong: "DFS works on directed graphs; the issue is what its result means."}
+      - {id: d, text: "The SCC always contains every vertex", why_wrong: "Many directed graphs have several SCCs."}
+    answer: a
+    explanation: "An SCC needs reachability in both directions. Forward reachability alone can include downstream components."
+    misconception_tag: dfs_reach_not_scc
+    diagnoses_prereq: dfs
+
+  - id: connectivity_scc-q05
+    type: multi_select
+    difficulty: 3
+    prompt: "Select every true statement about strongly connected components."
+    options:
+      - {id: a, text: "Shrinking each SCC to a single node produces a DAG."}
+      - {id: b, text: "A vertex that is on no cycle forms an SCC by itself."}
+      - {id: c, text: "Kosaraju's algorithm runs in O(V + E)."}
+      - {id: d, text: "Every directed graph has exactly one SCC.", why_wrong: "A chain of n vertices has n SCCs."}
+    answer: [a, b, c]
+    explanation: "A cycle between SCCs would merge them, so the condensation is acyclic. Single vertices count, and Kosaraju is linear."
+    misconception_tag: scc_properties
+    diagnoses_prereq: dfs
+
+  - id: connectivity_scc-q06
+    type: true_false
+    difficulty: 2
+    prompt: "True or false: a directed graph that is a single cycle through all its vertices has exactly one strongly connected component."
+    answer: true
+    explanation: "Following the cycle, every vertex can reach every other, so all vertices are in the same SCC."
+    misconception_tag: cycle_one_scc
+    diagnoses_prereq: dfs
+
+  - id: connectivity_scc-q07
+    type: code_output
+    difficulty: 2
+    prompt: "What does this program print?"
+    code: |
+      n = 6
+      edges = [(0, 1), (1, 2), (3, 4)]
+      adj = [[] for _ in range(n)]
+      for u, v in edges:
+          adj[u].append(v)
+          adj[v].append(u)
+      seen = [False] * n
+      count = 0
+      for s in range(n):
+          if not seen[s]:
+              count += 1
+              stack = [s]
+              seen[s] = True
+              while stack:
+                  u = stack.pop()
+                  for v in adj[u]:
+                      if not seen[v]:
+                          seen[v] = True
+                          stack.append(v)
+      print(count)
+    answer: "3"
+    explanation: "The components are {0, 1, 2}, {3, 4} and the isolated vertex {5}."
+    misconception_tag: components_trace
+    diagnoses_prereq: graph_representation
+
+  - id: connectivity_scc-q08
+    type: short_answer
+    difficulty: 3
+    prompt: "Explain why the second pass of Kosaraju's algorithm uses the reversed graph."
+    answer: "The vertex that finishes last in the first DFS belongs to a source SCC of the component graph. In the original graph, a DFS from it could follow edges out into other SCCs. Reversing every edge turns those outgoing edges into incoming ones, so a DFS from that vertex in the reversed graph can only reach vertices of its own SCC. Repeating in decreasing finish order peels off one SCC at a time."
+    explanation: "A good answer mentions the source SCC, that reversal blocks escape and the repeated peeling."
+    rubric:
+      key_points:
+        - "the latest-finishing vertex is in a source SCC"
+        - "reversal turns edges leaving that SCC into incoming edges"
+        - "so each second-pass DFS collects exactly one SCC"
+      max_score: 1
+      partial_credit: true
+    misconception_tag: kosaraju_reason
+    diagnoses_prereq: dfs

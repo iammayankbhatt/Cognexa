@@ -1,0 +1,121 @@
+concept_id: dijkstra
+questions:
+  - id: dijkstra-q01
+    type: mcq
+    difficulty: 1
+    prompt: "Dijkstra's algorithm is guaranteed to find correct shortest paths only when..."
+    options:
+      - {id: a, text: "all edge weights are non-negative"}
+      - {id: b, text: "the graph is undirected", why_wrong: "It works on directed graphs too."}
+      - {id: c, text: "all edge weights are equal", why_wrong: "Equal weights are fine, but any non-negative weights work."}
+      - {id: d, text: "the graph has no cycles", why_wrong: "Cycles with non-negative weights cause no problem."}
+    answer: a
+    explanation: "The greedy step that finalises the nearest vertex assumes no later edge can reduce a distance, which needs non-negative weights."
+    misconception_tag: dijkstra_nonnegative
+    diagnoses_prereq: greedy
+
+  - id: dijkstra-q02
+    type: mcq
+    difficulty: 1
+    prompt: "What is the running time of Dijkstra's algorithm with a binary heap on a graph with V vertices and E edges?"
+    options:
+      - {id: a, text: "O((V + E) log V)"}
+      - {id: b, text: "O(V + E)", why_wrong: "Heap operations add a log factor."}
+      - {id: c, text: "O(V * E)", why_wrong: "That is Bellman-Ford."}
+      - {id: d, text: "O(V cubed)", why_wrong: "That is Floyd-Warshall for all pairs."}
+    answer: a
+    explanation: "Each vertex pop and each edge relaxation can involve a heap operation costing O(log V)."
+    misconception_tag: dijkstra_complexity
+    diagnoses_prereq: binary_heap
+
+  - id: dijkstra-q03
+    type: mcq
+    difficulty: 2
+    prompt: "Edges: A->B weight 5, A->C weight 1, C->B weight 1. Starting at A, what is the shortest distance to B?"
+    options:
+      - {id: a, text: "2"}
+      - {id: b, text: "5", why_wrong: "The direct edge is longer than the route through C."}
+      - {id: c, text: "1", why_wrong: "1 is the distance to C."}
+      - {id: d, text: "6", why_wrong: "That adds the direct edge and a detour."}
+    answer: a
+    explanation: "A->C->B costs 1 + 1 = 2, which is less than the direct edge of 5. BFS would pick the direct edge because it has fewer hops."
+    misconception_tag: weighted_vs_hops
+    diagnoses_prereq: bfs
+
+  - id: dijkstra-q04
+    type: mcq
+    difficulty: 2
+    prompt: "A Dijkstra implementation uses a plain FIFO queue instead of a priority queue on a weighted graph. What is the consequence?"
+    options:
+      - {id: a, text: "Vertices may be finalised before their true shortest distance is known, giving wrong results unless they are reprocessed"}
+      - {id: b, text: "Nothing changes", why_wrong: "Order by distance is the essence of Dijkstra."}
+      - {id: c, text: "It becomes faster and still correct", why_wrong: "It loses the guarantee that the popped vertex is the closest."}
+      - {id: d, text: "It detects negative cycles", why_wrong: "A FIFO queue does not add that capability."}
+    answer: a
+    explanation: "Without a priority queue the next vertex is not the nearest, so the greedy correctness argument no longer holds."
+    misconception_tag: dijkstra_needs_pq
+    diagnoses_prereq: binary_heap
+
+  - id: dijkstra-q05
+    type: multi_select
+    difficulty: 2
+    prompt: "Select every true statement about Dijkstra's algorithm."
+    options:
+      - {id: a, text: "If every edge has weight 1, it visits vertices in the same layered order as BFS."}
+      - {id: b, text: "It relaxes the outgoing edges of each settled vertex."}
+      - {id: c, text: "It works with negative edges as long as there is no negative cycle.", why_wrong: "Even a single negative edge can break its greedy choice."}
+      - {id: d, text: "It computes shortest paths between all pairs in one run.", why_wrong: "One run gives distances from a single source."}
+    answer: [a, b]
+    explanation: "With unit weights it behaves like BFS, and relaxation is its core step. It is single-source and needs non-negative weights."
+    misconception_tag: dijkstra_properties
+    diagnoses_prereq: bfs
+
+  - id: dijkstra-q06
+    type: true_false
+    difficulty: 2
+    prompt: "True or false: with lazy deletion, a popped heap entry whose distance is larger than the vertex's current best distance should be skipped."
+    answer: true
+    explanation: "Such an entry is stale; the vertex was already reached by a cheaper path and processed."
+    misconception_tag: stale_entries
+    diagnoses_prereq: binary_heap
+
+  - id: dijkstra-q07
+    type: code_output
+    difficulty: 2
+    prompt: "What does this program print?"
+    code: |
+      import heapq
+
+      adj = {0: [(1, 4), (2, 1)], 1: [(3, 1)], 2: [(1, 2), (3, 5)], 3: []}
+      dist = {v: float("inf") for v in adj}
+      dist[0] = 0
+      h = [(0, 0)]
+      while h:
+          d, u = heapq.heappop(h)
+          if d > dist[u]:
+              continue
+          for v, w in adj[u]:
+              if d + w < dist[v]:
+                  dist[v] = d + w
+                  heapq.heappush(h, (dist[v], v))
+      print(dist[1], dist[3])
+    answer: "3 4"
+    explanation: "The route 0->2->1 costs 3, beating the direct edge of 4, and then 1->3 adds 1 for a distance of 4."
+    misconception_tag: dijkstra_trace
+    diagnoses_prereq: binary_heap
+
+  - id: dijkstra-q08
+    type: short_answer
+    difficulty: 3
+    prompt: "Explain why Dijkstra's algorithm can give a wrong answer when the graph has a negative edge weight."
+    answer: "Dijkstra finalises a vertex as soon as it is the closest unsettled vertex, assuming no later path can be cheaper because adding edges only increases the length. A negative edge breaks this assumption: a path through a vertex settled later can then reach an already finalised vertex with a smaller total, but Dijkstra never revisits it, so the reported distance is too large."
+    explanation: "A good answer names the greedy finalisation and how a negative edge can undercut it."
+    rubric:
+      key_points:
+        - "vertices are finalised greedily when popped"
+        - "this assumes extending a path never decreases its length"
+        - "a negative edge can produce a cheaper path to a finalised vertex that is never corrected"
+      max_score: 1
+      partial_credit: true
+    misconception_tag: dijkstra_negative_reason
+    diagnoses_prereq: greedy

@@ -1,0 +1,122 @@
+concept_id: minimum_spanning_tree
+questions:
+  - id: minimum_spanning_tree-q01
+    type: mcq
+    difficulty: 1
+    prompt: "How many edges does a spanning tree of a connected graph with V vertices contain?"
+    options:
+      - {id: a, text: "V - 1"}
+      - {id: b, text: "V", why_wrong: "V edges on V vertices would contain a cycle."}
+      - {id: c, text: "E", why_wrong: "A spanning tree usually uses only some of the edges."}
+      - {id: d, text: "2V - 1", why_wrong: "That is too many for a tree."}
+    answer: a
+    explanation: "A tree on V vertices always has V - 1 edges."
+    misconception_tag: spanning_tree_edges
+    diagnoses_prereq: disjoint_set_union
+
+  - id: minimum_spanning_tree-q02
+    type: mcq
+    difficulty: 1
+    prompt: "In Kruskal's algorithm, what data structure checks whether an edge would create a cycle?"
+    options:
+      - {id: a, text: "Disjoint set union (union-find)"}
+      - {id: b, text: "A stack", why_wrong: "A stack does not track which vertices are connected."}
+      - {id: c, text: "A min-heap", why_wrong: "A heap orders edges by weight but does not detect cycles."}
+      - {id: d, text: "A trie", why_wrong: "Tries store strings."}
+    answer: a
+    explanation: "If both endpoints have the same union-find root they are already connected, so the edge would close a cycle."
+    misconception_tag: kruskal_dsu
+    diagnoses_prereq: disjoint_set_union
+
+  - id: minimum_spanning_tree-q03
+    type: mcq
+    difficulty: 2
+    prompt: "Edges: A-B 1, B-C 2, A-C 3, C-D 4. What is the total weight of the minimum spanning tree?"
+    options:
+      - {id: a, text: "7"}
+      - {id: b, text: "10", why_wrong: "That includes every edge, which forms a cycle."}
+      - {id: c, text: "6", why_wrong: "Some edge connecting D must be included, and C-D costs 4."}
+      - {id: d, text: "8", why_wrong: "That swaps B-C for the heavier A-C."}
+    answer: a
+    explanation: "Take A-B (1), B-C (2), skip A-C (cycle), take C-D (4): total 7."
+    misconception_tag: mst_compute
+    diagnoses_prereq: greedy
+
+  - id: minimum_spanning_tree-q04
+    type: mcq
+    difficulty: 2
+    prompt: "A student uses an MST to find the shortest route from city X to city Y. Why can this give the wrong answer?"
+    options:
+      - {id: a, text: "The MST minimises the total weight of all edges, not the distance between a particular pair"}
+      - {id: b, text: "The MST may not contain Y", why_wrong: "A spanning tree contains every vertex."}
+      - {id: c, text: "MSTs only work with negative weights", why_wrong: "MSTs work with any weights."}
+      - {id: d, text: "The MST has cycles", why_wrong: "A tree has no cycles."}
+    answer: a
+    explanation: "The path between X and Y in the MST can be longer than their shortest path. Use Dijkstra for shortest paths."
+    misconception_tag: mst_vs_shortest_path
+    diagnoses_prereq: graph_representation
+
+  - id: minimum_spanning_tree-q05
+    type: multi_select
+    difficulty: 2
+    prompt: "Select every true statement about minimum spanning trees."
+    options:
+      - {id: a, text: "If all edge weights are distinct, the MST is unique."}
+      - {id: b, text: "The lightest edge crossing any cut belongs to some MST."}
+      - {id: c, text: "Kruskal's and Prim's algorithms are both greedy."}
+      - {id: d, text: "Negative edge weights make MST algorithms fail.", why_wrong: "Only the relative order of weights matters, so negatives are fine."}
+    answer: [a, b, c]
+    explanation: "Distinct weights force a unique MST, the cut property justifies both greedy algorithms, and negative weights pose no problem."
+    misconception_tag: mst_properties
+    diagnoses_prereq: greedy
+
+  - id: minimum_spanning_tree-q06
+    type: true_false
+    difficulty: 2
+    prompt: "True or false: Prim's algorithm grows a single tree by repeatedly adding the cheapest edge that connects the tree to a vertex outside it."
+    answer: true
+    explanation: "That is Prim's rule, usually implemented with a min-heap of candidate edges."
+    misconception_tag: prim_rule
+    diagnoses_prereq: binary_heap
+
+  - id: minimum_spanning_tree-q07
+    type: code_output
+    difficulty: 2
+    prompt: "What does this program print?"
+    code: |
+      edges = [(0, 1, 1), (1, 2, 2), (0, 2, 3), (2, 3, 4), (1, 3, 5)]
+      parent = list(range(4))
+
+      def find(x):
+          while parent[x] != x:
+              x = parent[x]
+          return x
+
+      total, taken = 0, []
+      for u, v, w in sorted(edges, key=lambda e: e[2]):
+          ru, rv = find(u), find(v)
+          if ru != rv:
+              parent[ru] = rv
+              total += w
+              taken.append(w)
+      print(total, taken)
+    answer: "7 [1, 2, 4]"
+    explanation: "Edges 1 and 2 are taken, edge 3 is skipped because 0 and 2 are already connected, and edge 4 connects vertex 3. Edge 5 is then skipped too."
+    misconception_tag: kruskal_trace
+    diagnoses_prereq: disjoint_set_union
+
+  - id: minimum_spanning_tree-q08
+    type: short_answer
+    difficulty: 3
+    prompt: "Explain why Kruskal's greedy choice of the cheapest non-cycle edge always leads to a minimum spanning tree."
+    answer: "When Kruskal's considers an edge (u, v) that joins two different components, consider the cut between u's component and the rest of the graph. All lighter edges have already been processed, and none crosses this cut, because they were either added inside components or skipped. So (u, v) is the lightest edge crossing the cut, and by the cut property such an edge belongs to some MST. Adding only safe edges until V - 1 are chosen gives an MST."
+    explanation: "A good answer uses the cut property and explains why the current edge is the lightest crossing edge."
+    rubric:
+      key_points:
+        - "consider the cut around one endpoint's component"
+        - "the edge is the lightest edge crossing that cut"
+        - "the cut property makes it safe, so the result is an MST"
+      max_score: 1
+      partial_credit: true
+    misconception_tag: kruskal_correctness
+    diagnoses_prereq: greedy
