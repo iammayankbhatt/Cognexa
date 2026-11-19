@@ -1,29 +1,20 @@
 """Live checks against real Postgres + Neo4j. Run in CI (service containers) or locally.
 
-Skipped unless DATABASE_URL and NEO4J_URI/USER/PASSWORD are present in the environment.
+Skipped unless the databases are configured (environment variables or apps/api/.env).
 """
 
-import os
-
-import pytest
 from httpx import ASGITransport, AsyncClient
 
-from app.core.config import Settings
 from app.health_checks import check_neo4j, check_postgres
 from app.main import create_app
 
-pytestmark = pytest.mark.skipif(
-    not (
-        os.environ.get("DATABASE_URL")
-        and os.environ.get("NEO4J_URI")
-        and os.environ.get("NEO4J_PASSWORD")
-    ),
-    reason="live databases not configured",
-)
+from .conftest import live_settings, requires_neo4j, requires_postgres
+
+pytestmark = [requires_postgres, requires_neo4j]
 
 
-def _settings() -> Settings:
-    return Settings(_env_file=None, health_check_timeout_s=10.0)
+def _settings():  # type: ignore[no-untyped-def]
+    return live_settings()
 
 
 async def test_postgres_reachable_and_pgvector_available() -> None:

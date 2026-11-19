@@ -60,6 +60,7 @@ cognexa/
 │   ├── questions/<concept_id>.yaml
 │   └── eval/testset.jsonl
 ├── supabase/migrations/      ← SQL migrations (must also apply on plain Postgres+pgvector in CI)
+├── supabase/shim/            ← test-only auth schema shim for plain Postgres (never apply to Supabase)
 ├── scripts/                  ← validate_graph.py, seed_neo4j.py, seed_postgres.py, seed_vectors.py
 ├── evaluation/               ← ragas_eval.py, study_analysis.ipynb, reports/
 ├── docs/                     ← ARCHITECTURE.md, DEPLOYMENT.md, API.md, DEMO_SCRIPT.md, COGNEXA_PROMPTS.md
@@ -80,8 +81,10 @@ cd apps/api && uv run ruff check . && uv run ruff format --check . && uv run myp
 # frontend
 cd apps/web && npm install && npm run dev
 cd apps/web && npm run lint && npm run typecheck && npm run test && npm run build
-# data
+# data (graph + databases)
+uv run --project apps/api python scripts/check_env.py            # which env vars are SET/MISSING/PLACEHOLDER (never prints values)
 uv run --project apps/api python scripts/validate_graph.py
+uv run --project apps/api python scripts/migrate.py            # plain Postgres only; Supabase uses `supabase db push`
 uv run --project apps/api python scripts/seed_neo4j.py && uv run --project apps/api python scripts/seed_postgres.py && uv run --project apps/api python scripts/seed_vectors.py
 # e2e
 cd apps/web && npx playwright test
@@ -142,6 +145,6 @@ A task is done only when **all** of these are true:
    - **Before each commit, run the full verification for the app you touched** (backend: `ruff check`, `ruff format --check`, `mypy`, `pytest`; frontend: `lint`, `typecheck`, `test`, `build`). Never commit a failing state.
    - Small Conventional Commits, one per logical step, using the per-phase commit lists in Appendix D; reference bug IDs in `fix:` commits; end the phase with `docs(progress): phase NN complete`.
    - At the end of each phase the human pushes, watches CI, and tags `v0.N` once it is green. **If CI is red, fixing it is the top priority before any new work.**
-   - **Never push or tag.** Give the human the exact commands instead.
+   - **Never push or tag.** Give the human the exact commands instead. **Autopilot exception (DEC-019):** only when the human has pasted the AUTOPILOT prompt, commit once per phase (`feat(phase-NN): ...`) and `git push origin main`; still never tag.
    - Note: run `git pull` first only if the human has ever committed from another machine or the GitHub web UI.
 4. Print a short summary: what's done, what's verified, anything the human must do manually (e.g., add an env var in a dashboard).

@@ -1,0 +1,779 @@
+# DSA concept graph: the source of truth for Neo4j and the Postgres concept mirror.
+# Edge convention (CLAUDE.md rule 4): `prerequisites: [A]` on concept B means A -[:PREREQUISITE_OF]-> B,
+# i.e. A must be learned before B. `related` links are associative and undirected.
+# order_index is a topological teaching order; scripts/assign_order_index.py computes it and
+# scripts/validate_graph.py enforces it. Keywords/aliases drive classification of questions that
+# never name the concept (e.g. "RecursionError" -> call_stack).
+subject:
+  id: dsa
+  name: "Data Structures & Algorithms"
+
+roots: [discrete_math_basics, variables_memory]
+
+concepts:
+  # ------------------------------------------------------------------ foundations
+  - id: discrete_math_basics
+    name: "Discrete Math Basics (logs, sums, modular arithmetic)"
+    cluster: foundations
+    order_index: 0
+    difficulty: 1
+    description: "The small amount of mathematics every algorithm analysis leans on: logarithms, summations, powers of two and modular arithmetic."
+    aliases: [discrete math, logarithms, log base 2, summation, modular arithmetic, modulo]
+    keywords: [log n, sigma, geometric series, arithmetic series, remainder, powers of two, floor and ceiling]
+    prerequisites: []
+    related: []
+
+  - id: variables_memory
+    name: "Variables, Data Types & Memory"
+    cluster: foundations
+    order_index: 1
+    difficulty: 1
+    description: "How values are stored in named memory locations, what data types mean, and why integers and floats behave differently."
+    aliases: [variables, data types, primitive types, memory model, integers and floats]
+    keywords: [integer overflow, int vs float, type error, uninitialized variable, bytes, 32-bit, 64-bit]
+    prerequisites: []
+    related: []
+
+  - id: control_flow
+    name: "Conditionals & Loops"
+    cluster: foundations
+    order_index: 2
+    difficulty: 1
+    description: "Making decisions with if/else and repeating work with for and while loops, including loop invariants and termination."
+    aliases: [if else, for loop, while loop, loops, conditionals, branching, iteration]
+    keywords: [infinite loop, off by one, loop condition, break, continue, nested loops, loop never ends]
+    prerequisites: [variables_memory]
+    related: []
+
+  - id: functions
+    name: "Functions & Parameters"
+    cluster: foundations
+    order_index: 3
+    difficulty: 1
+    description: "Packaging reusable logic into functions with parameters and return values, and how arguments are passed."
+    aliases: [functions, methods, procedures, parameters, arguments, return values]
+    keywords: [pass by value, pass by reference, return statement, function signature, scope, local variable, missing return]
+    prerequisites: [control_flow]
+    related: []
+
+  - id: arrays
+    name: "Arrays"
+    cluster: foundations
+    order_index: 4
+    difficulty: 1
+    description: "A contiguous block of same-typed elements addressed by index, giving constant-time access but costly insertion in the middle."
+    aliases: [array, lists, static array, indexing, contiguous memory]
+    keywords: [index out of range, IndexError, ArrayIndexOutOfBounds, zero-based index, fixed size, random access, out of bounds]
+    prerequisites: [control_flow]
+    related: []
+
+  - id: strings
+    name: "Strings"
+    cluster: foundations
+    order_index: 5
+    difficulty: 1
+    description: "Sequences of characters treated as arrays, with immutability, slicing, comparison and common manipulation patterns."
+    aliases: [string, character array, substring, text, string manipulation]
+    keywords: [immutable string, string concatenation slow, slicing, substring, palindrome, anagram, ASCII, unicode]
+    prerequisites: [arrays]
+    related: []
+
+  - id: pointers_references
+    name: "Pointers & References"
+    cluster: foundations
+    order_index: 6
+    difficulty: 2
+    description: "Variables that hold the address of another value, enabling shared data, linked structures and dynamic allocation."
+    aliases: [pointers, references, memory address, null pointer, aliasing]
+    keywords: [null pointer, NullPointerException, segmentation fault, segfault, dangling pointer, dereference, AttributeError NoneType, address of]
+    prerequisites: [variables_memory]
+    related: []
+
+  - id: stack_heap_memory
+    name: "Stack vs Heap Memory"
+    cluster: foundations
+    order_index: 7
+    difficulty: 2
+    description: "The two regions a program uses for data: the fast, automatically managed stack and the flexible, manually or garbage-collected heap."
+    aliases: [stack and heap, stack memory, heap memory, dynamic allocation, memory layout]
+    keywords: [memory leak, malloc, new and delete, garbage collection, out of memory, stack allocation, heap allocation, use after free]
+    prerequisites: [pointers_references, functions]
+    related: []
+
+  - id: call_stack
+    name: "Function Calls & the Call Stack"
+    cluster: foundations
+    order_index: 8
+    difficulty: 2
+    description: "How each function call pushes a stack frame holding its locals and return address, and how returns pop it."
+    aliases: [call stack, execution stack, stack frames, function call stack, activation record]
+    keywords: [stack overflow, RecursionError, maximum recursion depth exceeded, segfault, stack frame, return address, StackOverflowError, crashes with deep recursion]
+    prerequisites: [functions, stack_heap_memory]
+    related: [stack]
+
+  - id: bit_manipulation
+    name: "Bit Manipulation"
+    cluster: foundations
+    order_index: 9
+    difficulty: 2
+    description: "Working directly with the binary representation of integers using AND, OR, XOR, NOT and shifts."
+    aliases: [bitwise operations, bit tricks, bit masks, bitwise operators, binary operations]
+    keywords: [xor, shift left, shift right, bitmask, power of two check, count set bits, two's complement, bitwise and]
+    prerequisites: [variables_memory]
+    related: []
+
+  - id: recursion
+    name: "Recursion"
+    cluster: foundations
+    order_index: 10
+    difficulty: 2
+    description: "Solving a problem by having a function call itself on smaller inputs, with a base case that stops the descent."
+    aliases: [recursive function, recursive calls, base case, recursive thinking]
+    keywords: [base case missing, infinite recursion, stack overflow in recursion, recursive call, recursion depth, why does my recursive function crash, self call, recurse]
+    prerequisites: [call_stack]
+    related: [backtracking, divide_and_conquer]
+
+  # ------------------------------------------------------------------ complexity
+  - id: time_complexity
+    name: "Time Complexity & Big-O"
+    cluster: complexity
+    order_index: 11
+    difficulty: 2
+    description: "Describing how the running time of an algorithm grows with input size using Big-O notation and common growth classes."
+    aliases: [big o, big-o notation, runtime analysis, time complexity, running time, order of growth]
+    keywords: [O(n), O(n^2), O(log n), O(1), too slow, time limit exceeded, TLE, nested loop complexity, how fast is my algorithm]
+    prerequisites: [control_flow, discrete_math_basics]
+    related: []
+
+  - id: asymptotic_notation
+    name: "Asymptotic Notation (O, Θ, Ω; best/avg/worst)"
+    cluster: complexity
+    order_index: 12
+    difficulty: 3
+    description: "The formal upper, tight and lower bounds (O, Theta, Omega) and the difference between best, average and worst case."
+    aliases: [theta notation, omega notation, big theta, big omega, best case worst case, asymptotic analysis]
+    keywords: [worst case, average case, best case, tight bound, upper bound, lower bound, theta vs big o]
+    prerequisites: [time_complexity]
+    related: []
+
+  - id: space_complexity
+    name: "Space Complexity"
+    cluster: complexity
+    order_index: 13
+    difficulty: 2
+    description: "Measuring the extra memory an algorithm needs as input grows, including auxiliary space and recursion stack usage."
+    aliases: [memory complexity, auxiliary space, extra space, in-place, memory usage]
+    keywords: [in place algorithm, O(1) space, memory limit exceeded, recursion stack space, extra memory, memory footprint]
+    prerequisites: [time_complexity, stack_heap_memory]
+    related: []
+
+  - id: recurrence_relations
+    name: "Recurrence Relations & Master Theorem"
+    cluster: complexity
+    order_index: 14
+    difficulty: 4
+    description: "Expressing the running time of recursive algorithms as recurrences and solving them with unrolling, trees or the Master Theorem."
+    aliases: [master theorem, recurrence, recursion tree method, substitution method, T(n)]
+    keywords: [T(n) = 2T(n/2) + n, recurrence relation, unrolling a recurrence, recursion tree, solve the recurrence, a b and f(n)]
+    prerequisites: [recursion, asymptotic_notation]
+    related: []
+
+  - id: amortized_analysis
+    name: "Amortized Analysis"
+    cluster: complexity
+    order_index: 16
+    difficulty: 4
+    description: "Averaging the cost of a sequence of operations so that occasional expensive steps are paid for by many cheap ones."
+    aliases: [amortized cost, amortised analysis, aggregate method, potential method, accounting method]
+    keywords: [amortized O(1), average cost per operation, why is append O(1), doubling strategy, expensive resize, sequence of operations]
+    prerequisites: [asymptotic_notation, dynamic_arrays]
+    related: []
+
+  # ------------------------------------------------------------------ linear
+  - id: dynamic_arrays
+    name: "Dynamic Arrays"
+    cluster: linear
+    order_index: 15
+    difficulty: 2
+    description: "Arrays that grow automatically by reallocating to a larger block, as in Python lists, Java ArrayList and C++ vector."
+    aliases: [dynamic array, array list, vector, resizable array, python list, ArrayList]
+    keywords: [append, resize, capacity, doubling, reallocation, vector push_back, list append complexity, grow array]
+    prerequisites: [arrays, pointers_references, time_complexity]
+    related: []
+
+  - id: singly_linked_list
+    name: "Singly Linked List"
+    cluster: linear
+    order_index: 17
+    difficulty: 2
+    description: "A chain of nodes where each node stores a value and a pointer to the next, allowing constant-time insertion at known positions."
+    aliases: [linked list, singly linked list, node and next pointer, list node, ListNode]
+    keywords: [head pointer, next pointer, reverse a linked list, lost the rest of the list, null next, traverse list, insert at head, node.next]
+    prerequisites: [pointers_references, stack_heap_memory]
+    related: [arrays]
+
+  - id: doubly_circular_linked_list
+    name: "Doubly & Circular Linked Lists"
+    cluster: linear
+    order_index: 18
+    difficulty: 3
+    description: "Linked lists with both next and previous pointers, or with the tail wrapping around to the head, trading memory for flexibility."
+    aliases: [doubly linked list, circular linked list, prev pointer, tail pointer, sentinel node]
+    keywords: [prev and next, remove node in O(1), circular list, tail points to head, sentinel, dummy node, LRU cache list]
+    prerequisites: [singly_linked_list]
+    related: [deque_circular_queue]
+
+  - id: stack
+    name: "Stack (ADT & implementations)"
+    cluster: linear
+    order_index: 19
+    difficulty: 2
+    description: "A last-in, first-out collection with push and pop, implemented with an array or a linked list."
+    aliases: [stack, LIFO, push and pop, stack data structure, stack ADT]
+    keywords: [last in first out, push, pop, peek, balanced parentheses, undo, stack underflow, stack empty error]
+    prerequisites: [arrays, singly_linked_list]
+    related: [call_stack]
+
+  - id: queue
+    name: "Queue (ADT & implementations)"
+    cluster: linear
+    order_index: 20
+    difficulty: 2
+    description: "A first-in, first-out collection with enqueue and dequeue, implemented with arrays or linked lists."
+    aliases: [queue, FIFO, enqueue and dequeue, queue data structure, queue ADT]
+    keywords: [first in first out, enqueue, dequeue, front and rear, task scheduling, queue is empty, waiting line]
+    prerequisites: [arrays, singly_linked_list]
+    related: []
+
+  - id: deque_circular_queue
+    name: "Deque & Circular Queue"
+    cluster: linear
+    order_index: 21
+    difficulty: 3
+    description: "A double-ended queue supporting insertion and removal at both ends, and a ring-buffer queue that reuses freed space."
+    aliases: [deque, double ended queue, circular queue, ring buffer, circular buffer]
+    keywords: [ring buffer, wrap around, front and back, collections.deque, appendleft, popleft, modulo index, queue full false alarm]
+    prerequisites: [queue]
+    related: []
+
+  - id: priority_queue_adt
+    name: "Priority Queue (ADT)"
+    cluster: linear
+    order_index: 22
+    difficulty: 2
+    description: "A collection where the element with the highest priority is removed first, regardless of insertion order."
+    aliases: [priority queue, PQ, min priority queue, max priority queue, heapq, PriorityQueue]
+    keywords: [highest priority first, extract min, extract max, top k elements, scheduler with priorities, insert with priority]
+    prerequisites: [queue]
+    related: [binary_heap]
+
+  - id: expression_evaluation
+    name: "Expression Evaluation (infix/postfix)"
+    cluster: linear
+    order_index: 23
+    difficulty: 3
+    description: "Evaluating arithmetic expressions by converting infix to postfix and using a stack for operands and operators."
+    aliases: [infix to postfix, postfix evaluation, shunting yard, reverse polish notation, RPN, prefix notation]
+    keywords: [operator precedence, parentheses handling, evaluate expression, calculator, shunting-yard, postfix expression, operand stack]
+    prerequisites: [stack]
+    related: []
+
+  - id: monotonic_stack
+    name: "Monotonic Stack"
+    cluster: linear
+    order_index: 24
+    difficulty: 4
+    description: "A stack kept in sorted order to answer next-greater and previous-smaller queries for every element in linear time."
+    aliases: [monotonic stack, next greater element, monotone stack, increasing stack, decreasing stack]
+    keywords: [next greater element, previous smaller element, daily temperatures, largest rectangle in histogram, stock span, nearest larger value]
+    prerequisites: [stack]
+    related: [sliding_window]
+
+  # ------------------------------------------------------------------ searching_hashing
+  - id: linear_search
+    name: "Linear Search"
+    cluster: searching_hashing
+    order_index: 25
+    difficulty: 1
+    description: "Scanning elements one by one until the target is found or the collection is exhausted."
+    aliases: [sequential search, linear scan, brute force search, scan the array]
+    keywords: [find element in array, loop through list, search unsorted array, O(n) search, check every element]
+    prerequisites: [arrays]
+    related: []
+
+  - id: binary_search
+    name: "Binary Search"
+    cluster: searching_hashing
+    order_index: 26
+    difficulty: 2
+    description: "Finding a target in a sorted array by repeatedly halving the search range, in logarithmic time."
+    aliases: [binary search, bisect, half interval search, logarithmic search]
+    keywords: [sorted array search, mid calculation, infinite loop in binary search, off by one low high, bisect_left, lower bound, search in O(log n), mid overflow]
+    prerequisites: [arrays, time_complexity]
+    related: [bst]
+
+  - id: two_pointers
+    name: "Two Pointers"
+    cluster: searching_hashing
+    order_index: 27
+    difficulty: 2
+    description: "Using two indices that move through an array in coordinated ways to replace nested loops with a single pass."
+    aliases: [two pointer technique, left and right pointers, fast and slow pointers, converging pointers]
+    keywords: [pair with target sum, sorted array two sum, remove duplicates in place, reverse in place, left right pointers, container with most water]
+    prerequisites: [arrays]
+    related: [quick_sort]
+
+  - id: sliding_window
+    name: "Sliding Window"
+    cluster: searching_hashing
+    order_index: 28
+    difficulty: 3
+    description: "Maintaining a contiguous window over a sequence and updating it incrementally to answer subarray and substring questions."
+    aliases: [sliding window, window technique, moving window, fixed size window, variable size window]
+    keywords: [longest substring without repeating, maximum sum subarray of size k, window shrink expand, contiguous subarray, minimum window substring]
+    prerequisites: [two_pointers]
+    related: []
+
+  - id: prefix_sums
+    name: "Prefix Sums"
+    cluster: searching_hashing
+    order_index: 29
+    difficulty: 2
+    description: "Precomputing running totals so that the sum of any subarray can be answered in constant time."
+    aliases: [prefix sum, cumulative sum, running total, prefix array, range sum query]
+    keywords: [range sum query, subarray sum equals k, cumulative frequency, sum between indices, precompute sums, 2D prefix sum]
+    prerequisites: [arrays]
+    related: []
+
+  - id: hash_functions
+    name: "Hash Functions"
+    cluster: searching_hashing
+    order_index: 30
+    difficulty: 3
+    description: "Functions that map keys to fixed-range integers, and what makes one good: uniformity, determinism and speed."
+    aliases: [hash function, hashing, hash code, hash value, hashCode]
+    keywords: [collision, uniform distribution, modulo table size, string hashing, polynomial hash, hashCode and equals, bad hash function]
+    prerequisites: [arrays, discrete_math_basics]
+    related: []
+
+  - id: hash_tables
+    name: "Hash Tables (chaining, open addressing)"
+    cluster: searching_hashing
+    order_index: 31
+    difficulty: 3
+    description: "A table that stores key-value pairs at hashed positions, resolving collisions by chaining or probing, for expected constant-time lookup."
+    aliases: [hash table, hash map internals, chaining, open addressing, linear probing, load factor]
+    keywords: [collision resolution, load factor, rehashing, linear probing, separate chaining, clustering, O(1) lookup, resize table]
+    prerequisites: [hash_functions, singly_linked_list]
+    related: []
+
+  - id: hash_sets_maps
+    name: "Hash Sets & Maps in Practice"
+    cluster: searching_hashing
+    order_index: 32
+    difficulty: 2
+    description: "Using built-in sets and dictionaries for membership tests, counting and grouping, and knowing their costs and pitfalls."
+    aliases: [hash set, hash map, dictionary, dict, unordered_map, HashMap, set membership]
+    keywords: [count frequency, two sum with hash map, KeyError, duplicate detection, group anagrams, lookup in O(1), unordered_map vs map, contains check]
+    prerequisites: [hash_tables]
+    related: [bst]
+
+  # ------------------------------------------------------------------ sorting
+  - id: elementary_sorts
+    name: "Elementary Sorts (bubble, selection, insertion; stability)"
+    cluster: sorting
+    order_index: 33
+    difficulty: 2
+    description: "The simple quadratic sorting algorithms, how they work, and the idea of stability and in-place sorting."
+    aliases: [bubble sort, selection sort, insertion sort, simple sorts, quadratic sorts, stable sort]
+    keywords: [sort an array, swap adjacent, O(n^2) sort, stable sorting, in-place sort, nearly sorted array, sorting algorithm for small input]
+    prerequisites: [arrays, time_complexity]
+    related: []
+
+  - id: divide_and_conquer
+    name: "Divide & Conquer"
+    cluster: sorting
+    order_index: 34
+    difficulty: 3
+    description: "Splitting a problem into independent subproblems, solving them recursively and combining the results."
+    aliases: [divide and conquer, split and merge, D&C, recursive decomposition]
+    keywords: [divide step, combine step, subproblems, split in half, recursive split, conquer, solve halves independently]
+    prerequisites: [recursion, recurrence_relations]
+    related: []
+
+  - id: merge_sort
+    name: "Merge Sort"
+    cluster: sorting
+    order_index: 35
+    difficulty: 3
+    description: "A stable divide-and-conquer sort that splits the array, sorts each half and merges them in linear time, for O(n log n) overall."
+    aliases: [merge sort, mergesort, top down merge sort, merge procedure]
+    keywords: [merge two sorted arrays, O(n log n) sort, stable O(n log n), extra array for merging, sort linked list, external sort, merge step]
+    prerequisites: [divide_and_conquer, elementary_sorts]
+    related: []
+
+  - id: quick_sort
+    name: "Quick Sort"
+    cluster: sorting
+    order_index: 36
+    difficulty: 3
+    description: "A divide-and-conquer sort that partitions around a pivot so smaller items go left and larger go right, then recurses."
+    aliases: [quick sort, quicksort, partition, pivot selection, lomuto partition, hoare partition]
+    keywords: [pivot, partition, worst case O(n^2), random pivot, already sorted input slow, quickselect, in-place O(n log n), recursion depth quicksort]
+    prerequisites: [divide_and_conquer, elementary_sorts]
+    related: []
+
+  - id: heap_sort
+    name: "Heap Sort"
+    cluster: sorting
+    order_index: 45
+    difficulty: 3
+    description: "An in-place O(n log n) sort that builds a max-heap and repeatedly moves the maximum to the end."
+    aliases: [heap sort, heapsort, build heap, heapify and extract]
+    keywords: [build max heap, heapify, in-place O(n log n), extract max repeatedly, not stable, sort using a heap]
+    prerequisites: [binary_heap, elementary_sorts]
+    related: []
+
+  - id: non_comparison_sorts
+    name: "Counting, Radix & Bucket Sort"
+    cluster: sorting
+    order_index: 37
+    difficulty: 3
+    description: "Sorting algorithms that avoid comparisons by using key values directly, achieving linear time under assumptions about the input."
+    aliases: [counting sort, radix sort, bucket sort, linear time sorting, distribution sort]
+    keywords: [sort in O(n), small integer range, digit by digit sort, count array, sort without comparing, bucket distribution, key range k]
+    prerequisites: [elementary_sorts]
+    related: []
+
+  - id: sorting_lower_bound
+    name: "Comparison Sorting Lower Bound"
+    cluster: sorting
+    order_index: 39
+    difficulty: 4
+    description: "Why any comparison-based sort needs Omega(n log n) comparisons in the worst case, shown with a decision tree."
+    aliases: [n log n lower bound, decision tree argument, comparison sort lower bound, sorting lower bound]
+    keywords: [decision tree, n factorial leaves, can sorting be faster than n log n, log n factorial, impossible to beat n log n, comparison model]
+    prerequisites: [elementary_sorts, asymptotic_notation, tree_basics]
+    related: []
+
+  # ------------------------------------------------------------------ trees
+  - id: tree_basics
+    name: "Tree Terminology & Properties"
+    cluster: trees
+    order_index: 38
+    difficulty: 2
+    description: "Nodes, edges, root, leaves, height, depth and the basic properties of rooted trees."
+    aliases: [trees, tree terminology, rooted tree, tree height and depth, parent child nodes]
+    keywords: [root node, leaf, height of tree, depth of node, subtree, ancestor, descendant, hierarchy, n-ary tree]
+    prerequisites: [singly_linked_list]
+    related: []
+
+  - id: binary_tree
+    name: "Binary Trees"
+    cluster: trees
+    order_index: 40
+    difficulty: 2
+    description: "Trees where each node has at most two children, with array and pointer representations and special shapes such as full and complete."
+    aliases: [binary tree, left and right child, complete binary tree, full binary tree, perfect binary tree, TreeNode]
+    keywords: [left child right child, node.left, node.right, complete tree, tree height O(log n), TreeNode class, array representation of tree]
+    prerequisites: [tree_basics]
+    related: []
+
+  - id: dfs_tree_traversals
+    name: "Tree Traversals (pre/in/post-order)"
+    cluster: trees
+    order_index: 41
+    difficulty: 3
+    description: "Visiting every node of a binary tree depth-first in preorder, inorder or postorder, recursively or with an explicit stack."
+    aliases: [preorder, inorder, postorder, tree traversal, depth first traversal of tree, inorder traversal]
+    keywords: [inorder gives sorted order, visit root left right, postorder delete tree, iterative inorder with stack, traverse binary tree, print tree nodes]
+    prerequisites: [binary_tree, recursion]
+    related: [dfs]
+
+  - id: level_order_traversal
+    name: "Level-Order Traversal"
+    cluster: trees
+    order_index: 42
+    difficulty: 3
+    description: "Visiting a tree level by level from the root using a queue."
+    aliases: [level order traversal, BFS on tree, breadth first traversal of tree, level by level]
+    keywords: [print tree by levels, queue of nodes, zigzag traversal, width of tree, nodes at each depth, level by level output]
+    prerequisites: [binary_tree, queue]
+    related: [bfs]
+
+  - id: bst
+    name: "Binary Search Trees"
+    cluster: trees
+    order_index: 43
+    difficulty: 3
+    description: "Binary trees ordered so that left descendants are smaller and right descendants larger, supporting search, insert and delete in O(height)."
+    aliases: [binary search tree, BST, ordered tree, search tree]
+    keywords: [insert into BST, delete node with two children, inorder successor, BST becomes a linked list, validate BST, skewed tree, search in tree O(h)]
+    prerequisites: [binary_tree, binary_search]
+    related: []
+
+  - id: binary_heap
+    name: "Binary Heap"
+    cluster: trees
+    order_index: 44
+    difficulty: 3
+    description: "A complete binary tree stored in an array that keeps the minimum (or maximum) at the root, with O(log n) insert and extract."
+    aliases: [binary heap, min heap, max heap, heap data structure, heapq]
+    keywords: [heapify, sift up, sift down, parent index 2i+1, extract min, build heap O(n), top k with heap, heap property]
+    prerequisites: [binary_tree, priority_queue_adt]
+    related: []
+
+  - id: avl_tree
+    name: "AVL Trees"
+    cluster: trees
+    order_index: 46
+    difficulty: 4
+    description: "A self-balancing binary search tree that keeps subtree heights within one of each other using rotations."
+    aliases: [AVL tree, self balancing BST, balanced binary search tree, tree rotations]
+    keywords: [balance factor, left rotation, right rotation, LL LR RL RR case, keep tree balanced, height balanced, rebalancing after insert]
+    prerequisites: [bst]
+    related: []
+
+  - id: red_black_tree
+    name: "Red-Black Trees"
+    cluster: trees
+    order_index: 47
+    difficulty: 5
+    description: "A self-balancing BST that colours nodes red or black and uses recolouring and rotations to keep the tree approximately balanced."
+    aliases: [red black tree, RB tree, rb-tree, TreeMap internals, std::map internals]
+    keywords: [red node black node, recolor, black height, double red violation, TreeMap, std::map, fewer rotations than AVL]
+    prerequisites: [avl_tree]
+    related: []
+
+  - id: b_tree
+    name: "B-Trees"
+    cluster: trees
+    order_index: 48
+    difficulty: 5
+    description: "A multiway balanced search tree with many keys per node, designed to minimise disk reads in databases and file systems."
+    aliases: [b tree, b-tree, b+ tree, multiway search tree, database index tree]
+    keywords: [database index, disk blocks, node splitting, order of b-tree, many keys per node, minimise disk access, file system index]
+    prerequisites: [bst]
+    related: []
+
+  - id: trie
+    name: "Trie"
+    cluster: trees
+    order_index: 49
+    difficulty: 3
+    description: "A tree where each edge is a character, storing a set of strings by shared prefixes for fast prefix queries."
+    aliases: [trie, prefix tree, digital tree, radix tree, retrieval tree]
+    keywords: [autocomplete, prefix search, starts with, dictionary of words, word search, longest common prefix, insert word, spell checker]
+    prerequisites: [tree_basics, strings]
+    related: [string_matching]
+
+  - id: segment_tree
+    name: "Segment Tree"
+    cluster: trees
+    order_index: 50
+    difficulty: 5
+    description: "A tree over array ranges that answers range queries and point or range updates in O(log n)."
+    aliases: [segment tree, range query tree, interval tree, lazy propagation]
+    keywords: [range minimum query, range sum with updates, lazy propagation, update and query in log n, RMQ, build segment tree]
+    prerequisites: [dfs_tree_traversals, prefix_sums, divide_and_conquer]
+    related: [fenwick_tree]
+
+  - id: fenwick_tree
+    name: "Fenwick Tree (BIT)"
+    cluster: trees
+    order_index: 51
+    difficulty: 4
+    description: "A compact array structure supporting prefix sums and point updates in O(log n) using lowest-set-bit indexing."
+    aliases: [fenwick tree, binary indexed tree, BIT, bit tree]
+    keywords: [lowbit, i & -i, prefix sum with updates, point update, cumulative frequency table, inversion count]
+    prerequisites: [prefix_sums, bit_manipulation]
+    related: []
+
+  - id: disjoint_set_union
+    name: "Disjoint Set Union (Union-Find)"
+    cluster: trees
+    order_index: 52
+    difficulty: 4
+    description: "Tracking a partition of elements into groups with near-constant-time union and find using path compression and union by rank."
+    aliases: [union find, disjoint set, DSU, union-find, merge sets]
+    keywords: [find with path compression, union by rank, connected components dynamic, are two nodes connected, parent array, group membership, number of islands union]
+    prerequisites: [tree_basics, amortized_analysis]
+    related: []
+
+  # ------------------------------------------------------------------ graphs
+  - id: graph_representation
+    name: "Graph Basics & Representations"
+    cluster: graphs
+    order_index: 53
+    difficulty: 2
+    description: "Vertices, edges, directed and weighted graphs, and the adjacency matrix and adjacency list representations."
+    aliases: [graphs, adjacency list, adjacency matrix, directed graph, undirected graph, weighted graph, graph terminology]
+    keywords: [vertex and edge, adjacency list vs matrix, sparse graph, dense graph, in-degree out-degree, edge list, build a graph from input]
+    prerequisites: [arrays, singly_linked_list]
+    related: []
+
+  - id: bfs
+    name: "Breadth-First Search"
+    cluster: graphs
+    order_index: 54
+    difficulty: 3
+    description: "Exploring a graph layer by layer from a source using a queue, which finds shortest paths in unweighted graphs."
+    aliases: [BFS, breadth first search, level by level graph search, shortest path in unweighted graph]
+    keywords: [shortest path unweighted, visited set, queue of vertices, minimum number of steps, flood fill, word ladder, grid shortest path, distance from source]
+    prerequisites: [graph_representation, queue]
+    related: [level_order_traversal]
+
+  - id: dfs
+    name: "Depth-First Search"
+    cluster: graphs
+    order_index: 55
+    difficulty: 3
+    description: "Exploring a graph by going as deep as possible before backtracking, using recursion or an explicit stack."
+    aliases: [DFS, depth first search, graph traversal, recursive graph search]
+    keywords: [visited array, explore all paths, discovery and finish time, recursion limit on graph, connected component, flood fill recursion, search with backtracking]
+    prerequisites: [graph_representation, recursion, stack]
+    related: [dfs_tree_traversals, backtracking]
+
+  - id: topological_sort
+    name: "Topological Sort"
+    cluster: graphs
+    order_index: 56
+    difficulty: 3
+    description: "Ordering the vertices of a directed acyclic graph so every edge goes from earlier to later, via DFS finish times or Kahn's algorithm."
+    aliases: [topological order, toposort, Kahn's algorithm, dependency ordering, DAG ordering]
+    keywords: [course schedule, build order, task dependencies, prerequisite order, in-degree zero, DAG, order of compilation, cannot finish all courses]
+    prerequisites: [dfs]
+    related: [dp_fundamentals]
+
+  - id: cycle_detection
+    name: "Cycle Detection"
+    cluster: graphs
+    order_index: 57
+    difficulty: 3
+    description: "Detecting whether a graph contains a cycle using DFS colours for directed graphs or union-find for undirected ones."
+    aliases: [detect cycle, cycle in graph, cycle in directed graph, back edge, deadlock detection]
+    keywords: [back edge, white gray black, is the graph a DAG, circular dependency, detect loop in graph, deadlock, cycle in linked list]
+    prerequisites: [dfs]
+    related: [disjoint_set_union]
+
+  - id: connectivity_scc
+    name: "Connected & Strongly Connected Components"
+    cluster: graphs
+    order_index: 58
+    difficulty: 4
+    description: "Finding the maximal groups of mutually reachable vertices, with Kosaraju's or Tarjan's algorithm for directed graphs."
+    aliases: [connected components, strongly connected components, SCC, Kosaraju, Tarjan]
+    keywords: [number of islands, mutually reachable, strongly connected, condensation graph, Tarjan low-link, Kosaraju two passes, count components]
+    prerequisites: [dfs]
+    related: []
+
+  - id: dijkstra
+    name: "Dijkstra's Shortest Path"
+    cluster: graphs
+    order_index: 61
+    difficulty: 4
+    description: "Finding single-source shortest paths in graphs with non-negative weights by repeatedly settling the closest unvisited vertex with a priority queue."
+    aliases: [dijkstra, dijkstra's algorithm, single source shortest path, SSSP, shortest path weighted]
+    keywords: [shortest path with weights, priority queue of distances, relaxation, negative edge weights fail, minimum cost route, network delay time, GPS routing]
+    prerequisites: [bfs, binary_heap, greedy]
+    related: [bellman_ford]
+
+  - id: bellman_ford
+    name: "Bellman-Ford"
+    cluster: graphs
+    order_index: 62
+    difficulty: 4
+    description: "Single-source shortest paths that tolerates negative edge weights by relaxing all edges V-1 times, and detects negative cycles."
+    aliases: [bellman ford, bellman-ford algorithm, negative weight shortest path, edge relaxation]
+    keywords: [negative edge weights, negative cycle detection, relax all edges, V minus 1 iterations, currency arbitrage, shortest path with negative weights]
+    prerequisites: [graph_representation, dijkstra]
+    related: [floyd_warshall]
+
+  - id: floyd_warshall
+    name: "Floyd-Warshall"
+    cluster: graphs
+    order_index: 65
+    difficulty: 4
+    description: "An all-pairs shortest-path dynamic program that considers each vertex in turn as a possible intermediate stop."
+    aliases: [floyd warshall, all pairs shortest path, APSP, transitive closure]
+    keywords: [all pairs shortest paths, distance matrix, intermediate vertex k, O(V^3), shortest path between every pair, transitive closure]
+    prerequisites: [graph_representation, dp_fundamentals]
+    related: []
+
+  - id: minimum_spanning_tree
+    name: "Minimum Spanning Tree (Kruskal & Prim)"
+    cluster: graphs
+    order_index: 63
+    difficulty: 4
+    description: "Connecting all vertices of a weighted undirected graph with the cheapest set of edges using Kruskal's or Prim's greedy algorithm."
+    aliases: [MST, minimum spanning tree, Kruskal, Prim, spanning tree]
+    keywords: [connect all cities cheapest, cheapest network cables, sort edges by weight, cut property, union find in Kruskal, priority queue in Prim, minimum cost to connect]
+    prerequisites: [graph_representation, disjoint_set_union, binary_heap, greedy]
+    related: []
+
+  # ------------------------------------------------------------------ paradigms
+  - id: backtracking
+    name: "Backtracking"
+    cluster: paradigms
+    order_index: 59
+    difficulty: 3
+    description: "Building solutions incrementally and abandoning a partial solution as soon as it cannot lead to a valid one."
+    aliases: [backtracking, search with pruning, try and undo, constraint search, exhaustive search with pruning]
+    keywords: [n queens, sudoku solver, generate permutations, generate subsets, undo the choice, prune the search, combination sum, explore all possibilities]
+    prerequisites: [recursion]
+    related: []
+
+  - id: greedy
+    name: "Greedy Algorithms"
+    cluster: paradigms
+    order_index: 60
+    difficulty: 3
+    description: "Making the locally best choice at each step, and proving with exchange or cut arguments that this yields a global optimum."
+    aliases: [greedy algorithm, greedy choice, local optimum, exchange argument, greedy strategy]
+    keywords: [interval scheduling, activity selection, huffman coding, coin change greedy fails, locally optimal choice, sort then pick, fractional knapsack]
+    prerequisites: [elementary_sorts]
+    related: []
+
+  - id: dp_fundamentals
+    name: "Dynamic Programming (memoization & tabulation)"
+    cluster: paradigms
+    order_index: 64
+    difficulty: 4
+    description: "Solving problems with overlapping subproblems by storing results, either top-down with memoization or bottom-up with a table."
+    aliases: [dynamic programming, DP, memoization, tabulation, overlapping subproblems, optimal substructure]
+    keywords: [fibonacci slow recursion, overlapping subproblems, memo table, top down and bottom up, recursion repeats work, cache results, optimal substructure, climbing stairs]
+    prerequisites: [recursion, dynamic_arrays]
+    related: [divide_and_conquer]
+
+  - id: dp_classic
+    name: "Classic DP (knapsack, LCS, LIS, edit distance)"
+    cluster: paradigms
+    order_index: 66
+    difficulty: 5
+    description: "The standard dynamic-programming problem families: 0/1 knapsack, longest common subsequence, longest increasing subsequence and edit distance."
+    aliases: [knapsack, LCS, LIS, edit distance, classic dynamic programming, longest common subsequence]
+    keywords: [0/1 knapsack, longest common subsequence, longest increasing subsequence, levenshtein distance, coin change dp, dp table, subset sum, maximum value within weight]
+    prerequisites: [dp_fundamentals]
+    related: []
+
+  - id: string_matching
+    name: "String Matching (KMP, Rabin-Karp)"
+    cluster: paradigms
+    order_index: 67
+    difficulty: 4
+    description: "Finding a pattern inside a text faster than naive comparison using prefix-function tables (KMP) or rolling hashes (Rabin-Karp)."
+    aliases: [KMP, Knuth Morris Pratt, Rabin Karp, pattern matching, substring search, rolling hash]
+    keywords: [find substring, failure function, prefix function, lps array, rolling hash, search pattern in text, strstr, naive substring search too slow]
+    prerequisites: [strings, hash_functions]
+    related: []
+
+  - id: complexity_classes
+    name: "P, NP & NP-Completeness"
+    cluster: paradigms
+    order_index: 68
+    difficulty: 5
+    description: "Classifying problems by how hard they are to solve versus to verify, and what NP-complete problems tell us about practical limits."
+    aliases: [P vs NP, NP complete, NP hard, complexity classes, polynomial time reductions]
+    keywords: [P versus NP, NP-complete, reduction, travelling salesman hard, no known polynomial algorithm, SAT, verify in polynomial time, intractable]
+    prerequisites: [asymptotic_notation, backtracking]
+    related: []

@@ -7,7 +7,9 @@ dependencies = [
     "asyncpg>=0.32.0",
     "fastapi>=0.165.0",
     "neo4j>=6.4.1",
+    "pgvector>=0.5.1",
     "pydantic-settings>=2.16.3",
+    "pyyaml>=6.0.3",
     "sqlalchemy[asyncio]>=2.1.9",
     "uvicorn[standard]>=0.54.0",
 ]
@@ -26,6 +28,7 @@ dev = [
     "pytest>=9.2.0",
     "pytest-asyncio>=1.5.0",
     "ruff>=0.17.5",
+    "types-pyyaml>=6.0.12.20261113",
 ]
 
 [tool.ruff]
@@ -35,11 +38,19 @@ target-version = "py312"
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "ASYNC", "SIM", "RUF"]
 
+[tool.ruff.lint.per-file-ignores]
+# Test files contain long SQL / Cypher strings; only line length is relaxed there.
+"tests/**" = ["E501"]
+
 [tool.mypy]
 python_version = "3.12"
 strict = true
 files = ["app"]
 plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = ["asyncpg", "asyncpg.*", "pgvector", "pgvector.*"]
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

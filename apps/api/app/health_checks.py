@@ -6,9 +6,9 @@ from typing import Literal, TypedDict
 
 from neo4j import AsyncGraphDatabase
 from sqlalchemy import text
-from sqlalchemy.ext.asyncio import create_async_engine
 
 from app.core.config import Settings
+from app.db.engine import create_engine
 
 Status = Literal["ok", "error", "not_configured"]
 
@@ -24,19 +24,9 @@ def _result(status: Status, start: float | None, detail: str | None = None) -> D
     return {"status": status, "latency_ms": latency, "detail": detail}
 
 
-def _async_url(url: str) -> str:
-    for prefix in ("postgresql://", "postgres://"):
-        if url.startswith(prefix):
-            return "postgresql+asyncpg://" + url[len(prefix) :]
-    return url
-
-
 async def _ping_postgres(url: str) -> None:
-    # CLAUDE.md rule 6: no prepared-statement caching (Supabase pooler, transaction mode).
-    engine = create_async_engine(
-        _async_url(url),
-        connect_args={"statement_cache_size": 0, "prepared_statement_cache_size": 0},
-    )
+    # Shared factory applies the pooler-safe settings (CLAUDE.md rule 6).
+    engine = create_engine(url, pool_size=1, max_overflow=0)
     try:
         async with engine.connect() as conn:
             await conn.execute(text("SELECT 1"))
