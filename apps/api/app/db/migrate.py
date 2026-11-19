@@ -57,6 +57,14 @@ async def apply_migrations(
     try:
         await conn.fetchval("select pg_advisory_lock($1)", LOCK_KEY)
 
+        # A database migrated by the Supabase CLI records its history in supabase_migrations;
+        # applying our files again would fail half-way (types already exist). Refuse cleanly.
+        if await conn.fetchval("select to_regnamespace('supabase_migrations') is not null"):
+            raise MigrationError(
+                "this database is managed by the Supabase CLI (schema supabase_migrations "
+                "exists); use `supabase migration up` (local) or `supabase db push` instead"
+            )
+
         has_auth = await conn.fetchval("select to_regclass('auth.users') is not null")
         use_shim = apply_shim if apply_shim is not None else not has_auth
         if use_shim:

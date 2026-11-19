@@ -13,7 +13,7 @@
 **Mode:** autopilot, main only, no tags. One commit per phase (`feat(phase-NN): ...`), then `git push origin main` (explicitly authorised for autopilot; if push fails, log it under Human Action Needed and continue). No `gh` CLI and no Supabase CLI were found on this machine at start; CI runs are checked through the public GitHub API when possible.
 **Environment notes:** local `apps/api/.env` and `apps/web/.env.local` exist (created from the examples; fake LLM/embedding providers, `REPLACE_ME` for cloud values). Never open or print them; use `uv run --project apps/api python scripts/check_env.py`.
 **Phase order:** core 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 12 → 15 (prep only), then extras 11 → 13 → 14 → 16.
-**Current phase:** 4 — Auth, roles, app shell, public pages (not started). Phase 3 complete (Sessions 6 and 7): 69/69 concepts, 552 questions, study sets, 85-item eval set.
+**Current phase:** 5 — LLM layer, quotas, cost, cache, guardrails (not started). Phase 4 complete (Session 8): auth, roles, app shell, public pages.
 
 **Phase 2 checkpoints (done)**
 - [x] 2.1 Env files, `scripts/check_env.py`, `.env.example` for all phases
@@ -35,28 +35,36 @@
 - [x] 3.8 Cluster: graphs (10) `4d5d964` and paradigms (6) `0fb67d4`
 - [x] 3.9 Eval test set (85 items) + study sets, CI `--strict`, seeds re-run, spot-check, wrap-up
 
-**Phase 4 checkpoints** (to be refined at phase start)
-- [ ] 4.1 Try Supabase local stack (`npx supabase start`); else test-signed JWTs (log under Human Action Needed)
-- [ ] 4.2 Backend auth: JWT verification (JWKS / secret), role dependency, `/me`, profile + theme endpoints, tests
-- [ ] 4.3 Web: Supabase client, sign-up / sign-in / reset / verify pages, session handling, route guards
-- [ ] 4.4 App shell (sidebar, user menu, theme sync to profile), designed loading/empty/error states
-- [ ] 4.5 Public pages: landing, how-it-works, about, privacy, terms
-- [ ] 4.6 Data export + account deletion
-- [ ] 4.7 Tests (unit, integration, e2e), full verification, wrap-up
+**Phase 4 checkpoints (done)**
+- [x] 4.1 Supabase local stack runs (CLI 3.2.0 via npx; auth/kong/rest/db/mailpit only). All 9 migrations apply on Supabase Postgres 17. Dev API uses it (`DATABASE_URL` → 127.0.0.1:54322); tests use `TEST_DATABASE_URL` (docker pgvector). ES256 signing key in gitignored `supabase/signing_keys.json`
+- [x] 4.2 Backend auth: `app/auth/` (JWKS cache, ES256/RS256 + optional HS256, role from profiles with TTL cache), `/me` GET/PATCH, onboarding, export, DELETE `/me` (Supabase admin API or SQL fallback), `/admin/users` list/search/patch + audit_log; 22 new tests; live cycle verified against the local stack
+- [x] 4.3 Web auth written: `@supabase/ssr` 0.12.7 clients, `src/proxy.ts` (Next 16 proxy: session refresh via `getClaims`, redirects for /app and /admin), sign-up / sign-in / forgot / reset pages, `/auth/callback`, Google button, typed API client (token, one 401 retry, error envelope, cold-start signal). Unit tests: 30 new
+- [x] 4.4 App shell written: sidebar (collapsible, mobile drawer), top bar (concept search via new `GET /concepts`, usage meter, user menu), theme sync to profile, onboarding flow (diagnostic step is a clearly marked placeholder for Phase 8), dashboard, settings, admin gate + `/admin/users`; placeholder pages for Tutor, Learn, Quizzes, Review, Notes (marked with their phase)
+- [x] 4.5 Public pages written: landing (animated graph background, failure-case animation, pipeline, features, comparison), `/how-it-works` (live graph from new public `GET /graph`), About, Privacy, Terms
+- [x] 4.6 Settings: data export (JSON download) and account deletion (typed confirmation; backend deletes the auth user via the Auth admin API)
+- [x] 4.7 Verified: backend 161 tests, frontend 103 unit + 24 e2e (incl. 6 live auth tests against the local Supabase stack, twice from a cold dev server), screenshots in `docs/screenshots/phase4/`, Lighthouse (desktop 100/100/100/100; mobile perf 74-80, see LIM-015); BUG-015 to BUG-017 fixed; committed as `feat(phase-04)`
 
-**Next action:** read the Phase 4 prompt in docs/COGNEXA_PROMPTS.md and start 4.1
+**Next action:** start Phase 5: split it into checkpoints from docs/COGNEXA_PROMPTS.md (provider layer with fake/Groq/Gemini, retries + fallback + metering, usage guard, caches, guardrails).
+**Local stack:** `npx supabase start -x realtime,storage-api,imgproxy,studio,edge-runtime,logflare,vector,supavisor,postgres-meta` (mail UI http://127.0.0.1:54324); schema changes: `npx supabase migration up` (local Supabase) and `DATABASE_URL=<docker url> uv run ... scripts/migrate.py` (docker test DB)
 
 **Last cluster note:** Phase 3 content complete; 69/69 concepts
-**Blockers:** none
+**Blockers:** none. (The Docker Desktop outage of Session 7 ended after disk space was freed and Docker was relaunched; see Human Action Needed #6.)
 **Human Action Needed:** see the table below (grows as phases complete)
 
 | # | Group | Item | Exact steps |
 |---|---|---|---|
 | 1 | dashboards | Watch CI after each push | `gh` is not installed. After each autopilot push, open GitHub → Actions and confirm the run is green (or install GitHub CLI and run `gh auth login`). Red CI: tell Claude Code to fix it first. |
-| 2 | live checks | Supabase local stack not yet tried | Phase 4 will try `npx supabase start` (needs Docker). If it cannot run, real email sign-up/sign-in must be verified by you against a cloud Supabase project. |
+| 2 | live checks | ~~Supabase local stack not yet tried~~ **Done locally (Phase 4):** real email sign-up, confirmation mail, sign-in and sign-out are covered by `e2e/auth.spec.ts` on the local stack. Still to do on your **cloud** Supabase project: sign up with your own address, confirm the email, sign in, reset the password. | After the Phase 15 deploy, run those steps on the live site. Built-in Supabase email only reaches your own addresses until custom SMTP is set up (item 9). |
 | 3 | content to review | Phase 2 graph edges | Review `data/subjects/dsa/concepts.yaml` (prerequisite edges, aliases, keywords, difficulty). Appendix C is a draft, not gospel. Flip nothing automatically: edge changes are made in the file, then `scripts/validate_graph.py` and `scripts/seed_neo4j.py --prune`. |
 | 4 | content to review | Phase 3 notes and questions (all 69 concepts, 552 questions), study sets and the 85-item eval set (`data/subjects/dsa/eval/testset.jsonl`, especially the 27 `unnamed_prerequisite` items, which carry the project's central claim) | Read the notes and questions in `data/subjects/dsa/` (start with the concepts you know best). The checklist is in progressfile.md section 12. When a concept is correct, tick it there and set `reviewed: true` in the note's frontmatter, then re-run `scripts/seed_postgres.py` and `scripts/seed_neo4j.py`. Everything is currently `reviewed: false`. |
 | 5 | live checks | Run the real embedding model | `scripts/seed_vectors.py` uses a deterministic fake embedding. After adding `GEMINI_API_KEY` and wiring the real provider (Phase 5), re-run it; chunks are re-embedded because the model name differs. |
+| 6 | live checks | ~~Docker engine down (BLOCKER)~~ **Resolved 2026-11-20** (relaunched after disk space was freed: 95% → 68% used). Kept for history. | Docker Desktop stopped mid-session and the engine pipe (`dockerDesktopLinuxEngine`) never came back after two launches (about 25 min). Open Docker Desktop, wait for the whale icon to say "running" (if it shows an error, choose Restart / Troubleshoot, or reboot Windows). Then `docker compose up -d` and `npx supabase start -x realtime,storage-api,imgproxy,studio,edge-runtime,logflare,vector,supavisor,postgres-meta`, start the API (`cd apps/api && uv run uvicorn app.main:app --port 8000`) and tell Claude Code to continue: next action is 4.7 verification. Disk is also 95% full (28 GB free), which can make Docker fail; free some space if it keeps failing. |
+| 7 | keys to add | Supabase cloud values for the API and web app | Supabase dashboard → Project Settings → API: project URL into `SUPABASE_URL` (apps/api/.env) and `NEXT_PUBLIC_SUPABASE_URL` (apps/web/.env.local); the publishable/anon key into `NEXT_PUBLIC_SUPABASE_ANON_KEY`; the service-role/secret key into `SUPABASE_SERVICE_ROLE_KEY` (**backend only**). The JWKS URL is derived from the project URL; set `SUPABASE_JWT_SECRET` only if the project still signs with the legacy HS256 secret. Check with `scripts/check_env.py`. |
+| 8 | dashboards | Supabase Auth settings + migrations | Authentication → URL Configuration: Site URL = your Vercel URL; Redirect URLs: add `https://<vercel-domain>/auth/callback` and `http://localhost:3000/auth/callback`. Providers → Google: enable it with a Google Cloud OAuth client (authorised redirect URI `https://<project-ref>.supabase.co/auth/v1/callback`). Apply migrations with `supabase db push` (never `scripts/migrate.py`, which refuses Supabase-managed databases, BUG-014). |
+| 9 | dashboards | Custom SMTP (optional, for other users) | Built-in Supabase email only reaches organisation members. To let other students sign up, configure custom SMTP (Authentication → SMTP Settings), for example with a free Brevo or Resend account. |
+| 10 | live checks | Google sign-in | After item 8: on the live site click "Continue with Google", finish the consent screen, and check that you land on `/app/onboarding` and that a `profiles` row exists. Cannot be tested locally without a Google OAuth client. |
+| 11 | live checks | Lighthouse on the deployed landing page | After Phase 15: run Lighthouse (mobile) on the Vercel URL. The local lab score on this laptop was performance 74-80 (desktop 100); target 90+. If it is still below 90 on Vercel, tell Claude Code (LIM-015). |
+| 12 | live checks | Make yourself admin | After signing up on the cloud project: Supabase SQL editor → `update public.profiles set role = 'admin' where id = (select id from auth.users where email = '<your email>');` Wait 30 s (role cache) and reload; the Admin link appears. |
 
 ---
 
@@ -73,7 +81,7 @@
 | Repository | https://github.com/iammayankbhatt/Cognexa |
 | Live web app | _TBD (Vercel)_ |
 | Live API | _TBD (Render)_ |
-| Current phase | Phases 1 to 3 complete; next: Phase 4 (auth, app shell). Workflow: single developer, `main` only (DEC-013), autopilot (DEC-019) |
+| Current phase | Phases 1 to 4 complete; next: Phase 5 (LLM layer, quotas, guardrails). Workflow: single developer, `main` only (DEC-013), autopilot (DEC-019) |
 | Overall status | 🟡 In progress |
 
 Status legend: 🔴 Not started · 🟡 In progress · 🟢 Done + verified · ⚠️ Done with known issues · ⏸️ Blocked
@@ -113,10 +121,10 @@ Update the **Status** and **Where in code** columns as phases complete. Examiner
 
 | Feature | Phase | Status | Where in code |
 |---|---|---|---|
-| Email/password + Google login, verification, reset, roles (student/reviewer/admin) | 4 | 🔴 | |
-| Three themes (Neon Noir, Titanium Dark, Titanium Light) | 1, 4 | 🟡 themes + switcher done; profile sync in Phase 4 | `apps/web/src/app/globals.css`, `src/components/theme/`, `/design` route, `docs/screenshots/phase1/` |
-| Landing, How-it-works, About, Privacy, Terms pages | 4 | 🔴 | |
-| Onboarding + diagnostic quiz | 4, 8 | 🔴 | |
+| Email/password + Google login, verification, reset, roles (student/reviewer/admin) | 4 | 🟢 locally (Google: live check pending) | `apps/api/app/auth/`, `apps/api/app/api/me.py`, `apps/web/src/proxy.ts`, `src/components/auth/`, `src/app/(auth)/`, `src/app/auth/callback/`, `e2e/auth.spec.ts`, `tests/test_auth_*.py` |
+| Three themes (Neon Noir, Titanium Dark, Titanium Light) | 1, 4 | 🟢 incl. profile sync (`components/app/theme-sync.tsx`, e2e "theme follows the user") | `apps/web/src/app/globals.css`, `src/components/theme/`, `/design` route, `docs/screenshots/phase1/` |
+| Landing, How-it-works, About, Privacy, Terms pages | 4 | 🟢 | `src/app/(marketing)/`, `src/components/marketing/`, public `GET /graph` (`app/api/graph.py`), `docs/screenshots/phase4/` |
+| Onboarding + diagnostic quiz | 4, 8 | 🟡 onboarding flow done; the diagnostic step is a marked placeholder until Phase 8 | `src/app/app/onboarding/`, `POST /me/onboarding-complete` |
 | LLM provider layer with fallback, retries, circuit breaker | 5 | 🔴 | |
 | Per-user quotas, rate limits, global cap, cost metering | 5 | 🔴 | |
 | Response / classification / embedding caching | 5 | 🔴 | |
@@ -129,11 +137,11 @@ Update the **Status** and **Where in code** columns as phases complete. Examiner
 | Concept library + concept pages | 8 | 🔴 | |
 | Progress dashboard + Knowledge Map (mastery-coloured DAG) | 10 | 🔴 | |
 | Notes, bookmarks, personalised revision sheets (MD/PDF export) | 10 | 🔴 | |
-| Admin: graph editor, content/question editor, moderation, users, usage, settings | 11 | 🔴 | |
-| Data export + account deletion | 4 | 🔴 | |
+| Admin: graph editor, content/question editor, moderation, users, usage, settings | 4, 11 | 🟡 users page (role, study group, quota override, audit log) done in Phase 4 | `app/api/admin_users.py`, `src/app/admin/users/` |
+| Data export + account deletion | 4 | 🟢 | `GET /me/export`, `DELETE /me` (`app/api/me.py`, `app/auth/admin.py`), settings page, `tests/test_auth_api.py` |
 | Security hardening, a11y, performance, observability, backups | 13 | 🔴 | |
 | Free-tier deployment + keep-alive | 15 | 🔴 | |
-| Database schema + RLS (23 tables), migrations runnable on Supabase and plain Postgres | 2 | 🟢 locally | `supabase/migrations/`, `supabase/shim/auth_shim.sql`, `scripts/migrate.py`, `tests/test_db_migrations.py` |
+| Database schema + RLS (23 tables), migrations runnable on Supabase and plain Postgres | 2, 4 | 🟢 locally; all 9 migrations also apply on the Supabase local stack (Postgres 17) | `supabase/migrations/`, `supabase/shim/auth_shim.sql`, `scripts/migrate.py`, `tests/test_db_migrations.py` |
 
 ---
 
@@ -186,7 +194,7 @@ Key flows (details in docs/ARCHITECTURE.md once written):
 | 1 | Scaffold, design system, CI | ⚠️ | 2026-11-19 | 2026-11-19 | `fb019e9` (PR #1 merge); CI fix `2fabc20` | | Merged. First GitHub CI run failed at typecheck (BUG-005); fix verified in a fresh clone, awaiting a green run on GitHub, then tag v0.1. |
 | 2 | Databases + DSA concept graph | 🟢 | 2026-11-19 | 2026-11-19 | `0f2d90d` `feat(phase-02): databases and the DSA concept graph` | | Verified locally (79 tests) and on GitHub Actions (run 44499463362: backend + frontend jobs success). Supabase-specific behaviour (CLI `db push`, real `auth` schema) still untested (LIM-013). |
 | 3 | Content, question bank, eval test set | 🟢 | 2026-11-19 | 2026-11-19 | cluster commits (DEC-020) `67fc84b`…`0fb67d4` + `feat(phase-03)` wrap-up | | 69/69 notes, 552 questions, 138 snippets run, 69 code_output keys verified, study sets, 85-item eval set; validate_content `--strict` in CI. Content still `reviewed: false` (human review pending). |
-| 4 | Auth, roles, app shell, public pages | 🔴 | | | | | |
+| 4 | Auth, roles, app shell, public pages | 🟢 | 2026-11-19 | 2026-11-20 | `feat(phase-04): auth, roles, app shell, public pages` | | Verified locally: backend 161 tests, web 103 unit + 24 e2e (live auth cycle on the Supabase local stack), build without env vars (CI parity). Google OAuth and cloud Supabase are live checks (Human Action 2, 7-10, 12). |
 | 5 | LLM layer, quotas, cost, cache, guardrails | 🔴 | | | | | |
 | 6 | GraphRAG + plain RAG + agentic step | 🔴 | | | | | |
 | 7 | Tutor chat UI | 🔴 | | | | | |
@@ -382,6 +390,27 @@ git tag -a v0.1 -m "Phase 1: Scaffold, design system, CI" && git push --tags   #
 - The "unnamed prerequisite" rule must be checked by machine. It is easy to name the prerequisite by accident (writing "call stack" in a RecursionError question), and the validator rejects it.
 - Heredoc Python with backslashes is still fragile (a `split('\\')` in a throwaway script broke); use `os.path` helpers instead of string escapes in shell-embedded code.
 **Next step:** Phase 4: auth, roles, app shell, public pages.
+
+### Session 8 — 2026-11-19/20 — Phase 4: Auth, roles, app shell, public pages (autopilot)
+**Goal:** Real authentication with roles, the signed-in app shell, settings (export/delete) and the public marketing pages, verified end to end on the Supabase local stack.
+**Built:**
+- Supabase CLI local stack (CLI 3.2.0 via npx; auth, kong, rest, db, mailpit). All 9 migrations apply to Supabase Postgres 17 (LIM-013 updated). New migration `20260101000009_profile_experience_level.sql`. ES256 signing key in the gitignored `supabase/signing_keys.json`.
+- Backend `app/auth/`: JWKS cache (TTL, early refetch on an unknown `kid`), token verification (ES256/RS256/EdDSA via JWKS, HS256 only when a legacy secret is configured; rejects `alg: none`, wrong `aud`/`iss`/role and non-UUID `sub`), roles from `public.profiles` with a 30 s cache, `require_role`. Endpoints: `GET/PATCH /me`, `POST /me/onboarding-complete`, `GET /me/export`, `DELETE /me` (Auth admin API, SQL fallback on plain Postgres), `GET/PATCH /admin/users` with audit log, `GET /concepts`, public `GET /graph` (5-minute cache, approved nodes/edges only). `migrate.py` refuses CLI-managed databases (BUG-014). Tests use `TEST_DATABASE_URL`, so the dev API can point at the Supabase stack.
+- Web: `@supabase/ssr` 0.12.7 clients; `src/proxy.ts` (Next 16 proxy: session refresh with `getClaims`, redirects for `/app` and `/admin`, open-redirect guard `safeNext`); sign-up, sign-in, forgot and reset pages; `/auth/callback`; Google button; typed API client (token, one 401 refresh retry, error envelope, cold-start "waking up" banner). App shell: collapsible sidebar + mobile drawer, concept search, usage meter, user menu, theme sync to the profile, onboarding, dashboard, settings (JSON export, typed-confirmation delete), admin gate + `/admin/users`, placeholder pages for later phases (each names its phase). Public pages: landing (graph background, failure-case animation, pipeline, features, comparison), `/how-it-works` with the live graph, About, Privacy, Terms.
+- Fixes during verification: reduced-motion users now see staged reveals at once (BUG-016); cold-start e2e waits and a `waitForResponse` race fixed (BUG-015, BUG-017); `/admin/users` split into a server page + client table so it can opt out of instant-navigation validation; marketing links to `/login` and `/signup` no longer prefetch the auth bundle (DEC-024).
+**Files touched:** `supabase/` (config, .gitignore, migration 09), `apps/api/app/{auth,api,db,graph,core,main.py}`, `apps/api/tests/` (auth_helpers, test_auth_tokens, test_auth_api, test_graph_api, conftest, test_db_migrations), `apps/web/src/{proxy.ts,lib,components/{app,auth,marketing},app/{(auth),(marketing),app,admin,auth}}`, `apps/web/e2e/{auth.spec.ts,helpers.ts,design.spec.ts,screenshots.spec.ts}`, `docs/screenshots/phase4/`, `CLAUDE.md` (section 5: local auth stack commands), `progressfile.md`.
+**Commands run & results:** ruff ✅ · ruff format ✅ (59 files) · mypy ✅ (43 files) · pytest ✅ 161 passed (live Neo4j + Postgres) · web lint ✅ · typecheck ✅ · prettier ✅ · vitest ✅ 103 · build ✅ (also with every `NEXT_PUBLIC_*` variable empty, as in CI) · Playwright ✅ 24/24 on two consecutive cold starts (`.next` deleted), plus 30/30 with `--repeat-each=3 --workers=4` for the auth spec · screenshots ✅ (12 in `docs/screenshots/phase4/`) · Lighthouse 12.6.1 on `next start`: desktop 100/100/100/100; mobile performance 74-80 with accessibility, best practices and SEO at 100.
+**Manual verification:** API `/health` ok, `/graph` 200, `/me` without a token 401. The live e2e covers sign-up → confirmation mail in Mailpit → unconfirmed sign-in refused; sign-in → onboarding → dashboard (usage meter 0/40) → sign-out → `/app` redirects to login; a student gets the 403 page at `/admin/users` and 403/401 from the admin API; the theme chosen in settings follows the user to a fresh browser. Screenshots checked by eye in all three themes.
+**Bugs found this session:** BUG-014, BUG-015, BUG-016, BUG-017
+**Decisions:** DEC-023, DEC-024 (LIM-011 closed; LIM-015, LIM-016 added)
+**Human action needed:** Autopilot State items 2 and 7-12.
+**What we learned:**
+- A `prefers-reduced-motion` rule that only shortens `animation-duration` is not enough: content revealed with `animation-delay` and fill-mode `both` stays invisible for the whole delay. Zero the delay too.
+- A `waitForResponse` set up after the action that triggers the request is a race. Create the promise first, then act.
+- On a dev server, e2e timings are dominated by first-request compilation; a test that passes warm can fail cold. Verify from a deleted `.next` before trusting a green run.
+- Turbopack's dev cache can serve stale CSS after a file is restored with identical content. When the browser disagrees with the source, check what is actually served.
+- Next.js `<Link>` prefetch adds the target route's JS to the current page's cost: public pages linking to the auth pages were loading supabase-js and zod until prefetch was turned off for those links.
+**Next step:** Phase 5: LLM layer, quotas, cost, cache, guardrails.
 ---
 
 ## 7. Bug Log
@@ -404,7 +433,11 @@ Severity: **S1** critical (data loss, security, app down) · **S2** major (featu
 | BUG-010 | 2026-11-19 | 3 | S3 | tooling | Backslash sequences written through the shell tool were corrupted (`\\b` became a backspace control character in a regex; `\\n` became a real newline in a string), so the stray-text rule matched nothing and one helper had a syntax error | Fixed | `acd5c5f` | `tests/test_content_tooling.py::test_stray_self_correction_text_is_rejected`; repo scanned for control characters (none) |
 | BUG-011 | 2026-11-19 | 3 | S3 | content | Authored `code_output` answers were wrong in 3 questions (amortized_analysis-q07, stack-q07, binary_search-q07) and a note contained a confused self-correction | Fixed | cluster commits | `tests/test_content_real.py::test_code_output_answers_match_real_program_output`; validator rejects stray self-correcting text |
 | BUG-012 | 2026-11-19 | 3 | S4 | content | `dfs.md` Python snippet asserted interval nesting in one direction only, so the self-check would have failed for an ancestor/descendant pair taken in reverse order | Fixed before commit | `4d5d964` | snippet runner (`run_content_snippets.py`, `test_content_real.py`) |
+| BUG-014 | 2026-11-19 | 4 | S3 | db / tooling | `scripts/migrate.py` run against the Supabase local database (already migrated by the Supabase CLI) failed half-way with `type "user_role" already exists` instead of refusing cleanly | Fixed | `feat(phase-04)` | `tests/test_db_migrations.py::test_supabase_cli_managed_database_is_refused` |
 | BUG-013 | 2026-11-19 | 3 | S4 | content | `connectivity_scc-q04` option c had a 7-character `why_wrong` ("It can."), rejected by the question schema (minimum 10 characters) | Fixed before commit | `4d5d964` | `QuestionFile` schema in `validate_content.py` |
+| BUG-015 | 2026-11-20 | 4 | S4 | e2e | Live auth e2e tests failed intermittently right after the dev server started: still on `/login` or `/app` when the 5 s URL assertion gave up | Fixed | `feat(phase-04)` | `e2e/auth.spec.ts` passes on two consecutive cold starts and 30/30 repeated runs |
+| BUG-016 | 2026-11-20 | 4 | S3 | frontend / a11y | With reduced motion, the landing page's failure-case diagram hid its key node (Call Stack) for 2.8 s; the screenshot showed an arrow pointing at nothing | Fixed | `feat(phase-04)` | `e2e/design.spec.ts` "reduced motion shows the landing page's final state immediately" |
+| BUG-017 | 2026-11-20 | 4 | S4 | e2e | Theme-sync e2e test could hang until timeout: `waitForResponse` for `PATCH /me` was registered after the click, so a fast response was missed | Fixed | `feat(phase-04)` | the test itself (promise created before the click) |
 
 ### 7.2 Bug details
 
@@ -571,6 +604,50 @@ Severity: **S1** critical (data loss, security, app down) · **S2** major (featu
 - **Commit:** cluster commits (complexity, linear, searching_hashing)
 - **Lesson / pattern to avoid:** Never trust a hand-traced expected output; run it.
 
+#### BUG-014 — `migrate.py` half-applied on a Supabase-CLI-managed database
+- **Found:** 2026-11-19, Phase 4, while pointing local tooling at the Supabase local stack
+- **Severity / Area:** S3 / db tooling
+- **Symptom:** `type "user_role" already exists`; a stray `public.schema_migrations` table was left behind.
+- **Root cause:** the Supabase CLI had already applied the migrations (tracked in `supabase_migrations.schema_migrations`); `migrate.py` keeps its own ledger and started from zero.
+- **Fix:** `migrate.py` raises `MigrationError` ("managed by the Supabase CLI") when the `supabase_migrations` schema exists; the stray table was dropped.
+- **Files changed:** `apps/api/app/db/migrate.py`
+- **Regression test:** `test_supabase_cli_managed_database_is_refused`
+- **Commit:** `feat(phase-04)`
+- **Lesson / pattern to avoid:** Two migration runners must never share a database; make the wrong one refuse loudly.
+
+#### BUG-015 — Cold-start flakiness in live auth e2e tests
+- **Found:** 2026-11-20, Phase 4 verification
+- **Severity / Area:** S4 / e2e
+- **Symptom:** `expect(page).toHaveURL(/app/onboarding/)` timed out (received `/login` or `/app`) on the first run after the dev server started; later runs passed.
+- **Root cause:** the dev server compiles `/app` and `/app/onboarding` on first request, which took longer than the default 5 s expect timeout; one test (two sign-ins + onboarding) could also exceed the 30 s test timeout.
+- **Fix:** a named `NAV_TIMEOUT` (30 s) only on the navigation waits after sign-in, and `test.slow()` for the live block. The assertions are unchanged.
+- **Files changed:** `apps/web/e2e/auth.spec.ts`
+- **Regression test:** two consecutive cold-start runs (`.next` deleted), 24/24
+- **Commit:** `feat(phase-04)`
+- **Lesson / pattern to avoid:** Verify e2e from a cold server; warm runs hide compile time.
+
+#### BUG-016 — Reduced motion delayed content instead of removing motion
+- **Found:** 2026-11-20, Phase 4, by looking at the generated screenshots
+- **Severity / Area:** S3 / frontend, accessibility
+- **Symptom:** the failure-case diagram showed "needs →" pointing at empty space; the Call Stack node (the point of the diagram) appeared only after 2.8 s for reduced-motion users.
+- **Root cause:** the global `prefers-reduced-motion` rule shortened `animation-duration` but not `animation-delay`; staged reveals use delays with fill-mode `both`, so elements stayed at opacity 0 for the whole delay.
+- **Fix:** `animation-delay: 0s !important` in the reduced-motion rule (fixes every staged animation).
+- **Files changed:** `apps/web/src/app/globals.css`
+- **Regression test:** `e2e/design.spec.ts` "reduced motion shows the landing page's final state immediately" (fails with opacity 0 without the rule)
+- **Commit:** `feat(phase-04)`
+- **Lesson / pattern to avoid:** Look at the screenshots, not only at green tests.
+
+#### BUG-017 — `waitForResponse` registered after the triggering click
+- **Found:** 2026-11-20, Phase 4 verification
+- **Severity / Area:** S4 / e2e
+- **Symptom:** "theme choice ... follows the user to a new browser" sometimes hit the test timeout.
+- **Root cause:** the `PATCH /me` could complete before `page.waitForResponse` was called, so the wait never resolved.
+- **Fix:** create the response promise before clicking, then await it and assert `ok()`.
+- **Files changed:** `apps/web/e2e/auth.spec.ts`
+- **Regression test:** the test itself, 30/30 repeated runs
+- **Commit:** `feat(phase-04)`
+- **Lesson / pattern to avoid:** Listen first, act second.
+
 ---
 
 ## 8. Decisions Log (lightweight ADRs)
@@ -598,6 +675,8 @@ Severity: **S1** critical (data loss, security, app down) · **S2** major (featu
 | DEC-019 | 2026-11-19 | Autopilot mode: one commit per phase and `git push origin main` are authorised by the human's AUTOPILOT prompt; tags are never created. CLAUDE.md section 9 records this exception | Per-step commits and manual pushes (DEC-013) | Explicit user instruction for autonomous operation | Per-phase commits are large; DEC-013's small-commit rule applies again outside autopilot |
 | DEC-020 | 2026-11-19 | Phase 3 is committed per content cluster (`content(<cluster>): ...`), each followed by a push, instead of one commit per phase | One huge phase commit | Appendix D lists per-cluster commits; the phase is far too large for a single commit and clusters are natural, verifiable checkpoints | The phase still ends with a `feat(phase-03)`-style wrap-up commit for tooling/seeds/eval set |
 | DEC-021 | 2026-11-19 | Question conventions: q01 and q02 are parallel difficulty-1 MCQs; q03 and q04 are parallel difficulty-2 MCQs; q05 multi_select, q06 true_false, q07 code_output, q08 short_answer. Parallel pairs feed the pre/post study sets and quiz variety. `code_output` answers are machine-verified by running the program; incorrect MCQ options must carry `why_wrong` | Free-form question sets | Makes matched study forms possible and keeps answer keys honest | Authoring cost is higher; schema enforces the rules |
+| DEC-023 | 2026-11-19 | Auth: Supabase access tokens are verified in FastAPI against the project JWKS (asymmetric keys), with HS256 only if a legacy secret is configured; roles are read from `public.profiles` (cached 30 s), never from token claims; account deletion goes through the Auth admin API with the service-role key | Trust a role claim in the JWT; verify with the shared secret only | Supabase now issues asymmetric signing keys; an admin must be able to change roles without re-issuing tokens | A role change takes up to 30 s to apply (LIM-016); the service-role key stays backend-only |
+| DEC-024 | 2026-11-20 | Keep `cacheComponents` + `partialPrefetching` on with Supabase SSR (closes LIM-011): session refresh lives in `src/proxy.ts`, app pages read the user client-side through TanStack Query, so prerendered shells stay static. Marketing links to `/login` and `/signup` use `prefetch={false}`; `/admin/users` exports `instant = false` (client page behind a gate) | Turn both flags off; prefetch everything | Every route except `/auth/callback` still prerenders; prefetching the auth pages loaded supabase-js + zod on every public page view | Signed-in pages show skeletons until `/me` resolves; the auth pages' JS is fetched on click |
 | DEC-022 | 2026-11-19 | Content code samples are C++14 (not 17) and Python 3.12; every snippet is a complete program that asserts its own claims and is compiled/run by the test suite | C++17 | The only local compiler is MinGW GCC 6.3 (no `-std=c++17`); C++14 also works on every CI compiler | Notes avoid C++17 features (structured bindings, `std::optional`) |
 
 ---
@@ -616,10 +695,12 @@ Severity: **S1** critical (data loss, security, app down) · **S2** major (featu
 | LIM-008 | `/design` is gated by NODE_ENV only | Any non-production deployment exposes it | Acceptable: it holds no data |
 | LIM-009 | `/health/deep` is unauthenticated and reveals dependency status | Minor information disclosure | Reduce detail or protect in Phase 13 |
 | LIM-010 | `statement_cache_size=0` / `prepared_statement_cache_size=0` set only on the health-check engine | The shared engine in Phase 2 must apply the same settings (CLAUDE.md rule 6) | Put them in one engine factory in Phase 2 |
-| LIM-011 | **Phase 4:** Phase 4 must verify Supabase SSR auth works with Next.js cacheComponents/partialPrefetching (DEC-007); if it causes problems, disable them and record a new decision. | Auth cookies / session reads are dynamic data and may conflict with the prerendered shell | Verify in Phase 4 before building the app shell; if problematic set both flags off in `next.config.ts` and log a DEC |
+| LIM-011 | ~~**Phase 4:** Phase 4 must verify Supabase SSR auth works with Next.js cacheComponents/partialPrefetching (DEC-007); if it causes problems, disable them and record a new decision. | Auth cookies / session reads are dynamic data and may conflict with the prerendered shell | Verify in Phase 4 before building the app shell; if problematic set both flags off in `next.config.ts` and log a DEC~~ **CLOSED 2026-11-20** (DEC-024: works with both flags on) |
 | LIM-012 | Concurrent `upsert_edge` calls could both pass the cycle check and create a cycle together | DAG rule violation under a race | Single admin editor; `validate_graph.py` and CI catch it; add a Neo4j-side lock if multi-admin editing is ever needed |
-| LIM-013 | Migrations were tested on plain Postgres 16 + shim, not on a real Supabase project or the Supabase CLI | Supabase-specific differences (extension schema, default grants, managed roles) could surface at deploy | Phase 4 tries the Supabase local stack; Phase 15 runbook includes `supabase db push` on dev first |
+| LIM-013 | Migrations were tested on plain Postgres 16 + shim, not on a real Supabase project or the Supabase CLI. **Update 2026-11-19:** all 9 apply cleanly on the Supabase CLI local stack (Postgres 17); a cloud project is still untested | Supabase-specific differences (extension schema, default grants, managed roles) could surface at deploy | Phase 4 tries the Supabase local stack; Phase 15 runbook includes `supabase db push` on dev first |
 | LIM-014 | `/health/deep` and tests share one local Neo4j/Postgres that also holds dev data | A test bug could touch dev data | Tests use unique ids/subjects and throwaway databases; never `wipe()` in tests |
+| LIM-015 | Lighthouse mobile performance on the landing page is 74-80 locally (desktop 100; accessibility, best practices and SEO 100). The cost is React hydration (~770 ms under 4× CPU throttling) and layout, measured on a busy dev laptop | Below the 90 target in lab conditions | Re-measure on Vercel (Human Action 11); if still low, Phase 13 options: keep TanStack/Toaster providers out of marketing routes (separate root layouts), lighter hero |
+| LIM-016 | Role changes take up to 30 s to apply (profile cache, DEC-023) | A demoted admin keeps access for up to 30 s | Acceptable for this app; revisit if roles ever guard sensitive data |
 
 ---
 
@@ -797,6 +878,10 @@ Run ID / date / models used: _TBD_
 | Unnamed-prerequisite test item | An eval question that describes only a symptom ("RecursionError at n = 5000") whose gold answer needs a prerequisite it never names (call_stack) | `data/subjects/dsa/eval/testset.jsonl`, validator rule |
 | Matched pre/post forms | Two tests over the same concepts with the same difficulty profile and no shared items, so learning gain is not inflated by memorising questions | `questions/_study_sets.yaml` |
 | Self-verifying content | Every code sample asserts its own claims and every `code_output` key is checked against real program output | `app/content/snippets.py`, `scripts/run_content_snippets.py` |
+| JWKS | A public list of signing keys published by the auth server; the API verifies tokens with it without holding any secret | `app/auth/jwks.py`, `app/auth/tokens.py` |
+| Open-redirect guard | Only same-site relative paths are accepted as the post-login destination, so a crafted link cannot send users to another site | `safeNext` in `src/lib/auth-schemas.ts` |
+| Reduced motion | Users can ask the OS for less animation; the CSS removes durations and delays so content appears at once | `globals.css`, BUG-016 |
+| Route prefetching | Next.js loads a linked page's code in the background; useful, but it adds that code to the current page's cost | DEC-024 |
 
 ---
 

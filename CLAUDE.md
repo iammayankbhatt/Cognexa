@@ -73,7 +73,10 @@ cognexa/
 
 ```bash
 # local infra
-docker compose up -d                       # neo4j + postgres(pgvector)
+docker compose up -d                       # neo4j + postgres(pgvector) — tests use this Postgres via TEST_DATABASE_URL
+npx supabase start -x realtime,storage-api,imgproxy,studio,edge-runtime,logflare,vector,supavisor,postgres-meta
+                                           # local Supabase (auth + db on :54322, mail UI http://127.0.0.1:54324); dev API's DATABASE_URL points here
+npx supabase migration up                  # apply new migrations to the local Supabase db (never scripts/migrate.py there)
 # backend
 cd apps/api && uv sync && uv run uvicorn app.main:app --reload --port 8000
 cd apps/api && uv run pytest -q

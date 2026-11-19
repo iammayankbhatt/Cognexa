@@ -18,8 +18,16 @@ from app.graph.repository import GraphRepository
 
 
 def live_settings() -> Settings:
-    """Settings from the environment / apps/api/.env (CI sets real service values)."""
-    return Settings(health_check_timeout_s=10.0)
+    """Settings from the environment / apps/api/.env (CI sets real service values).
+
+    Tests use TEST_DATABASE_URL when it is set (local dev: the plain pgvector container, matching
+    CI), so the dev API can point DATABASE_URL at the Supabase local stack without tests creating
+    throwaway databases or seed rows there.
+    """
+    s = Settings(health_check_timeout_s=10.0)
+    if s.test_database_url:
+        s = s.model_copy(update={"database_url": s.test_database_url})
+    return s
 
 
 def _neo4j_configured() -> bool:

@@ -71,6 +71,7 @@ profiles = Table(
     Column("study_group", study_group, nullable=False, server_default="none"),
     Column("onboarding_completed", Boolean, nullable=False, server_default="false"),
     Column("quota_override", JSONB),
+    Column("experience_level", Text),
     _now(),
     _updated(),
 )

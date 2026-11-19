@@ -1,19 +1,40 @@
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import health
+from app.api import admin_users, concepts, graph, health, me
+from app.auth.deps import ProfileCache
+from app.auth.jwks import JwksCache
 from app.core.config import Settings, get_settings
 from app.core.errors import register_error_handlers
 from app.core.logging import configure_logging
 from app.core.middleware import RequestIdMiddleware
+from app.db.session import Database
+from app.graph.provider import GraphProvider
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or get_settings()
     configure_logging(settings.log_level)
+    db = Database(settings)
+    graph_provider = GraphProvider(settings)
 
-    app = FastAPI(title="Cognexa API", version="0.1.0")
+    @asynccontextmanager
+    async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+        yield
+        await db.dispose()
+        await graph_provider.close()
+
+    app = FastAPI(title="Cognexa API", version="0.1.0", lifespan=lifespan)
     app.dependency_overrides[get_settings] = lambda: settings
+    app.state.db = db
+    app.state.graph = graph_provider
+    app.state.graph_cache = {}
+    jwks_url = settings.effective_jwks_url
+    app.state.jwks = JwksCache(jwks_url, ttl_s=settings.jwks_cache_ttl_s) if jwks_url else None
+    app.state.profile_cache = ProfileCache(settings.profile_cache_ttl_s)
     register_error_handlers(app)
 
     app.add_middleware(
@@ -28,6 +49,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.add_middleware(RequestIdMiddleware)
 
     app.include_router(health.router)
+    app.include_router(me.router)
+    app.include_router(concepts.router)
+    app.include_router(graph.router)
+    app.include_router(admin_users.router)
     return app
 
 

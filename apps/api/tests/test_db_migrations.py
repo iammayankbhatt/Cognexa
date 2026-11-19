@@ -87,6 +87,22 @@ async def test_editing_an_applied_migration_is_rejected(fresh_db_url: str, tmp_p
         await apply_migrations(fresh_db_url, directory=copy)
 
 
+async def test_supabase_cli_managed_database_is_refused(fresh_db_url: str) -> None:
+    """BUG-014: a database migrated by the Supabase CLI must not be migrated again by us."""
+    c = await asyncpg.connect(to_asyncpg_dsn(fresh_db_url), statement_cache_size=0)
+    try:
+        await c.execute("create schema supabase_migrations")
+    finally:
+        await c.close()
+    with pytest.raises(MigrationError, match="managed by the Supabase CLI"):
+        await apply_migrations(fresh_db_url)
+    c = await asyncpg.connect(to_asyncpg_dsn(fresh_db_url), statement_cache_size=0)
+    try:  # refused before touching anything
+        assert await c.fetchval("select to_regclass('public.schema_migrations')") is None
+    finally:
+        await c.close()
+
+
 async def test_all_expected_tables_exist_with_rls(conn: asyncpg.Connection) -> None:
     rows = await conn.fetch(
         "select c.relname, c.relrowsecurity from pg_class c join pg_namespace n on n.oid = c.relnamespace "

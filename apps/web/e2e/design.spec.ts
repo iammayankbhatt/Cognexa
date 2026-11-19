@@ -4,7 +4,7 @@ const THEMES = ["neon-noir", "titanium-dark", "titanium-light"] as const;
 
 test("home page renders in the default theme", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "Cognexa" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: /Cognexa/ })).toBeVisible();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "neon-noir");
 });
 
@@ -27,6 +27,17 @@ for (const theme of THEMES) {
     expect(await page.evaluate(() => document.documentElement.dataset.theme)).toBe(theme);
   });
 }
+
+test("reduced motion shows the landing page's final state immediately", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  // The Call Stack node is the last staged reveal (2.8 s delay with full motion).
+  const node = page.locator("figure svg g").filter({ hasText: "Call Stack" });
+  await expect(node).toBeVisible();
+  await expect
+    .poll(() => node.evaluate((el) => Number(getComputedStyle(el).opacity)), { timeout: 500 })
+    .toBe(1);
+});
 
 test("design page renders every section without console errors", async ({ page }) => {
   const errors: string[] = [];
