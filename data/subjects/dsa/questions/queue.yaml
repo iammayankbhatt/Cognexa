@@ -1,0 +1,114 @@
+concept_id: queue
+questions:
+  - id: queue-q01
+    type: mcq
+    difficulty: 1
+    prompt: "Items A, B, C are enqueued in that order. Which item does the next dequeue return?"
+    options:
+      - {id: a, text: "A"}
+      - {id: b, text: "B", why_wrong: "B is behind A and would be served second."}
+      - {id: c, text: "C", why_wrong: "C arrived last; a queue serves the oldest item first."}
+      - {id: d, text: "It depends on the item values", why_wrong: "A queue serves in arrival order, regardless of values."}
+    answer: a
+    explanation: "A queue is first in, first out, so A, which arrived first, leaves first."
+    misconception_tag: fifo_order
+    diagnoses_prereq: arrays
+
+  - id: queue-q02
+    type: mcq
+    difficulty: 1
+    prompt: "Which structure removes items in the same order they were added?"
+    options:
+      - {id: a, text: "Stack", why_wrong: "A stack removes the most recent item first."}
+      - {id: b, text: "Queue"}
+      - {id: c, text: "Binary search tree", why_wrong: "A tree orders items by key, not by arrival."}
+      - {id: d, text: "Hash table", why_wrong: "A hash table has no arrival-order removal rule."}
+    answer: b
+    explanation: "First in, first out is the defining behaviour of a queue."
+    misconception_tag: queue_vs_stack
+    diagnoses_prereq: arrays
+
+  - id: queue-q03
+    type: mcq
+    difficulty: 2
+    prompt: "A program uses a Python list as a queue with append for enqueue and pop(0) for dequeue. Why does it become slow for long queues?"
+    options:
+      - {id: a, text: "append is O(n) for long lists", why_wrong: "append is amortized O(1); the slow step is pop(0)."}
+      - {id: b, text: "pop(0) shifts all remaining elements, so each dequeue is O(n)"}
+      - {id: c, text: "Python lists cannot hold more than 1000 items", why_wrong: "Lists have no such limit."}
+      - {id: d, text: "pop(0) is always O(1)", why_wrong: "Removing from the front of an array requires shifting everything left."}
+    answer: b
+    explanation: "Removing the first element of an array shifts all others. collections.deque.popleft is O(1) instead."
+    misconception_tag: list_as_queue
+    diagnoses_prereq: arrays
+
+  - id: queue-q04
+    type: mcq
+    difficulty: 2
+    prompt: "In a linked-list queue with head and tail pointers, the only item is dequeued. What must happen?"
+    options:
+      - {id: a, text: "Only head is set to null", why_wrong: "A stale tail would still point at the removed node and break later enqueues."}
+      - {id: b, text: "Both head and tail are set to null"}
+      - {id: c, text: "Only tail is set to null", why_wrong: "head would still refer to the removed node."}
+      - {id: d, text: "Nothing; the pointers update themselves", why_wrong: "Pointers must be updated explicitly in code."}
+    answer: b
+    explanation: "An empty queue has no front or back, so both pointers must be reset to avoid dangling references."
+    misconception_tag: empty_queue_pointers
+    diagnoses_prereq: singly_linked_list
+
+  - id: queue-q05
+    type: multi_select
+    difficulty: 2
+    prompt: "Select every true statement about queues."
+    options:
+      - {id: a, text: "enqueue and dequeue can both be O(1)."}
+      - {id: b, text: "Breadth-first search uses a queue to visit nodes level by level."}
+      - {id: c, text: "A queue removes the newest item first.", why_wrong: "That is stack behaviour."}
+      - {id: d, text: "A queue can only be implemented with an array.", why_wrong: "Linked lists work as well; the ADT is independent of storage."}
+    answer: [a, b]
+    explanation: "Constant-time ends and BFS are standard facts. Order is first in first out and storage is flexible."
+    misconception_tag: queue_properties
+    diagnoses_prereq: null
+
+  - id: queue-q06
+    type: true_false
+    difficulty: 1
+    prompt: "True or false: Python's collections.deque supports O(1) removal from its left end."
+    answer: true
+    explanation: "popleft on a deque runs in constant time, which makes it the right tool for queues."
+    misconception_tag: deque_as_queue
+    diagnoses_prereq: null
+
+  - id: queue-q07
+    type: code_output
+    difficulty: 2
+    prompt: "What does this program print?"
+    code: |
+      from collections import deque
+
+      q = deque()
+      q.append("a")
+      q.append("b")
+      first = q.popleft()
+      q.append("c")
+      print(first, list(q), len(q))
+    answer: "a ['b', 'c'] 2"
+    explanation: "a is removed from the front, leaving b; appending c puts it at the back, so the queue is [b, c] with length 2."
+    misconception_tag: queue_trace
+    diagnoses_prereq: arrays
+
+  - id: queue-q08
+    type: short_answer
+    difficulty: 3
+    prompt: "Explain why a queue is the natural structure for breadth-first search."
+    answer: "Breadth-first search must visit all nodes at distance k before any at distance k + 1. A queue serves nodes in the order they were discovered, so nodes discovered earlier, which are closer to the start, are processed first, giving level-by-level exploration."
+    explanation: "Look for first-in-first-out order matching discovery order and level-by-level processing."
+    rubric:
+      key_points:
+        - "BFS processes nodes in order of distance from the start"
+        - "a queue serves in first-in first-out (discovery) order"
+        - "so closer nodes are handled before farther ones"
+      max_score: 1
+      partial_credit: true
+    misconception_tag: queue_for_bfs
+    diagnoses_prereq: arrays

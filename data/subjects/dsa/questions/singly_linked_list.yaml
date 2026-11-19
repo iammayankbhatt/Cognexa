@@ -1,0 +1,127 @@
+concept_id: singly_linked_list
+questions:
+  - id: singly_linked_list-q01
+    type: mcq
+    difficulty: 1
+    prompt: "What does the next field of the last node in a singly linked list contain?"
+    options:
+      - {id: a, text: "A reference to the head", why_wrong: "That would make the list circular; a plain singly linked list ends in null."}
+      - {id: b, text: "null (None)"}
+      - {id: c, text: "The value of the previous node", why_wrong: "Singly linked nodes do not know their predecessor."}
+      - {id: d, text: "The length of the list", why_wrong: "next holds a reference, not a number."}
+    answer: b
+    explanation: "The null reference marks the end of the chain, which is what traversal loops test for."
+    misconception_tag: list_termination
+    diagnoses_prereq: pointers_references
+
+  - id: singly_linked_list-q02
+    type: mcq
+    difficulty: 1
+    prompt: "What is the time complexity of inserting a new node at the head of a singly linked list?"
+    options:
+      - {id: a, text: "O(1)"}
+      - {id: b, text: "O(n)", why_wrong: "No traversal is needed; only two pointer updates."}
+      - {id: c, text: "O(log n)", why_wrong: "There is no halving structure involved."}
+      - {id: d, text: "O(n squared)", why_wrong: "A constant number of pointer changes cannot be quadratic."}
+    answer: a
+    explanation: "Create a node, point it at the old head and update head: constant work."
+    misconception_tag: head_insertion
+    diagnoses_prereq: pointers_references
+
+  - id: singly_linked_list-q03
+    type: mcq
+    difficulty: 2
+    prompt: "A Python program crashes with `AttributeError: 'NoneType' object has no attribute 'next'` while walking a linked list. What is the most likely cause?"
+    options:
+      - {id: a, text: "The loop moved past the last node and tried to read next on None."}
+      - {id: b, text: "The list contains too many nodes.", why_wrong: "Length does not cause this error; a null reference does."}
+      - {id: c, text: "Python does not support linked lists.", why_wrong: "Classes with a next field work fine."}
+      - {id: d, text: "The values are not sorted.", why_wrong: "Order of values has nothing to do with this error."}
+    answer: a
+    explanation: "Traversal must stop when the node is None. Dereferencing None.next raises this error."
+    misconception_tag: null_dereference
+    diagnoses_prereq: pointers_references
+
+  - id: singly_linked_list-q04
+    type: mcq
+    difficulty: 2
+    prompt: "To insert new node X after node A, in which order should the pointers be changed?"
+    options:
+      - {id: a, text: "Set A.next = X first, then X.next = A.next", why_wrong: "After the first step A.next is X, so X.next would point to itself and the rest is lost."}
+      - {id: b, text: "Set X.next = A.next first, then A.next = X"}
+      - {id: c, text: "Set X.next = None, then A.next = X", why_wrong: "That discards everything after A."}
+      - {id: d, text: "The order does not matter", why_wrong: "The order matters; the wrong one loses the rest of the list."}
+    answer: b
+    explanation: "X must first capture the old successor. Only then can A be redirected to X without losing the tail."
+    misconception_tag: pointer_update_order
+    diagnoses_prereq: pointers_references
+
+  - id: singly_linked_list-q05
+    type: multi_select
+    difficulty: 2
+    prompt: "Select every true statement about singly linked lists."
+    options:
+      - {id: a, text: "Finding the kth element requires following k links from the head."}
+      - {id: b, text: "Deleting a node whose predecessor you already hold is O(1)."}
+      - {id: c, text: "Accessing element k takes O(1) time like an array.", why_wrong: "There is no index arithmetic; you must follow the chain."}
+      - {id: d, text: "Appending at the tail is always O(1).", why_wrong: "Without a tail pointer, you must walk the whole list first."}
+    answer: [a, b]
+    explanation: "Traversal is linear while local pointer changes are constant. Random access and tail append need extra structure."
+    misconception_tag: linked_list_costs
+    diagnoses_prereq: null
+
+  - id: singly_linked_list-q06
+    type: true_false
+    difficulty: 1
+    prompt: "True or false: the nodes of a linked list are normally stored next to each other in memory, like an array."
+    answer: false
+    explanation: "Each node is allocated separately and linked by references, so the nodes can be anywhere in memory."
+    misconception_tag: linked_vs_array_layout
+    diagnoses_prereq: stack_heap_memory
+
+  - id: singly_linked_list-q07
+    type: code_output
+    difficulty: 2
+    prompt: "What does this program print?"
+    code: |
+      class Node:
+          def __init__(self, value, next=None):
+              self.value = value
+              self.next = next
+
+      head = None
+      for v in (3, 2, 1):
+          head = Node(v, head)
+
+      previous, current = None, head
+      while current:
+          nxt = current.next
+          current.next = previous
+          previous, current = current, nxt
+      head = previous
+
+      out = []
+      while head:
+          out.append(head.value)
+          head = head.next
+      print(out)
+    answer: "[3, 2, 1]"
+    explanation: "Pushing 3, 2, 1 at the head builds 1 -> 2 -> 3. The loop reverses the pointers, giving 3 -> 2 -> 1."
+    misconception_tag: reversal_trace
+    diagnoses_prereq: pointers_references
+
+  - id: singly_linked_list-q08
+    type: short_answer
+    difficulty: 3
+    prompt: "Compare inserting in the middle of an array with inserting in the middle of a linked list. When is the linked list actually faster?"
+    answer: "Inserting in the middle of an array shifts later elements, costing O(n). In a linked list the insertion itself is O(1) pointer changes, but finding the position costs O(n) unless you already hold a reference to the node, so the list is faster only when the insertion point is already known."
+    explanation: "A strong answer separates the cost of finding the position from the cost of the insertion itself."
+    rubric:
+      key_points:
+        - "array insertion shifts elements, O(n)"
+        - "list insertion is O(1) once the node is held"
+        - "locating the position in a list is O(n), so it wins only with a known position"
+      max_score: 1
+      partial_credit: true
+    misconception_tag: array_vs_list_insertion
+    diagnoses_prereq: pointers_references

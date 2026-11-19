@@ -1,0 +1,131 @@
+concept_id: doubly_circular_linked_list
+questions:
+  - id: doubly_circular_linked_list-q01
+    type: mcq
+    difficulty: 1
+    prompt: "Which operation becomes O(1) in a doubly linked list because each node has a prev pointer?"
+    options:
+      - {id: a, text: "Removing a node when you already hold a reference to it"}
+      - {id: b, text: "Finding a value anywhere in the list", why_wrong: "Searching still requires walking the list."}
+      - {id: c, text: "Reading the kth element", why_wrong: "There is no index; you still follow links."}
+      - {id: d, text: "Sorting the list", why_wrong: "Sorting takes more than constant time."}
+    answer: a
+    explanation: "With prev available, both neighbours can be relinked without searching for the predecessor."
+    misconception_tag: o1_removal
+    diagnoses_prereq: singly_linked_list
+
+  - id: doubly_circular_linked_list-q02
+    type: mcq
+    difficulty: 1
+    prompt: "What is the main extra cost of a doubly linked list compared with a singly linked list?"
+    options:
+      - {id: a, text: "Slower access by index", why_wrong: "Both are O(n) by index; that is not the extra cost."}
+      - {id: b, text: "An extra pointer per node and more pointer updates to keep consistent"}
+      - {id: c, text: "It cannot be traversed forward", why_wrong: "Forward traversal works exactly as before."}
+      - {id: d, text: "It cannot store duplicate values", why_wrong: "Any list can store duplicates."}
+    answer: b
+    explanation: "Every node carries a second pointer, and insert and remove must update both links correctly."
+    misconception_tag: doubly_cost
+    diagnoses_prereq: singly_linked_list
+
+  - id: doubly_circular_linked_list-q03
+    type: mcq
+    difficulty: 2
+    prompt: "A program walks a circular linked list with `node = head; while node is not None: process(node); node = node.next`. What happens?"
+    options:
+      - {id: a, text: "It processes every node once and stops", why_wrong: "No node's next is None in a circular list, so the loop never terminates."}
+      - {id: b, text: "It loops forever, because the last node links back to the first"}
+      - {id: c, text: "It raises an error at the last node", why_wrong: "The last node's next is a valid node, so no error occurs."}
+      - {id: d, text: "It skips the head", why_wrong: "The head is processed first; the problem is that the loop never stops."}
+    answer: b
+    explanation: "Circular traversal must stop when the walk returns to the starting node or sentinel."
+    misconception_tag: circular_traversal
+    diagnoses_prereq: singly_linked_list
+
+  - id: doubly_circular_linked_list-q04
+    type: mcq
+    difficulty: 2
+    prompt: "What is the purpose of a sentinel (dummy) node in a circular doubly linked list?"
+    options:
+      - {id: a, text: "It stores the list's size", why_wrong: "A sentinel is a placeholder node, not a counter."}
+      - {id: b, text: "It removes special cases for the head, tail and empty list because every node has non-null links"}
+      - {id: c, text: "It makes search faster", why_wrong: "Search is still linear."}
+      - {id: d, text: "It sorts the list automatically", why_wrong: "A sentinel does no sorting."}
+    answer: b
+    explanation: "With a sentinel the same insert and remove code works at every position, including the empty list."
+    misconception_tag: sentinel_purpose
+    diagnoses_prereq: singly_linked_list
+
+  - id: doubly_circular_linked_list-q05
+    type: multi_select
+    difficulty: 2
+    prompt: "Select every true statement about doubly and circular linked lists."
+    options:
+      - {id: a, text: "A doubly linked list can be traversed backwards."}
+      - {id: b, text: "Inserting after a held node updates four pointers in a doubly linked list."}
+      - {id: c, text: "Searching by value is O(1) in a doubly linked list.", why_wrong: "Search still examines nodes one by one, O(n)."}
+      - {id: d, text: "A circular list has a null next pointer at its tail.", why_wrong: "The tail links back to the head; there is no null end."}
+    answer: [a, b]
+    explanation: "prev links allow backward walks and insertion touches two new links and two neighbours. Search is linear and circular lists have no null end."
+    misconception_tag: doubly_facts
+    diagnoses_prereq: null
+
+  - id: doubly_circular_linked_list-q06
+    type: true_false
+    difficulty: 1
+    prompt: "True or false: in an empty circular doubly linked list with a sentinel, the sentinel's next and prev both point to the sentinel itself."
+    answer: true
+    explanation: "That self-loop is what lets the same insert code work for an empty list."
+    misconception_tag: sentinel_empty_state
+    diagnoses_prereq: null
+
+  - id: doubly_circular_linked_list-q07
+    type: code_output
+    difficulty: 2
+    prompt: "What does this program print?"
+    code: |
+      class Node:
+          def __init__(self, v=None):
+              self.v = v
+              self.prev = self
+              self.next = self
+
+      s = Node()
+      def append(v):
+          n = Node(v)
+          n.prev, n.next = s.prev, s
+          s.prev.next = n
+          s.prev = n
+          return n
+
+      a, b, c = append("a"), append("b"), append("c")
+      b.prev.next, b.next.prev = b.next, b.prev
+      out, n = [], s.next
+      while n is not s:
+          out.append(n.v)
+          n = n.next
+      back, n = [], s.prev
+      while n is not s:
+          back.append(n.v)
+          n = n.prev
+      print(out, back)
+    answer: "['a', 'c'] ['c', 'a']"
+    explanation: "After removing b the forward walk gives a, c and the backward walk gives c, a."
+    misconception_tag: doubly_trace
+    diagnoses_prereq: singly_linked_list
+
+  - id: doubly_circular_linked_list-q08
+    type: short_answer
+    difficulty: 3
+    prompt: "Explain why removing a given node is O(1) in a doubly linked list but O(n) in a singly linked list."
+    answer: "To remove a node you must change its predecessor's next pointer. A doubly linked node stores a prev reference, so its predecessor is available immediately and removal takes a fixed number of pointer updates. In a singly linked list the predecessor is not stored, so you must walk from the head to find it, which takes O(n)."
+    explanation: "A good answer identifies the predecessor as the problem and shows prev solving it."
+    rubric:
+      key_points:
+        - "removal must update the predecessor's next pointer"
+        - "doubly linked nodes keep a prev reference, so no search is needed"
+        - "singly linked lists must walk from the head to find the predecessor, O(n)"
+      max_score: 1
+      partial_credit: true
+    misconception_tag: o1_removal
+    diagnoses_prereq: singly_linked_list

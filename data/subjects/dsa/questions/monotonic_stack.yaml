@@ -1,0 +1,114 @@
+concept_id: monotonic_stack
+questions:
+  - id: monotonic_stack-q01
+    type: mcq
+    difficulty: 1
+    prompt: "What does a monotonic stack guarantee about its contents?"
+    options:
+      - {id: a, text: "The values are kept in sorted order from bottom to top"}
+      - {id: b, text: "The stack never holds more than one item", why_wrong: "It can hold many items; they are just ordered."}
+      - {id: c, text: "Items are removed in arrival order", why_wrong: "That is a queue; a stack still removes the newest item first."}
+      - {id: d, text: "All values are equal", why_wrong: "Monotonic means ordered, not equal."}
+    answer: a
+    explanation: "Before each push, items that would break the ordering are popped, so the stack stays increasing or decreasing."
+    misconception_tag: monotonic_meaning
+    diagnoses_prereq: stack
+
+  - id: monotonic_stack-q02
+    type: mcq
+    difficulty: 1
+    prompt: "Which problem is the classic use of a monotonic stack?"
+    options:
+      - {id: a, text: "Finding the next greater element for every position in an array"}
+      - {id: b, text: "Sorting an array in place", why_wrong: "A monotonic stack is not a sorting algorithm."}
+      - {id: c, text: "Searching a sorted array in O(log n)", why_wrong: "That is binary search."}
+      - {id: d, text: "Counting characters in a string", why_wrong: "A counter array or dictionary does that."}
+    answer: a
+    explanation: "A single left-to-right scan with a monotonic stack answers next-greater (or smaller) queries for all positions."
+    misconception_tag: monotonic_use_case
+    diagnoses_prereq: stack
+
+  - id: monotonic_stack-q03
+    type: mcq
+    difficulty: 2
+    prompt: "The next-greater-element algorithm has a while loop nested in a for loop. What is its time complexity?"
+    options:
+      - {id: a, text: "O(n squared), because loops are nested", why_wrong: "The inner loop's pops are shared across the whole scan, not repeated for each outer iteration."}
+      - {id: b, text: "O(n), because each index is pushed and popped at most once"}
+      - {id: c, text: "O(log n)", why_wrong: "Every element must be examined, so at least linear time is needed."}
+      - {id: d, text: "O(n log n)", why_wrong: "No sorting or halving step is involved."}
+    answer: b
+    explanation: "Total pops cannot exceed total pushes, which is n, so the whole scan does at most 2n stack operations."
+    misconception_tag: amortized_stack_scan
+    diagnoses_prereq: stack
+
+  - id: monotonic_stack-q04
+    type: mcq
+    difficulty: 2
+    prompt: "In the next-greater scan, why does the stack hold indexes rather than just values?"
+    options:
+      - {id: a, text: "So the answer can be written to the right position and widths can be computed"}
+      - {id: b, text: "Because values cannot be compared", why_wrong: "Values can be compared; indexes are needed for positions."}
+      - {id: c, text: "Because Python requires it", why_wrong: "Nothing in the language requires indexes; the algorithm needs them."}
+      - {id: d, text: "To make the stack larger", why_wrong: "Size is not a goal."}
+    answer: a
+    explanation: "An index gives both the position (to store the answer) and, via the array, the value (to compare)."
+    misconception_tag: indexes_vs_values
+    diagnoses_prereq: stack
+
+  - id: monotonic_stack-q05
+    type: multi_select
+    difficulty: 2
+    prompt: "Select every true statement about monotonic stacks."
+    options:
+      - {id: a, text: "Each element is pushed once and popped at most once in a scan."}
+      - {id: b, text: "A decreasing stack (bottom to top) finds next greater elements."}
+      - {id: c, text: "The nested while loop makes the scan O(n squared).", why_wrong: "Pops across the whole scan are bounded by the number of pushes, so it is O(n)."}
+      - {id: d, text: "Equal values never need a rule.", why_wrong: "Whether to pop on equal values depends on the problem and changes the answer."}
+    answer: [a, b]
+    explanation: "Amortized pushes and pops give linear time, and a decreasing stack suits next-greater queries. Ties need an explicit rule."
+    misconception_tag: monotonic_facts
+    diagnoses_prereq: null
+
+  - id: monotonic_stack-q06
+    type: true_false
+    difficulty: 1
+    prompt: "True or false: after a next-greater scan ends, indexes still on the stack have no greater element to their right."
+    answer: true
+    explanation: "An index leaves the stack only when a greater value arrives, so those that remain never found one."
+    misconception_tag: leftover_stack
+    diagnoses_prereq: stack
+
+  - id: monotonic_stack-q07
+    type: code_output
+    difficulty: 2
+    prompt: "What does this program print?"
+    code: |
+      values = [3, 1, 4, 2, 5]
+      answer = [-1] * len(values)
+      stack = []
+      for i, v in enumerate(values):
+          while stack and values[stack[-1]] < v:
+              answer[stack.pop()] = v
+          stack.append(i)
+      print(answer, stack)
+    answer: "[4, 4, 5, 5, -1] [4]"
+    explanation: "3 and 1 both find 4, then 4 and 2 find 5. Only index 4 (value 5) is left, with no greater element."
+    misconception_tag: next_greater_trace
+    diagnoses_prereq: stack
+
+  - id: monotonic_stack-q08
+    type: short_answer
+    difficulty: 3
+    prompt: "Explain how a monotonic stack finds the next greater element for every item in an array in linear time."
+    answer: "Scan left to right keeping a stack of indexes whose next greater element is not yet known, with their values decreasing toward the top. When a new value is larger than the value at the top, pop that index and record the new value as its answer, repeating while the top is smaller, then push the new index. Each index is pushed and popped at most once, so the scan is O(n)."
+    explanation: "A full answer includes the stack of unresolved indexes, popping smaller tops, and the push-pop counting argument."
+    rubric:
+      key_points:
+        - "stack of indexes whose answer is unresolved, values decreasing"
+        - "pop smaller tops and record the new value as their next greater element"
+        - "each index pushed and popped once, so O(n)"
+      max_score: 1
+      partial_credit: true
+    misconception_tag: next_greater_algorithm
+    diagnoses_prereq: stack

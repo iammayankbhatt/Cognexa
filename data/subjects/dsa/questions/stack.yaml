@@ -1,0 +1,112 @@
+concept_id: stack
+questions:
+  - id: stack-q01
+    type: mcq
+    difficulty: 1
+    prompt: "Items 1, 2, 3 are pushed onto an empty stack in that order. What does the next pop return?"
+    options:
+      - {id: a, text: "1", why_wrong: "1 was pushed first; a stack returns the most recent item first."}
+      - {id: b, text: "2", why_wrong: "2 is under the top item and would come out second."}
+      - {id: c, text: "3"}
+      - {id: d, text: "It depends on the implementation", why_wrong: "The ADT guarantees last-in, first-out regardless of implementation."}
+    answer: c
+    explanation: "A stack is last in, first out, so the most recently pushed item, 3, is popped first."
+    misconception_tag: lifo_order
+    diagnoses_prereq: arrays
+
+  - id: stack-q02
+    type: mcq
+    difficulty: 1
+    prompt: "What happens in Python if pop() is called on an empty list that is used as a stack?"
+    options:
+      - {id: a, text: "It returns None", why_wrong: "list.pop() does not return None for an empty list."}
+      - {id: b, text: "It raises IndexError: pop from empty list"}
+      - {id: c, text: "It returns 0", why_wrong: "No default value is returned."}
+      - {id: d, text: "The list grows by one element", why_wrong: "pop never adds elements."}
+    answer: b
+    explanation: "Popping an empty stack is underflow, which Python reports as an IndexError."
+    misconception_tag: stack_underflow
+    diagnoses_prereq: arrays
+
+  - id: stack-q03
+    type: mcq
+    difficulty: 2
+    prompt: "A bracket checker pushes opening brackets and pops on closing ones. For the input \"((\" which final check is needed to reject it?"
+    options:
+      - {id: a, text: "Check that the stack is empty at the end"}
+      - {id: b, text: "Check that no closing bracket appeared", why_wrong: "The input has no closing bracket yet is still unbalanced."}
+      - {id: c, text: "Check that the input has even length", why_wrong: "\"))\" and \"()\" also have even length; length alone does not decide it."}
+      - {id: d, text: "No check is needed; the loop handles it", why_wrong: "Without the final emptiness check, unmatched opening brackets would be accepted."}
+    answer: a
+    explanation: "After processing, any leftover opening brackets mean they were never closed, so the stack must be empty for the input to be balanced."
+    misconception_tag: final_empty_check
+    diagnoses_prereq: arrays
+
+  - id: stack-q04
+    type: mcq
+    difficulty: 2
+    prompt: "A stack is built on a singly linked list. Which choice keeps push and pop at O(1)?"
+    options:
+      - {id: a, text: "Use the head as the top", }
+      - {id: b, text: "Use the tail as the top without a tail pointer", why_wrong: "Reaching the tail requires walking the whole list, which is O(n)."}
+      - {id: c, text: "Insert in the middle of the list", why_wrong: "Finding the middle costs O(n)."}
+      - {id: d, text: "Keep the list sorted", why_wrong: "Sorting is unnecessary and would make pushes slower."}
+    answer: a
+    explanation: "Inserting and removing at the head of a singly linked list are constant-time pointer updates."
+    misconception_tag: stack_on_linked_list
+    diagnoses_prereq: singly_linked_list
+
+  - id: stack-q05
+    type: multi_select
+    difficulty: 2
+    prompt: "Select every true statement about stacks."
+    options:
+      - {id: a, text: "Push and pop both run in constant time."}
+      - {id: b, text: "A stack can be implemented with a dynamic array or a linked list."}
+      - {id: c, text: "A stack returns the oldest item first.", why_wrong: "That is a queue; a stack returns the newest item first."}
+      - {id: d, text: "Peeking at the top removes it.", why_wrong: "peek reads the top without removing it; pop removes it."}
+    answer: [a, b]
+    explanation: "Both implementations give O(1) operations. Order is last in first out and peek is read-only."
+    misconception_tag: stack_properties
+    diagnoses_prereq: null
+
+  - id: stack-q06
+    type: true_false
+    difficulty: 1
+    prompt: "True or false: the function call stack that stores local variables during recursion follows last-in, first-out order."
+    answer: true
+    explanation: "The most recently called function returns first, which is exactly stack behaviour."
+    misconception_tag: call_stack_is_stack
+    diagnoses_prereq: null
+
+  - id: stack-q07
+    type: code_output
+    difficulty: 2
+    prompt: "What does this program print?"
+    code: |
+      stack = []
+      for token in [1, 2, 3, 4]:
+          stack.append(token)
+          if token % 2 == 0:
+              stack.pop()
+      print(stack, len(stack))
+    answer: "[1, 3] 2"
+    explanation: "Each token is pushed. Even tokens are popped straight away, removing the item just pushed, so only 1 and 3 remain."
+    misconception_tag: stack_trace
+    diagnoses_prereq: arrays
+
+  - id: stack-q08
+    type: short_answer
+    difficulty: 3
+    prompt: "Explain how a stack can be used to check whether the brackets in an expression are balanced."
+    answer: "Scan the expression: push each opening bracket, and for each closing bracket pop the top and check that it is the matching opening bracket. If a mismatch occurs, or the stack is empty when a closing bracket arrives, or the stack is not empty at the end, the brackets are unbalanced; otherwise they are balanced."
+    explanation: "A full answer covers pushing openers, matching on closers, and the three failure conditions."
+    rubric:
+      key_points:
+        - "push opening brackets"
+        - "on a closing bracket pop and check it matches"
+        - "fail on mismatch or underflow; the stack must be empty at the end"
+      max_score: 1
+      partial_credit: true
+    misconception_tag: bracket_matching
+    diagnoses_prereq: arrays

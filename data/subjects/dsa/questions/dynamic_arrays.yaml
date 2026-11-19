@@ -1,0 +1,113 @@
+concept_id: dynamic_arrays
+questions:
+  - id: dynamic_arrays-q01
+    type: mcq
+    difficulty: 1
+    prompt: "What happens when append is called on a dynamic array whose size equals its capacity?"
+    options:
+      - {id: a, text: "A larger block is allocated, items are copied over, then the new item is added."}
+      - {id: b, text: "The new item overwrites the last item.", why_wrong: "A dynamic array never discards data to make room."}
+      - {id: c, text: "The append fails with an error.", why_wrong: "Automatic growth is the defining feature of a dynamic array."}
+      - {id: d, text: "The array is sorted to free space.", why_wrong: "Sorting does not create capacity; a bigger block is needed."}
+    answer: a
+    explanation: "The array grows by allocating a bigger block, copying the existing items and then adding the new one."
+    misconception_tag: resize_mechanism
+    diagnoses_prereq: arrays
+
+  - id: dynamic_arrays-q02
+    type: mcq
+    difficulty: 1
+    prompt: "In Python, which list operation takes O(n) time because every element must shift?"
+    options:
+      - {id: a, text: "my_list.append(x)", why_wrong: "Append adds at the end and is amortized O(1)."}
+      - {id: b, text: "my_list[5]", why_wrong: "Indexing is O(1)."}
+      - {id: c, text: "my_list.insert(0, x)"}
+      - {id: d, text: "my_list.pop()", why_wrong: "Removing the last item is O(1)."}
+    answer: c
+    explanation: "Inserting at index 0 shifts all existing elements one place to the right."
+    misconception_tag: front_insertion_cost
+    diagnoses_prereq: arrays
+
+  - id: dynamic_arrays-q03
+    type: mcq
+    difficulty: 2
+    prompt: "A dynamic array grows by adding 10 slots each time it is full. Why is this a poor strategy for n appends?"
+    options:
+      - {id: a, text: "It wastes memory only; the running time is the same as doubling.", why_wrong: "The time also suffers: resizes are frequent."}
+      - {id: b, text: "It triggers a full copy every 10 appends, so n appends cost O(n squared) in total."}
+      - {id: c, text: "It makes indexing O(n).", why_wrong: "Indexing stays O(1); the problem is the cost of copying."}
+      - {id: d, text: "It makes the array non-contiguous.", why_wrong: "The new block is still contiguous."}
+    answer: b
+    explanation: "With about n/10 resizes each copying up to n items, total copying is quadratic. Geometric growth makes it linear."
+    misconception_tag: growth_factor
+    diagnoses_prereq: time_complexity
+
+  - id: dynamic_arrays-q04
+    type: mcq
+    difficulty: 2
+    prompt: "A C++ program stores `int& r = v[0];` for a std::vector<int> v, then calls v.push_back(1) many times and later reads r. What is the danger?"
+    options:
+      - {id: a, text: "None; references are always valid.", why_wrong: "A reallocation moves the elements, leaving r pointing at freed memory."}
+      - {id: b, text: "A resize may have moved the elements, so r can dangle and reading it is undefined behaviour."}
+      - {id: c, text: "push_back sorts the vector and changes v[0].", why_wrong: "push_back never reorders elements; the issue is reallocation."}
+      - {id: d, text: "The vector shrinks and r goes out of range.", why_wrong: "push_back grows the vector, it does not shrink it."}
+    answer: b
+    explanation: "Growth allocates a new block and frees the old one, invalidating references and iterators into it."
+    misconception_tag: invalidated_references
+    diagnoses_prereq: pointers_references
+
+  - id: dynamic_arrays-q05
+    type: multi_select
+    difficulty: 2
+    prompt: "Select every true statement about dynamic arrays."
+    options:
+      - {id: a, text: "Indexing by position takes O(1) time."}
+      - {id: b, text: "Appending is O(1) amortized when capacity grows by a constant factor."}
+      - {id: c, text: "Inserting in the middle takes O(1) time because capacity is spare.", why_wrong: "Later elements must shift, which costs O(n)."}
+      - {id: d, text: "Capacity always equals the number of stored elements.", why_wrong: "Capacity is usually larger, reserving unused slots."}
+    answer: [a, b]
+    explanation: "Contiguous layout gives O(1) indexing and geometric growth gives amortized O(1) appends. Mid insertion shifts and capacity exceeds size."
+    misconception_tag: dynamic_array_facts
+    diagnoses_prereq: null
+
+  - id: dynamic_arrays-q06
+    type: true_false
+    difficulty: 1
+    prompt: "True or false: Python's list is a dynamic array."
+    answer: true
+    explanation: "A Python list stores references in a contiguous array that is resized as needed, so it supports O(1) indexing and amortized O(1) append."
+    misconception_tag: python_list_is_array
+    diagnoses_prereq: null
+
+  - id: dynamic_arrays-q07
+    type: code_output
+    difficulty: 2
+    prompt: "What does this program print?"
+    code: |
+      capacity, size, copies = 1, 0, 0
+      for _ in range(6):
+          if size == capacity:
+              copies += size
+              capacity *= 2
+          size += 1
+      print(size, capacity, copies)
+    answer: "6 8 7"
+    explanation: "Resizes happen when appending the 2nd, 3rd and 5th items, copying 1, 2 and 4 items (7 in total). The capacity grows 1, 2, 4, 8."
+    misconception_tag: resize_trace
+    diagnoses_prereq: arrays
+
+  - id: dynamic_arrays-q08
+    type: short_answer
+    difficulty: 3
+    prompt: "Explain why appending to a dynamic array is described as O(1) amortized even though an individual append can cost O(n)."
+    answer: "An append costs O(n) only when the array is full and must be copied into a larger block, and with geometric growth that happens rarely. The total copying over n appends is at most about 2n, so the average cost per append is constant."
+    explanation: "Look for the rare resize, geometric growth and the linear total cost giving a constant average."
+    rubric:
+      key_points:
+        - "expensive copy happens only when the array is full"
+        - "capacity grows geometrically so resizes are rare"
+        - "total cost of n appends is O(n), average O(1)"
+      max_score: 1
+      partial_credit: true
+    misconception_tag: amortized_append
+    diagnoses_prereq: time_complexity

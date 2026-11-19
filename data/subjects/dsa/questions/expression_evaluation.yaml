@@ -1,0 +1,115 @@
+concept_id: expression_evaluation
+questions:
+  - id: expression_evaluation-q01
+    type: mcq
+    difficulty: 1
+    prompt: "What is the postfix (reverse Polish) form of the infix expression 5 + 6 * 7?"
+    options:
+      - {id: a, text: "5 6 + 7 *", why_wrong: "That corresponds to (5 + 6) * 7; multiplication binds tighter than addition."}
+      - {id: b, text: "5 6 7 * +"}
+      - {id: c, text: "+ 5 * 6 7", why_wrong: "That is prefix (Polish) notation, with operators before operands."}
+      - {id: d, text: "5 + 6 7 *", why_wrong: "Postfix puts every operator after its operands, so + cannot come between 5 and 6."}
+    answer: b
+    explanation: "6 * 7 is evaluated first, so its operands and operator come first, then 5 and +: 5 6 7 * +."
+    misconception_tag: infix_to_postfix
+    diagnoses_prereq: stack
+
+  - id: expression_evaluation-q02
+    type: mcq
+    difficulty: 1
+    prompt: "What is the value of the postfix expression 3 4 + 2 *?"
+    options:
+      - {id: a, text: "11", why_wrong: "That is 3 + 4 * 2; here the addition happens first in postfix order."}
+      - {id: b, text: "14"}
+      - {id: c, text: "10", why_wrong: "Neither grouping of 3, 4 and 2 with + and * gives 10."}
+      - {id: d, text: "24", why_wrong: "That multiplies all three numbers and ignores the addition."}
+    answer: b
+    explanation: "3 4 + gives 7, then 7 2 * gives 14."
+    misconception_tag: postfix_evaluation
+    diagnoses_prereq: stack
+
+  - id: expression_evaluation-q03
+    type: mcq
+    difficulty: 2
+    prompt: "When evaluating the postfix expression 9 4 -, which operand is popped first and what is the result?"
+    options:
+      - {id: a, text: "9 is popped first; the result is 5", why_wrong: "4 was pushed last, so it is popped first."}
+      - {id: b, text: "4 is popped first and is the right operand; the result is 5"}
+      - {id: c, text: "4 is popped first; the result is -5", why_wrong: "The first popped value is the right operand, so the calculation is 9 - 4 = 5."}
+      - {id: d, text: "The order of popping does not matter", why_wrong: "Subtraction is not commutative, so the order matters."}
+    answer: b
+    explanation: "Operators consume the top two stack items: the first popped is the right operand. 9 - 4 = 5."
+    misconception_tag: operand_order
+    diagnoses_prereq: stack
+
+  - id: expression_evaluation-q04
+    type: mcq
+    difficulty: 2
+    prompt: "In the shunting-yard algorithm, why must equal-precedence left-associative operators already on the stack be popped before pushing a new one?"
+    options:
+      - {id: a, text: "So that 8 - 3 - 2 groups as (8 - 3) - 2"}
+      - {id: b, text: "So that the stack stays small", why_wrong: "Associativity, not stack size, is the reason."}
+      - {id: c, text: "So that parentheses can be removed", why_wrong: "Parentheses are handled separately by their own rule."}
+      - {id: d, text: "It is only needed for multiplication", why_wrong: "Subtraction and division also need left-to-right grouping."}
+    answer: a
+    explanation: "Popping equal precedence makes the earlier operator run first, giving left-to-right grouping. Without it 8 - 3 - 2 would be evaluated as 8 - (3 - 2)."
+    misconception_tag: left_associativity
+    diagnoses_prereq: stack
+
+  - id: expression_evaluation-q05
+    type: multi_select
+    difficulty: 2
+    prompt: "Select every true statement about postfix expressions."
+    options:
+      - {id: a, text: "They need no parentheses to express evaluation order."}
+      - {id: b, text: "Evaluating one takes O(n) time using a stack."}
+      - {id: c, text: "The operator is written before its operands.", why_wrong: "That describes prefix notation; in postfix the operator follows its operands."}
+      - {id: d, text: "Operator precedence rules are needed to evaluate a postfix expression.", why_wrong: "The token order already fixes the evaluation order."}
+    answer: [a, b]
+    explanation: "Postfix order encodes grouping, and a single left-to-right pass with a stack is linear. Operators come after operands and precedence is not consulted."
+    misconception_tag: postfix_facts
+    diagnoses_prereq: null
+
+  - id: expression_evaluation-q06
+    type: true_false
+    difficulty: 1
+    prompt: "True or false: after evaluating a well-formed postfix expression, exactly one value remains on the stack."
+    answer: true
+    explanation: "Each operator replaces two values with one, so a valid expression ends with a single result; any other count signals a malformed expression."
+    misconception_tag: final_stack_state
+    diagnoses_prereq: stack
+
+  - id: expression_evaluation-q07
+    type: code_output
+    difficulty: 2
+    prompt: "What does this program print?"
+    code: |
+      stack = []
+      for tok in "6 2 3 + -".split():
+          if tok.isdigit():
+              stack.append(int(tok))
+          else:
+              right = stack.pop()
+              left = stack.pop()
+              stack.append(left + right if tok == "+" else left - right)
+      print(stack)
+    answer: "[1]"
+    explanation: "2 3 + gives 5, then 6 5 - gives 1."
+    misconception_tag: postfix_trace
+    diagnoses_prereq: stack
+
+  - id: expression_evaluation-q08
+    type: short_answer
+    difficulty: 3
+    prompt: "Describe how the shunting-yard algorithm converts an infix expression to postfix, naming the data structures it uses."
+    answer: "It scans tokens left to right with an operator stack and an output list. Numbers go straight to the output. For an operator, it pops operators of higher or equal precedence from the stack to the output and then pushes the new one. Left parentheses are pushed, right parentheses pop until the matching left parenthesis, and at the end remaining operators are popped to the output."
+    explanation: "A full answer mentions the stack and output list, the precedence-based popping, and parenthesis handling."
+    rubric:
+      key_points:
+        - "an operator stack and an output list"
+        - "pop higher or equal precedence operators before pushing a new operator"
+        - "handle parentheses and flush the stack at the end"
+      max_score: 1
+      partial_credit: true
+    misconception_tag: shunting_yard
+    diagnoses_prereq: stack

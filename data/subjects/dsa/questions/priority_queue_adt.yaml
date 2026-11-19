@@ -1,0 +1,114 @@
+concept_id: priority_queue_adt
+questions:
+  - id: priority_queue_adt-q01
+    type: mcq
+    difficulty: 1
+    prompt: "In a min-priority queue, which item does extract remove?"
+    options:
+      - {id: a, text: "The item that was inserted first", why_wrong: "That is queue behaviour; a priority queue ignores arrival order."}
+      - {id: b, text: "The item with the smallest priority value"}
+      - {id: c, text: "The item that was inserted last", why_wrong: "That is stack behaviour."}
+      - {id: d, text: "A random item", why_wrong: "The ADT specifies exactly which item is removed."}
+    answer: b
+    explanation: "A min-priority queue always removes the item with the smallest key."
+    misconception_tag: pq_extract_rule
+    diagnoses_prereq: queue
+
+  - id: priority_queue_adt-q02
+    type: mcq
+    difficulty: 1
+    prompt: "Python's heapq module implements which kind of priority queue by default?"
+    options:
+      - {id: a, text: "Max-priority queue", why_wrong: "heapq returns the smallest item first; it is a min-heap."}
+      - {id: b, text: "Min-priority queue"}
+      - {id: c, text: "First-in first-out queue", why_wrong: "Arrival order is not what heapq uses."}
+      - {id: d, text: "Last-in first-out queue", why_wrong: "That would be a stack."}
+    answer: b
+    explanation: "heapq is a binary min-heap, so heappop returns the smallest element."
+    misconception_tag: heapq_is_min_heap
+    diagnoses_prereq: queue
+
+  - id: priority_queue_adt-q03
+    type: mcq
+    difficulty: 2
+    prompt: "A priority queue is stored in an unsorted array. What are the costs of insert and extract-min?"
+    options:
+      - {id: a, text: "Insert O(1), extract-min O(n)"}
+      - {id: b, text: "Insert O(n), extract-min O(1)", why_wrong: "That describes a sorted array, not an unsorted one."}
+      - {id: c, text: "Both O(1)", why_wrong: "Finding the minimum in an unsorted array needs a scan."}
+      - {id: d, text: "Both O(log n)", why_wrong: "Logarithmic costs need a heap or balanced tree."}
+    answer: a
+    explanation: "Appending is constant time, but the minimum must be found by scanning all items."
+    misconception_tag: pq_implementations
+    diagnoses_prereq: queue
+
+  - id: priority_queue_adt-q04
+    type: mcq
+    difficulty: 2
+    prompt: "You push (priority, item) tuples into heapq and get a TypeError when two priorities are equal. What is the best fix?"
+    options:
+      - {id: a, text: "Add a unique tiebreaker such as an incrementing counter: (priority, counter, item)"}
+      - {id: b, text: "Sort the heap list after each push", why_wrong: "Sorting does not remove the comparison between non-comparable items."}
+      - {id: c, text: "Use negative priorities", why_wrong: "Negation does not resolve ties between equal values."}
+      - {id: d, text: "Switch to a plain list", why_wrong: "That abandons the heap instead of fixing the tie comparison."}
+    answer: a
+    explanation: "On equal priorities Python compares the next tuple element. A counter makes the comparison decisive and also keeps first-in first-out order among ties."
+    misconception_tag: tuple_tiebreaker
+    diagnoses_prereq: queue
+
+  - id: priority_queue_adt-q05
+    type: multi_select
+    difficulty: 2
+    prompt: "Select every true statement about priority queues."
+    options:
+      - {id: a, text: "A binary heap gives O(log n) insert and O(log n) extract."}
+      - {id: b, text: "Dijkstra's algorithm uses a priority queue to pick the closest unvisited vertex."}
+      - {id: c, text: "Printing the underlying heap list shows items in sorted order.", why_wrong: "A heap is only partially ordered; only the best item is guaranteed first."}
+      - {id: d, text: "A priority queue always removes items in arrival order.", why_wrong: "Arrival order is irrelevant; priority decides."}
+    answer: [a, b]
+    explanation: "Heaps give logarithmic operations and Dijkstra relies on them. A heap list is not fully sorted and priority overrides arrival."
+    misconception_tag: pq_facts
+    diagnoses_prereq: null
+
+  - id: priority_queue_adt-q06
+    type: true_false
+    difficulty: 1
+    prompt: "True or false: std::priority_queue in C++ returns the largest element first by default."
+    answer: true
+    explanation: "It is a max-heap by default; pass std::greater to obtain a min-heap."
+    misconception_tag: cpp_max_heap
+    diagnoses_prereq: null
+
+  - id: priority_queue_adt-q07
+    type: code_output
+    difficulty: 2
+    prompt: "What does this program print?"
+    code: |
+      import heapq
+
+      h = []
+      for v in [5, 1, 9, 3, 7]:
+          heapq.heappush(h, v)
+          if len(h) > 3:
+              heapq.heappop(h)
+      print(sorted(h), h[0])
+    answer: "[5, 7, 9] 5"
+    explanation: "Keeping the three largest values: once more than three are present the smallest is dropped. The result is 5, 7, 9 with 5 at the top of the min-heap."
+    misconception_tag: top_k_with_heap
+    diagnoses_prereq: queue
+
+  - id: priority_queue_adt-q08
+    type: short_answer
+    difficulty: 3
+    prompt: "Explain how a size-k min-priority queue can find the k largest items of a stream of n numbers, and give its time complexity."
+    answer: "Push each number into a min-priority queue and, whenever it holds more than k items, remove the smallest. At the end the queue holds the k largest numbers. Each of the n numbers costs O(log k), so the total time is O(n log k) with O(k) space."
+    explanation: "The answer should keep a min-queue of size k, discard the smallest on overflow and give O(n log k)."
+    rubric:
+      key_points:
+        - "keep a min-priority queue holding at most k items"
+        - "remove the smallest when the size exceeds k"
+        - "time O(n log k), space O(k)"
+      max_score: 1
+      partial_credit: true
+    misconception_tag: top_k_pattern
+    diagnoses_prereq: queue

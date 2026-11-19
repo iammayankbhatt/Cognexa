@@ -1,0 +1,127 @@
+concept_id: deque_circular_queue
+questions:
+  - id: deque_circular_queue-q01
+    type: mcq
+    difficulty: 1
+    prompt: "Which operations can a deque perform in constant time?"
+    options:
+      - {id: a, text: "Adding and removing at both ends"}
+      - {id: b, text: "Only adding at the back and removing at the front", why_wrong: "That describes a plain queue; a deque allows both ends for both operations."}
+      - {id: c, text: "Only adding and removing at the top", why_wrong: "That describes a stack."}
+      - {id: d, text: "Removing from the middle", why_wrong: "Middle removal is not constant time in a deque."}
+    answer: a
+    explanation: "A deque is double-ended: push and pop work at the front and the back."
+    misconception_tag: deque_operations
+    diagnoses_prereq: queue
+
+  - id: deque_circular_queue-q02
+    type: mcq
+    difficulty: 1
+    prompt: "In a circular queue of capacity 8, what is the index after index 7 when advancing by one?"
+    options:
+      - {id: a, text: "8", why_wrong: "Index 8 is outside the array of capacity 8; the index must wrap."}
+      - {id: b, text: "0"}
+      - {id: c, text: "-1", why_wrong: "Indexes move forward and wrap to zero, not to a negative number."}
+      - {id: d, text: "7 again", why_wrong: "The index must advance; staying would reuse the same slot."}
+    answer: b
+    explanation: "Advancing uses (index + 1) mod capacity, and (7 + 1) mod 8 equals 0."
+    misconception_tag: wrap_around
+    diagnoses_prereq: queue
+
+  - id: deque_circular_queue-q03
+    type: mcq
+    difficulty: 2
+    prompt: "A ring buffer tracks only head and tail indexes. Why is this ambiguous?"
+    options:
+      - {id: a, text: "head == tail can mean both an empty and a completely full buffer"}
+      - {id: b, text: "The tail can never move", why_wrong: "The tail advances on every enqueue."}
+      - {id: c, text: "The head wraps but the tail does not", why_wrong: "Both indexes wrap around the array."}
+      - {id: d, text: "There is no ambiguity at all", why_wrong: "Without extra information the two states look identical."}
+    answer: a
+    explanation: "When the buffer is full the tail has wrapped back to the head, the same position as when it is empty. A count, a flag or a spare slot resolves it."
+    misconception_tag: empty_vs_full
+    diagnoses_prereq: queue
+
+  - id: deque_circular_queue-q04
+    type: mcq
+    difficulty: 2
+    prompt: "A program calls list.pop(0) repeatedly to dequeue from a large Python list. What is the better alternative?"
+    options:
+      - {id: a, text: "collections.deque with popleft"}
+      - {id: b, text: "list.insert(0, x)", why_wrong: "Inserting at the front is also O(n)."}
+      - {id: c, text: "sorting the list first", why_wrong: "Sorting does not make removal from the front cheaper."}
+      - {id: d, text: "using a dictionary", why_wrong: "A dictionary has no queue ordering semantics."}
+    answer: a
+    explanation: "deque.popleft is O(1) while list.pop(0) shifts all remaining items, which is O(n)."
+    misconception_tag: list_as_queue
+    diagnoses_prereq: queue
+
+  - id: deque_circular_queue-q05
+    type: multi_select
+    difficulty: 2
+    prompt: "Select every true statement about circular queues and deques."
+    options:
+      - {id: a, text: "A ring buffer reuses freed slots by wrapping indexes with modulo."}
+      - {id: b, text: "A deque can act as either a stack or a queue."}
+      - {id: c, text: "A fixed-size ring buffer can always accept new items.", why_wrong: "When it is full, an enqueue must fail unless the buffer is resized."}
+      - {id: d, text: "Computing (head - 1) mod capacity is always safe in every language.", why_wrong: "In many languages the result can be negative, so capacity should be added first."}
+    answer: [a, b]
+    explanation: "Modulo wrap-around and two-ended access make these structures flexible. Fixed capacity and negative modulo are common pitfalls."
+    misconception_tag: ring_buffer_facts
+    diagnoses_prereq: null
+
+  - id: deque_circular_queue-q06
+    type: true_false
+    difficulty: 1
+    prompt: "True or false: a circular queue avoids shifting elements when items are dequeued."
+    answer: true
+    explanation: "Only the head index moves forward; the stored items stay where they are."
+    misconception_tag: no_shifting
+    diagnoses_prereq: queue
+
+  - id: deque_circular_queue-q07
+    type: code_output
+    difficulty: 2
+    prompt: "What does this program print?"
+    code: |
+      cap, head, count = 4, 0, 0
+      data = [None] * cap
+
+      def enqueue(v):
+          global count
+          data[(head + count) % cap] = v
+          count += 1
+
+      def dequeue():
+          global head, count
+          v = data[head]
+          head = (head + 1) % cap
+          count -= 1
+          return v
+
+      for v in "ABC":
+          enqueue(v)
+      first = dequeue()
+      enqueue("D")
+      enqueue("E")
+      print(first, data, head)
+    answer: "A ['E', 'B', 'C', 'D'] 1"
+    explanation: "A is removed first and head moves to 1. D is written at index 3 and E wraps to index 0, so the array is [E, B, C, D]."
+    misconception_tag: ring_trace
+    diagnoses_prereq: queue
+
+  - id: deque_circular_queue-q08
+    type: short_answer
+    difficulty: 3
+    prompt: "Explain how a circular queue avoids the O(n) cost of removing from the front of an array."
+    answer: "Instead of shifting items left after each dequeue, a circular queue just advances a head index, using modulo to wrap around the end of the array. Freed slots at the front are reused by later enqueues, so both enqueue and dequeue take constant time."
+    explanation: "Look for the moving head index, modulo wrap-around and reuse of freed slots."
+    rubric:
+      key_points:
+        - "dequeue advances a head index instead of shifting elements"
+        - "indexes wrap with modulo capacity"
+        - "freed slots are reused so operations are O(1)"
+      max_score: 1
+      partial_credit: true
+    misconception_tag: circular_queue_idea
+    diagnoses_prereq: queue

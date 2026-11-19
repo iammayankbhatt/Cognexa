@@ -28,16 +28,16 @@
 - [x] 3.1 Content tooling: `validate_content.py`, snippet runner, content/question schemas + tests
 - [x] 3.2 Cluster: foundations (11 concepts)
 - [x] 3.3 Cluster: complexity (5)
-- [ ] 3.4 Cluster: linear (9)
+- [x] 3.4 Cluster: linear (9)
 - [ ] 3.5 Cluster: searching_hashing (8)
 - [ ] 3.6 Cluster: sorting (7)
 - [ ] 3.7 Cluster: trees (13)
 - [ ] 3.8 Cluster: graphs (10) and paradigms (6)
 - [ ] 3.9 Eval test set (80 items) + study sets, chunk seeding, `seed_vectors.py`, wrap-up
 
-**Next action:** 3.4 linear cluster (9 concepts)
+**Next action:** 3.5 searching_hashing cluster (8 concepts)
 
-**Last cluster note:** complexity 5/5 written; 16/69 concepts total; answer-key verifier caught a wrong guess in amortized_analysis-q07 (fixed)
+**Last cluster note:** linear 9/9 written; 25/69 concepts total; verifier caught a wrong answer key in stack-q07 (replaced) and YAML comma typos
 **Blockers:** none
 **Human Action Needed:** see the table below (grows as phases complete)
 
@@ -567,16 +567,16 @@ _(Claude Code: keep this in sync with both .env.example files.)_
 | complexity | asymptotic_notation | notes + questions | ☐ | ☐ |  |  |
 | complexity | space_complexity | notes + questions | ☐ | ☐ |  |  |
 | complexity | recurrence_relations | notes + questions | ☐ | ☐ |  |  |
-| linear | dynamic_arrays | pending | ☐ | ☐ |  |  |
+| linear | dynamic_arrays | notes + questions | ☐ | ☐ |  |  |
 | complexity | amortized_analysis | notes + questions | ☐ | ☐ |  |  |
-| linear | singly_linked_list | pending | ☐ | ☐ |  |  |
-| linear | doubly_circular_linked_list | pending | ☐ | ☐ |  |  |
-| linear | stack | pending | ☐ | ☐ |  |  |
-| linear | queue | pending | ☐ | ☐ |  |  |
-| linear | deque_circular_queue | pending | ☐ | ☐ |  |  |
-| linear | priority_queue_adt | pending | ☐ | ☐ |  |  |
-| linear | expression_evaluation | pending | ☐ | ☐ |  |  |
-| linear | monotonic_stack | pending | ☐ | ☐ |  |  |
+| linear | singly_linked_list | notes + questions | ☐ | ☐ |  |  |
+| linear | doubly_circular_linked_list | notes + questions | ☐ | ☐ |  |  |
+| linear | stack | notes + questions | ☐ | ☐ |  |  |
+| linear | queue | notes + questions | ☐ | ☐ |  |  |
+| linear | deque_circular_queue | notes + questions | ☐ | ☐ |  |  |
+| linear | priority_queue_adt | notes + questions | ☐ | ☐ |  |  |
+| linear | expression_evaluation | notes + questions | ☐ | ☐ |  |  |
+| linear | monotonic_stack | notes + questions | ☐ | ☐ |  |  |
 | searching_hashing | linear_search | pending | ☐ | ☐ |  |  |
 | searching_hashing | binary_search | pending | ☐ | ☐ |  |  |
 | searching_hashing | two_pointers | pending | ☐ | ☐ |  |  |
