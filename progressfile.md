@@ -44,7 +44,18 @@
 - [x] 4.6 Settings: data export (JSON download) and account deletion (typed confirmation; backend deletes the auth user via the Auth admin API)
 - [x] 4.7 Verified: backend 161 tests, frontend 103 unit + 24 e2e (incl. 6 live auth tests against the local Supabase stack, twice from a cold dev server), screenshots in `docs/screenshots/phase4/`, Lighthouse (desktop 100/100/100/100; mobile perf 74-80, see LIM-015); BUG-015 to BUG-017 fixed; committed as `feat(phase-04)`
 
-**Next action:** start Phase 5: split it into checkpoints from docs/COGNEXA_PROMPTS.md (provider layer with fake/Groq/Gemini, retries + fallback + metering, usage guard, caches, guardrails).
+**Phase 5 checkpoints**
+- [ ] 5.1 `app/llm/` core: message/result/usage types, `LLMProvider` interface (complete, stream, embed), errors (retryable vs fatal), pricing table, `FakeProvider` (scriptable for tests; deterministic default answers built from the supplied context)
+- [ ] 5.2 Real providers: `GroqProvider` (OpenAI-compatible HTTP via httpx: JSON mode, SSE streaming, usage) and `GeminiProvider` (google-genai SDK: complete, stream, embed); real embedding provider in `embeddings.py`; tests with mocked transports (no network)
+- [ ] 5.3 Router: retries with exponential backoff + jitter (429/5xx/timeouts, max 3), fallback provider, 60 s circuit breaker, JSON-schema validation with one repair re-ask, token metering callback
+- [ ] 5.4 Usage guard (`app/usage/`): global cap → user daily quota → per-minute sliding window → max input chars; 429 `QUOTA_EXCEEDED`/`RATE_LIMITED`/`GLOBAL_CAP` with reset time; atomic upserts into `usage_daily` + `global_usage_daily`; `GET /me/usage` (today + 30 days); concurrency test (20 parallel)
+- [ ] 5.5 Caches (`app/cache/`): response cache (sha256 of normalised text + mode + concepts + personalisation bucket, TTL from settings, `cached=true`, still 1 quota request), classification + query-embedding caches, invalidation by concept / message
+- [ ] 5.6 Guardrails (`app/guardrails/`): length limit, control-character stripping, `<student_question>` templates with the ignore-instructions rule, output checks (system-prompt leak, harmful content)
+- [ ] 5.7 Admin: `GET /admin/usage` (by day, user, provider/model, est. cost, cache hit rate), `GET/PUT /admin/settings` (quotas, global cap, cache TTL, flags AGENTIC_MODE / STUDY_MODE / PLAIN_RAG_VISIBLE_TO_STUDENTS), admin LLM health check endpoint; web: friendly 429 messages with reset time, admin usage + settings pages
+- [ ] 5.8 `scripts/llm_smoke.py` (real call per provider; live run → Human Action), `seed_vectors.py` wired to the real embedding provider (fake stays default)
+- [ ] 5.9 Full verification, wrap-up, commit `feat(phase-05)`, push, CI
+
+**Next action:** 5.1 (`app/llm/` core + FakeProvider).
 **Local stack:** `npx supabase start -x realtime,storage-api,imgproxy,studio,edge-runtime,logflare,vector,supavisor,postgres-meta` (mail UI http://127.0.0.1:54324); schema changes: `npx supabase migration up` (local Supabase) and `DATABASE_URL=<docker url> uv run ... scripts/migrate.py` (docker test DB)
 
 **Last cluster note:** Phase 3 content complete; 69/69 concepts
@@ -194,7 +205,7 @@ Key flows (details in docs/ARCHITECTURE.md once written):
 | 1 | Scaffold, design system, CI | ⚠️ | 2026-11-19 | 2026-11-19 | `fb019e9` (PR #1 merge); CI fix `2fabc20` | | Merged. First GitHub CI run failed at typecheck (BUG-005); fix verified in a fresh clone, awaiting a green run on GitHub, then tag v0.1. |
 | 2 | Databases + DSA concept graph | 🟢 | 2026-11-19 | 2026-11-19 | `0f2d90d` `feat(phase-02): databases and the DSA concept graph` | | Verified locally (79 tests) and on GitHub Actions (run 44499463362: backend + frontend jobs success). Supabase-specific behaviour (CLI `db push`, real `auth` schema) still untested (LIM-013). |
 | 3 | Content, question bank, eval test set | 🟢 | 2026-11-19 | 2026-11-19 | cluster commits (DEC-020) `67fc84b`…`0fb67d4` + `feat(phase-03)` wrap-up | | 69/69 notes, 552 questions, 138 snippets run, 69 code_output keys verified, study sets, 85-item eval set; validate_content `--strict` in CI. Content still `reviewed: false` (human review pending). |
-| 4 | Auth, roles, app shell, public pages | 🟢 | 2026-11-19 | 2026-11-20 | `feat(phase-04): auth, roles, app shell, public pages` | | Verified locally: backend 161 tests, web 103 unit + 24 e2e (live auth cycle on the Supabase local stack), build without env vars (CI parity). Google OAuth and cloud Supabase are live checks (Human Action 2, 7-10, 12). |
+| 4 | Auth, roles, app shell, public pages | 🟢 | 2026-11-19 | 2026-11-20 | `fbbdc49` `feat(phase-04): auth, roles, app shell, public pages` | | Verified locally: backend 161 tests, web 103 unit + 24 e2e (live auth cycle on the Supabase local stack), build without env vars (CI parity). Google OAuth and cloud Supabase are live checks (Human Action 2, 7-10, 12). |
 | 5 | LLM layer, quotas, cost, cache, guardrails | 🔴 | | | | | |
 | 6 | GraphRAG + plain RAG + agentic step | 🔴 | | | | | |
 | 7 | Tutor chat UI | 🔴 | | | | | |
@@ -438,6 +449,7 @@ Severity: **S1** critical (data loss, security, app down) · **S2** major (featu
 | BUG-015 | 2026-11-20 | 4 | S4 | e2e | Live auth e2e tests failed intermittently right after the dev server started: still on `/login` or `/app` when the 5 s URL assertion gave up | Fixed | `feat(phase-04)` | `e2e/auth.spec.ts` passes on two consecutive cold starts and 30/30 repeated runs |
 | BUG-016 | 2026-11-20 | 4 | S3 | frontend / a11y | With reduced motion, the landing page's failure-case diagram hid its key node (Call Stack) for 2.8 s; the screenshot showed an arrow pointing at nothing | Fixed | `feat(phase-04)` | `e2e/design.spec.ts` "reduced motion shows the landing page's final state immediately" |
 | BUG-017 | 2026-11-20 | 4 | S4 | e2e | Theme-sync e2e test could hang until timeout: `waitForResponse` for `PATCH /me` was registered after the click, so a fast response was missed | Fixed | `feat(phase-04)` | the test itself (promise created before the click) |
+| BUG-018 | 2026-11-20 | 4 | S2 | ci / tests | GitHub Actions backend job failed at pytest after the Phase 4 push (run 44593254858); everything passed locally | Fixed | `fix(ci)` after `fbbdc49` | CI-identical local run: empty Neo4j container, fresh database, no Supabase env (161 passed) |
 
 ### 7.2 Bug details
 
@@ -647,6 +659,17 @@ Severity: **S1** critical (data loss, security, app down) · **S2** major (featu
 - **Regression test:** the test itself, 30/30 repeated runs
 - **Commit:** `feat(phase-04)`
 - **Lesson / pattern to avoid:** Listen first, act second.
+
+#### BUG-018 — `/graph` tests passed locally but failed in CI
+- **Found:** 2026-11-20, after pushing Phase 4 (GitHub Actions run 44593254858, backend job, pytest step). Job logs need admin rights, so the failure was reproduced locally instead.
+- **Severity / Area:** S2 / CI, tests
+- **Symptom:** locally 161 passed; CI's pytest step failed. Re-running the old test file against an empty Neo4j container gave `assert {'call_stack', 'recursion'} <= set()` and `assert (200 == 503)`.
+- **Root cause:** two hidden dependencies on the local machine. (1) `test_public_graph_lists_nodes_and_prerequisite_edges` read the real DSA graph, which exists in the seeded dev Neo4j but not in CI's empty one (no earlier test seeds it). (2) `test_graph_is_503_when_neo4j_is_not_configured` used `Settings(_env_file=None)`, which still reads environment variables; CI sets `NEO4J_URI` in the job environment, so Neo4j counted as configured.
+- **Fix:** the graph test seeds its own isolated subject (cleaned up by the `isolated_subject` fixture); the 503 test passes `neo4j_uri=None` (and user/password) explicitly.
+- **Files changed:** `apps/api/tests/test_graph_api.py`
+- **Regression test:** the suite run under CI conditions: throwaway `neo4j:5` on port 7688, fresh `ci_repro` database, `SUPABASE_*` and `TEST_DATABASE_URL` blank: 161 passed; migrate + seed smoke steps also pass there. The old test file fails in that setup.
+- **Commit:** `fix(ci)` after `fbbdc49`
+- **Lesson / pattern to avoid:** Before pushing, run the backend suite against empty services, not just the seeded dev ones. `_env_file=None` does not isolate a test from the environment; pass the values that matter explicitly.
 
 ---
 
