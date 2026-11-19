@@ -1,0 +1,118 @@
+concept_id: stack_heap_memory
+questions:
+  - id: stack_heap_memory-q01
+    type: mcq
+    difficulty: 1
+    prompt: "Where are the local variables of a function stored while it runs?"
+    options:
+      - {id: a, text: "On the heap, until the program ends", why_wrong: "Heap data persists until released, but ordinary locals are not placed there."}
+      - {id: b, text: "On the stack, in that call's frame"}
+      - {id: c, text: "In the hard disk's swap file", why_wrong: "Locals live in ordinary program memory, not on disk by design."}
+      - {id: d, text: "In a global table shared by all functions", why_wrong: "Each call has its own private set of locals."}
+    answer: b
+    explanation: "Each call gets a frame on the stack holding its locals, and the frame is popped when the function returns."
+    misconception_tag: locals_on_stack
+    diagnoses_prereq: functions
+
+  - id: stack_heap_memory-q02
+    type: mcq
+    difficulty: 1
+    prompt: "What happens to a function's local variables when the function returns?"
+    options:
+      - {id: a, text: "They are released automatically as the frame is removed from the stack"}
+      - {id: b, text: "They stay in memory until the program ends", why_wrong: "Locals are tied to the call; they do not persist after it returns."}
+      - {id: c, text: "They move to the heap", why_wrong: "Nothing moves to the heap automatically when a function returns."}
+      - {id: d, text: "They must be deleted manually", why_wrong: "Only heap allocations need manual release in C++; stack locals are automatic."}
+    answer: a
+    explanation: "Popping the frame releases the locals, which is why they cannot be used after the function ends."
+    misconception_tag: locals_on_stack
+    diagnoses_prereq: functions
+
+  - id: stack_heap_memory-q03
+    type: mcq
+    difficulty: 2
+    prompt: "A C++ function returns the address of one of its local int variables. What is the problem?"
+    options:
+      - {id: a, text: "Nothing; the value is simply copied back.", why_wrong: "Returning an address does not copy the variable; the variable itself is destroyed."}
+      - {id: b, text: "The pointer is dangling because the local variable is destroyed on return."}
+      - {id: c, text: "The compiler converts the variable to heap memory.", why_wrong: "C++ never moves a local to the heap automatically."}
+      - {id: d, text: "Integers cannot have addresses.", why_wrong: "Every variable has an address; the issue is lifetime."}
+    answer: b
+    explanation: "The frame holding the variable is popped, so the address refers to memory that will be reused; using it is undefined behaviour."
+    misconception_tag: dangling_pointer
+    diagnoses_prereq: pointers_references
+
+  - id: stack_heap_memory-q04
+    type: mcq
+    difficulty: 2
+    prompt: "A long-running C++ program calls `new int[1000]` in a loop and never calls `delete[]`. Which symptom do you expect?"
+    options:
+      - {id: a, text: "The stack overflows after a few iterations.", why_wrong: "The arrays are on the heap, not the stack, so the stack is unaffected."}
+      - {id: b, text: "Memory usage grows steadily and may eventually run out (a leak)."}
+      - {id: c, text: "The program becomes faster as memory is reused.", why_wrong: "Without delete nothing is reused; memory only accumulates."}
+      - {id: d, text: "Nothing, because the OS frees heap memory at every loop iteration.", why_wrong: "The operating system reclaims memory only when the process ends."}
+    answer: b
+    explanation: "Each unreleased allocation stays reserved, so the heap grows. This is a memory leak."
+    misconception_tag: memory_leak
+    diagnoses_prereq: pointers_references
+
+  - id: stack_heap_memory-q05
+    type: multi_select
+    difficulty: 2
+    prompt: "Select every true statement about the stack and the heap."
+    options:
+      - {id: a, text: "Stack allocation and release happen automatically as functions are called and return."}
+      - {id: b, text: "Heap memory can outlive the function that allocated it."}
+      - {id: c, text: "The stack is usually much larger than the heap.", why_wrong: "The stack is limited to a few megabytes, while the heap can use most available memory."}
+      - {id: d, text: "In C++, every object must be created with new.", why_wrong: "Ordinary local objects live on the stack and need no new."}
+    answer: [a, b]
+    explanation: "Automatic frame management and longer-lived heap blocks are the defining differences."
+    misconception_tag: stack_vs_heap
+    diagnoses_prereq: null
+
+  - id: stack_heap_memory-q06
+    type: true_false
+    difficulty: 1
+    prompt: "True or false: in Python, a garbage collector reclaims an object once nothing refers to it."
+    answer: true
+    explanation: "Python frees an object when its reference count drops to zero (and a cycle collector handles cycles)."
+    misconception_tag: garbage_collection
+    diagnoses_prereq: null
+
+  - id: stack_heap_memory-q07
+    type: code_output
+    difficulty: 2
+    prompt: "What does this program print?"
+    code: |
+      import gc
+      import weakref
+
+      class Box:
+          pass
+
+      b = Box()
+      r = weakref.ref(b)
+      print(r() is b)
+      del b
+      gc.collect()
+      print(r())
+    answer: "True\nNone"
+    explanation: "While b exists the weak reference returns the object, so the first line is True. After del removes the last strong reference the object is reclaimed and the weak reference returns None."
+    misconception_tag: object_lifetime
+    diagnoses_prereq: pointers_references
+
+  - id: stack_heap_memory-q08
+    type: short_answer
+    difficulty: 3
+    prompt: "Explain the difference between the stack and the heap, and give one situation where heap allocation is necessary."
+    answer: "The stack holds a function's local variables and is managed automatically, with data released when the function returns. The heap holds memory requested at runtime whose lifetime is controlled explicitly, so it is needed when data must outlive the function that created it or its size is unknown in advance."
+    explanation: "Look for automatic versus explicit lifetime, and a valid reason such as data surviving past the call or runtime-determined size."
+    rubric:
+      key_points:
+        - "stack: automatic frames for locals, released on return"
+        - "heap: runtime allocation with explicit or garbage-collected lifetime"
+        - "heap needed when data outlives the call or size is unknown"
+      max_score: 1
+      partial_credit: true
+    misconception_tag: stack_vs_heap
+    diagnoses_prereq: functions

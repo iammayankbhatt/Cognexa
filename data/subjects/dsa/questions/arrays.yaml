@@ -1,0 +1,110 @@
+concept_id: arrays
+questions:
+  - id: arrays-q01
+    type: mcq
+    difficulty: 1
+    prompt: "An array holds 10 elements. Which index refers to its last element?"
+    options:
+      - {id: a, text: "10", why_wrong: "Indexes start at 0, so index 10 would be the eleventh element and is out of range."}
+      - {id: b, text: "9"}
+      - {id: c, text: "0", why_wrong: "Index 0 is the first element."}
+      - {id: d, text: "11", why_wrong: "That is two positions beyond the end."}
+    answer: b
+    explanation: "With zero-based indexing the valid indexes of a 10-element array are 0 through 9."
+    misconception_tag: zero_based_index
+    diagnoses_prereq: control_flow
+
+  - id: arrays-q02
+    type: mcq
+    difficulty: 1
+    prompt: "An array holds 25 elements. Which index refers to its last element?"
+    options:
+      - {id: a, text: "25", why_wrong: "Indexes start at 0, so index 25 is out of range."}
+      - {id: b, text: "26", why_wrong: "That is far beyond the end of the array."}
+      - {id: c, text: "1", why_wrong: "Index 1 is the second element."}
+      - {id: d, text: "24"}
+    answer: d
+    explanation: "Valid indexes run from 0 to n - 1, so for 25 elements the last index is 24."
+    misconception_tag: zero_based_index
+    diagnoses_prereq: control_flow
+
+  - id: arrays-q03
+    type: mcq
+    difficulty: 2
+    prompt: "Why can an array return arr[i] in constant time regardless of its length?"
+    options:
+      - {id: a, text: "The elements are kept sorted, so it can use binary search.", why_wrong: "Arrays need not be sorted, and index access involves no searching at all."}
+      - {id: b, text: "The address is computed as base + i * element size, with no scanning."}
+      - {id: c, text: "Every index is stored in a hash table.", why_wrong: "Plain arrays do not use hash tables; contiguous layout gives direct addressing."}
+      - {id: d, text: "The computer remembers the last index used and starts there.", why_wrong: "No such cache is involved; the address is computed from the index."}
+    answer: b
+    explanation: "Contiguous layout plus equal-size elements means the location of element i is a single arithmetic calculation."
+    misconception_tag: why_random_access_is_fast
+    diagnoses_prereq: control_flow
+
+  - id: arrays-q04
+    type: mcq
+    difficulty: 2
+    prompt: "How does the cost of inserting a new element at the beginning of a large array grow with its length n?"
+    options:
+      - {id: a, text: "It stays constant.", why_wrong: "Constant time applies to indexed access, not to inserting at the front."}
+      - {id: b, text: "It grows like log n.", why_wrong: "No halving is involved; every element must move."}
+      - {id: c, text: "It grows in proportion to n, because all elements must shift."}
+      - {id: d, text: "It grows like n squared.", why_wrong: "Each element moves once, which is linear, not quadratic."}
+    answer: c
+    explanation: "Making room at index 0 shifts all n existing elements one place, so the cost is O(n)."
+    misconception_tag: insertion_cost
+    diagnoses_prereq: control_flow
+
+  - id: arrays-q05
+    type: multi_select
+    difficulty: 2
+    prompt: "Select every true statement about arrays."
+    options:
+      - {id: a, text: "Elements are stored contiguously in memory."}
+      - {id: b, text: "Accessing an element by index takes O(1) time."}
+      - {id: c, text: "Deleting the first element of an array takes O(1) time because indexes are fast.", why_wrong: "The remaining elements must shift left to fill the gap, which is O(n)."}
+      - {id: d, text: "Arrays in C++ check that an index is in range and raise an error.", why_wrong: "Plain C++ arrays do not check bounds; out-of-range access is undefined behaviour."}
+    answer: [a, b]
+    explanation: "Contiguous storage gives constant-time access. Deletion at the front is linear, and C++ arrays are unchecked."
+    misconception_tag: array_properties
+    diagnoses_prereq: null
+
+  - id: arrays-q06
+    type: true_false
+    difficulty: 1
+    prompt: "True or false: in a typical array, the first element has index 1."
+    answer: false
+    explanation: "Most languages, including Python, C++ and Java, use zero-based indexing, so the first element has index 0."
+    misconception_tag: zero_based_index
+    diagnoses_prereq: null
+
+  - id: arrays-q07
+    type: code_output
+    difficulty: 2
+    prompt: "What does this program print?"
+    code: |
+      a = [10, 20, 30, 40]
+      b = a
+      b[0] = 99
+      print(a[0], len(a), a[-1])
+    answer: "99 4 40"
+    explanation: "b is another name for the same list, so changing b[0] changes a[0]. The length stays 4 and a[-1] is the last element, 40."
+    misconception_tag: array_aliasing
+    diagnoses_prereq: control_flow
+
+  - id: arrays-q08
+    type: short_answer
+    difficulty: 3
+    prompt: "Explain why inserting into the middle of an array is slower than reading an element by index."
+    answer: "Reading by index is computed directly from the base address in constant time. Inserting in the middle requires shifting every later element one place to make room, so the cost grows with the number of elements, O(n)."
+    explanation: "Look for the contrast between direct address calculation and shifting a number of elements proportional to the array size."
+    rubric:
+      key_points:
+        - "indexed read is a direct address calculation, O(1)"
+        - "insertion shifts later elements to make room"
+        - "cost grows linearly with the number of elements, O(n)"
+      max_score: 1
+      partial_credit: true
+    misconception_tag: insertion_cost
+    diagnoses_prereq: null

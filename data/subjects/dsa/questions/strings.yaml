@@ -1,0 +1,111 @@
+concept_id: strings
+questions:
+  - id: strings-q01
+    type: mcq
+    difficulty: 1
+    prompt: "In Python, what does s[1:4] return when s = \"hello\"?"
+    options:
+      - {id: a, text: "\"hell\"", why_wrong: "That would be s[0:4]; this slice starts at index 1."}
+      - {id: b, text: "\"ello\"", why_wrong: "That would be s[1:5]; the end index 4 is excluded."}
+      - {id: c, text: "\"ell\""}
+      - {id: d, text: "\"el\"", why_wrong: "That would be s[1:3]; the slice includes index 3."}
+    answer: c
+    explanation: "A slice s[a:b] includes index a and excludes index b, so s[1:4] is the characters at 1, 2 and 3: ell."
+    misconception_tag: slice_end_exclusive
+    diagnoses_prereq: arrays
+
+  - id: strings-q02
+    type: mcq
+    difficulty: 1
+    prompt: "In Python, what does s[2:5] return when s = \"python\"?"
+    options:
+      - {id: a, text: "\"thon\"", why_wrong: "That would be s[2:6]; the end index 5 is excluded."}
+      - {id: b, text: "\"tho\""}
+      - {id: c, text: "\"yth\"", why_wrong: "That would be s[1:4]; this slice starts at index 2."}
+      - {id: d, text: "\"pyt\"", why_wrong: "That would be s[0:3]; this slice starts at index 2, not 0."}
+    answer: b
+    explanation: "Indexes 2, 3 and 4 of \"python\" are t, h and o, so the slice is tho."
+    misconception_tag: slice_end_exclusive
+    diagnoses_prereq: arrays
+
+  - id: strings-q03
+    type: mcq
+    difficulty: 2
+    prompt: "A program builds a result of n characters with `result += ch` inside a loop over n characters in Python. How does the total running time grow?"
+    options:
+      - {id: a, text: "Linearly, O(n), because each append is constant time.", why_wrong: "Strings are immutable, so each += builds a new string and copies the old characters."}
+      - {id: b, text: "Quadratically, O(n squared), because each concatenation copies the existing characters."}
+      - {id: c, text: "Logarithmically, O(log n).", why_wrong: "Nothing halves here; the copying grows with the current length."}
+      - {id: d, text: "It stays constant.", why_wrong: "The work clearly grows with n; constant time is impossible for building n characters."}
+    answer: b
+    explanation: "Each concatenation allocates a new string and copies all characters so far, so total work is 1 + 2 + ... + n, which is quadratic. Collecting pieces and joining once is linear."
+    misconception_tag: string_concat_cost
+    diagnoses_prereq: arrays
+
+  - id: strings-q04
+    type: mcq
+    difficulty: 2
+    prompt: "Why does `word[0] = \"X\"` raise a TypeError in Python?"
+    options:
+      - {id: a, text: "Index 0 is invalid for strings.", why_wrong: "Index 0 is valid for reading; it is assignment that is not allowed."}
+      - {id: b, text: "Strings are immutable, so individual characters cannot be assigned."}
+      - {id: c, text: "The letter X is not allowed.", why_wrong: "Any character is acceptable; the restriction is on assignment itself."}
+      - {id: d, text: "word must be converted to an integer first.", why_wrong: "Strings are not integers; the issue is immutability, not type conversion."}
+    answer: b
+    explanation: "Python strings cannot be modified in place. Build a new string with slicing or a list of characters instead."
+    misconception_tag: immutability
+    diagnoses_prereq: arrays
+
+  - id: strings-q05
+    type: multi_select
+    difficulty: 2
+    prompt: "Select every true statement about strings."
+    options:
+      - {id: a, text: "ord('a') is 97 in ASCII and Unicode."}
+      - {id: b, text: "String comparison with == is case-sensitive."}
+      - {id: c, text: "Python strings can be changed in place with s[0] = 'x'.", why_wrong: "Python strings are immutable; that assignment raises TypeError."}
+      - {id: d, text: "Slicing s[a:b] includes the character at index b.", why_wrong: "The end index of a slice is excluded."}
+    answer: [a, b]
+    explanation: "Character codes and case sensitivity are standard. Python strings are immutable and slices exclude their end."
+    misconception_tag: string_properties
+    diagnoses_prereq: null
+
+  - id: strings-q06
+    type: true_false
+    difficulty: 1
+    prompt: "True or false: the last character of a non-empty Python string s can be read with s[-1]."
+    answer: true
+    explanation: "Negative indexes count from the end, so s[-1] is the last character."
+    misconception_tag: negative_index
+    diagnoses_prereq: null
+
+  - id: strings-q07
+    type: code_output
+    difficulty: 2
+    prompt: "What does this program print?"
+    code: |
+      s = "banana"
+      counts = [0] * 26
+      for ch in s:
+          counts[ord(ch) - ord("a")] += 1
+      print(counts[0], counts[13], s[::-1])
+    answer: "3 2 ananab"
+    explanation: "'a' appears 3 times (index 0) and 'n' twice (index 13). The slice s[::-1] reverses the string to ananab."
+    misconception_tag: character_codes
+    diagnoses_prereq: arrays
+
+  - id: strings-q08
+    type: short_answer
+    difficulty: 3
+    prompt: "Explain how to check whether a string is a palindrome using two indexes, and state the running time."
+    answer: "Start one index at the beginning and one at the end and compare the characters, moving the indexes toward each other. If any pair differs the string is not a palindrome; if the indexes meet, it is. It takes O(n) time."
+    explanation: "A good answer describes two converging indexes, comparing pairs, stopping on mismatch or crossing, and the linear running time."
+    rubric:
+      key_points:
+        - "one index at each end moving toward the middle"
+        - "compare characters at the two indexes; stop on a mismatch"
+        - "linear time O(n)"
+      max_score: 1
+      partial_credit: true
+    misconception_tag: palindrome_check
+    diagnoses_prereq: arrays

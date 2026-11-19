@@ -1,0 +1,116 @@
+concept_id: call_stack
+questions:
+  - id: call_stack-q01
+    type: mcq
+    difficulty: 1
+    prompt: "A Python program raises `RecursionError: maximum recursion depth exceeded`. What does this mean?"
+    options:
+      - {id: a, text: "The computer ran out of disk space.", why_wrong: "The error concerns nested function calls, not disk."}
+      - {id: b, text: "Function calls were nested more deeply than the call stack allows."}
+      - {id: c, text: "The recursion produced a wrong answer.", why_wrong: "The error is about depth, not about correctness of the result."}
+      - {id: d, text: "A variable was used before being assigned.", why_wrong: "That would be a NameError, a different problem."}
+    answer: b
+    explanation: "Each call adds a frame to the call stack, and Python stops the program with RecursionError when the allowed depth is exceeded."
+    misconception_tag: recursion_depth
+    diagnoses_prereq: functions
+
+  - id: call_stack-q02
+    type: mcq
+    difficulty: 1
+    prompt: "A Java program stops with `StackOverflowError`. What is the most likely cause?"
+    options:
+      - {id: a, text: "A very deep or infinite chain of method calls exhausted the call stack."}
+      - {id: b, text: "The hard disk is full.", why_wrong: "Disk space has nothing to do with the call stack."}
+      - {id: c, text: "A list contained too many elements.", why_wrong: "Large lists live on the heap and cause OutOfMemoryError, not a stack overflow."}
+      - {id: d, text: "A number was divided by zero.", why_wrong: "That raises an ArithmeticException."}
+    answer: a
+    explanation: "Too many nested calls, often from missing recursion termination, fill the stack and trigger the error."
+    misconception_tag: stack_overflow_cause
+    diagnoses_prereq: stack_heap_memory
+
+  - id: call_stack-q03
+    type: mcq
+    difficulty: 2
+    prompt: "Function a calls b, and b calls c. In which order do the three functions finish (return)?"
+    options:
+      - {id: a, text: "a, b, c", why_wrong: "a cannot return before the functions it called have finished."}
+      - {id: b, text: "c, b, a"}
+      - {id: c, text: "b, c, a", why_wrong: "b cannot return until c, which it called, has returned."}
+      - {id: d, text: "In any order the system picks", why_wrong: "Returns follow the strict last-in, first-out order of the stack."}
+    answer: b
+    explanation: "The stack is last in, first out: the most recently called function c returns first, then b, then a."
+    misconception_tag: stack_order
+    diagnoses_prereq: functions
+
+  - id: call_stack-q04
+    type: mcq
+    difficulty: 2
+    prompt: "A student's recursive function crashes with RecursionError for n = 5000 but works for n = 500. A friend suggests `sys.setrecursionlimit(10**9)`. What is the best assessment?"
+    options:
+      - {id: a, text: "It is a permanent fix because Python then has unlimited stack.", why_wrong: "The real machine stack is still finite and the interpreter can crash."}
+      - {id: b, text: "It only postpones the failure and risks crashing the interpreter; reduce depth or use a loop or explicit stack instead."}
+      - {id: c, text: "It makes the function run faster.", why_wrong: "The limit does not affect speed; it only changes when the error is raised."}
+      - {id: d, text: "It is required for any recursive function.", why_wrong: "The default limit is enough for modest depths."}
+    answer: b
+    explanation: "The limit guards against exhausting the real stack. Raising it blindly can segfault the interpreter. Algorithms with large depth should be restructured."
+    misconception_tag: recursion_limit_fix
+    diagnoses_prereq: stack_heap_memory
+
+  - id: call_stack-q05
+    type: multi_select
+    difficulty: 2
+    prompt: "Select every true statement about the call stack."
+    options:
+      - {id: a, text: "Each active function call has its own frame with its own local variables."}
+      - {id: b, text: "A frame stores where execution should resume in the caller."}
+      - {id: c, text: "Frames are removed in the same order they were created.", why_wrong: "Frames are removed last in, first out, the reverse of creation."}
+      - {id: d, text: "The call stack can grow without limit because it uses the heap.", why_wrong: "The call stack is a limited region separate from the heap."}
+    answer: [a, b]
+    explanation: "Frames hold locals and return addresses. They unwind in reverse order and the stack has a fixed size."
+    misconception_tag: stack_frames
+    diagnoses_prereq: null
+
+  - id: call_stack-q06
+    type: true_false
+    difficulty: 1
+    prompt: "True or false: two active calls of the same function share the same local variables."
+    answer: false
+    explanation: "Each call gets its own frame, so its local variables are separate from those of other calls."
+    misconception_tag: separate_frames
+    diagnoses_prereq: functions
+
+  - id: call_stack-q07
+    type: code_output
+    difficulty: 2
+    prompt: "What does this program print?"
+    code: |
+      trace = []
+
+      def go(n):
+          trace.append(n)
+          if n > 0:
+              go(n - 1)
+          trace.append(-n)
+
+      go(2)
+      print(trace)
+    answer: "[2, 1, 0, 0, -1, -2]"
+    explanation: "Entering appends 2, 1, 0 as the calls go deeper. At n = 0 the second append adds 0, and then the calls return in reverse, appending -1 and -2."
+    misconception_tag: trace_execution
+    diagnoses_prereq: functions
+
+  - id: call_stack-q08
+    type: short_answer
+    difficulty: 3
+    prompt: "A recursive function works on small inputs but crashes with a stack overflow on very large ones. Explain why and give one way to avoid the crash."
+    answer: "Each recursive call adds a stack frame, and the stack has limited size, so a very deep recursion uses up all frames and overflows. Avoid it by rewriting the algorithm with a loop or an explicit stack on the heap, or by reducing the recursion depth."
+    explanation: "A full answer connects recursion depth to frames on a limited stack and offers an iterative or explicit-stack remedy."
+    rubric:
+      key_points:
+        - "every recursive call adds a frame to the call stack"
+        - "the stack has a limited size so deep recursion overflows"
+        - "use a loop, an explicit stack, or reduce the depth"
+      max_score: 1
+      partial_credit: true
+    misconception_tag: recursion_depth
+    diagnoses_prereq: stack_heap_memory

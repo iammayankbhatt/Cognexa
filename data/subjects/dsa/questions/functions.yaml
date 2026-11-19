@@ -1,0 +1,113 @@
+concept_id: functions
+questions:
+  - id: functions-q01
+    type: mcq
+    difficulty: 1
+    prompt: "What does a Python function return if it finishes without executing any return statement?"
+    options:
+      - {id: a, text: "0", why_wrong: "Python does not default to zero; it returns the special value None."}
+      - {id: b, text: "None"}
+      - {id: c, text: "An empty string", why_wrong: "No string is created; the result is None."}
+      - {id: d, text: "It raises an error", why_wrong: "A function without return is legal; it just returns None."}
+    answer: b
+    explanation: "Falling off the end of a function returns None implicitly."
+    misconception_tag: missing_return
+    diagnoses_prereq: control_flow
+
+  - id: functions-q02
+    type: mcq
+    difficulty: 1
+    prompt: "After `def g(a): a * 2` is called as `r = g(4)`, what is r?"
+    options:
+      - {id: a, text: "8", why_wrong: "The value 8 is computed but never returned, so the caller does not receive it."}
+      - {id: b, text: "4", why_wrong: "The argument is not returned unless the function says so."}
+      - {id: c, text: "None"}
+      - {id: d, text: "A NameError is raised", why_wrong: "All names are defined; the expression is just discarded."}
+    answer: c
+    explanation: "The expression a * 2 is evaluated and thrown away. Without return, the call evaluates to None."
+    misconception_tag: missing_return
+    diagnoses_prereq: control_flow
+
+  - id: functions-q03
+    type: mcq
+    difficulty: 2
+    prompt: "Given `def f(items, x): items.append(x)` and `data = [1]; f(data, 2)`, what is data afterwards?"
+    options:
+      - {id: a, text: "[1]", why_wrong: "The parameter refers to the same list, so the append is visible to the caller."}
+      - {id: b, text: "[1, 2]"}
+      - {id: c, text: "[2]", why_wrong: "append adds to the end; it does not replace the list."}
+      - {id: d, text: "None", why_wrong: "data still refers to the list; the function's return value is None, not data."}
+    answer: b
+    explanation: "Python passes object references, and a list is mutable, so appending inside the function changes the caller's list."
+    misconception_tag: mutable_argument_sharing
+    diagnoses_prereq: control_flow
+
+  - id: functions-q04
+    type: mcq
+    difficulty: 2
+    prompt: "Given `def h(n): n = n + 1; return n` and `x = 5; y = h(x)`, what are x and y?"
+    options:
+      - {id: a, text: "x = 6, y = 6", why_wrong: "Rebinding the local name n does not change the caller's x."}
+      - {id: b, text: "x = 5, y = 5", why_wrong: "The function returns the incremented value, so y is 6."}
+      - {id: c, text: "x = 5, y = 6"}
+      - {id: d, text: "x = 6, y = 5", why_wrong: "That reverses the roles: the caller's x is unchanged and the returned value is incremented."}
+    answer: c
+    explanation: "Integers are immutable and n is a local name, so x stays 5 while the function returns 6."
+    misconception_tag: rebinding_vs_mutation
+    diagnoses_prereq: control_flow
+
+  - id: functions-q05
+    type: multi_select
+    difficulty: 2
+    prompt: "Select every true statement about functions in Python."
+    options:
+      - {id: a, text: "Local variables disappear when the call returns."}
+      - {id: b, text: "A mutable default argument is created once and shared between calls."}
+      - {id: c, text: "print and return do the same thing.", why_wrong: "print writes text for the user, while return hands a value to the calling code."}
+      - {id: d, text: "Assigning to a parameter name inside a function changes the caller's variable.", why_wrong: "Assignment rebinds only the local name; the caller's variable is unaffected."}
+    answer: [a, b]
+    explanation: "Local scope and the one-time evaluation of defaults are core behaviours. print and return differ, and rebinding a parameter is local."
+    misconception_tag: function_semantics
+    diagnoses_prereq: null
+
+  - id: functions-q06
+    type: true_false
+    difficulty: 1
+    prompt: "True or false: variables created inside a function are normally visible after the function returns."
+    answer: false
+    explanation: "Local variables exist only during the call; using them afterwards raises a NameError."
+    misconception_tag: local_scope
+    diagnoses_prereq: null
+
+  - id: functions-q07
+    type: code_output
+    difficulty: 2
+    prompt: "What does this program print?"
+    code: |
+      def add(items, x, extra=[]):
+          extra.append(x)
+          items.append(x)
+          return len(extra)
+
+      a = []
+      print(add(a, 1), add(a, 2), a)
+    answer: "1 2 [1, 2]"
+    explanation: "The default list extra is shared, so its length grows across calls: 1 then 2. The list a receives both values."
+    misconception_tag: mutable_default
+    diagnoses_prereq: control_flow
+
+  - id: functions-q08
+    type: short_answer
+    difficulty: 3
+    prompt: "Explain why a function with a default argument of an empty list can behave strangely across calls, and how to fix it."
+    answer: "The default value is evaluated once when the function is defined, so every call that uses the default shares the same list. The fix is to use None as the default and create a new list inside the function when the argument is None."
+    explanation: "A complete answer mentions evaluation at definition time, the shared object, and the None-sentinel pattern."
+    rubric:
+      key_points:
+        - "default evaluated once at definition time"
+        - "the same list object is shared across calls"
+        - "use None as default and create a fresh list inside"
+      max_score: 1
+      partial_credit: true
+    misconception_tag: mutable_default
+    diagnoses_prereq: null

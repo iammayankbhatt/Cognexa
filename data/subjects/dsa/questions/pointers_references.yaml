@@ -1,0 +1,111 @@
+concept_id: pointers_references
+questions:
+  - id: pointers_references-q01
+    type: mcq
+    difficulty: 1
+    prompt: "In Python, after `a = [1, 2]` and `b = a`, what does `b.append(3)` do to a?"
+    options:
+      - {id: a, text: "a stays [1, 2]", why_wrong: "b is another name for the same list, so changes are shared."}
+      - {id: b, text: "a becomes [1, 2, 3]"}
+      - {id: c, text: "a becomes [3]", why_wrong: "append adds to the end; it does not replace the list."}
+      - {id: d, text: "It raises an error", why_wrong: "Appending through any name that refers to the list is legal."}
+    answer: b
+    explanation: "Assignment copies the reference, not the list. Both names refer to one list object."
+    misconception_tag: aliasing
+    diagnoses_prereq: variables_memory
+
+  - id: pointers_references-q02
+    type: mcq
+    difficulty: 1
+    prompt: "In Python, after `x = [5]` and `y = x`, what is the value of the expression `x is y`?"
+    options:
+      - {id: a, text: "True"}
+      - {id: b, text: "False", why_wrong: "y was assigned from x, so both refer to the same list object."}
+      - {id: c, text: "[5]", why_wrong: "is returns a boolean, not the list."}
+      - {id: d, text: "An error", why_wrong: "is is a valid operator for any two objects."}
+    answer: a
+    explanation: "`is` tests identity. y refers to the same object as x, so the expression is True."
+    misconception_tag: identity_vs_equality
+    diagnoses_prereq: variables_memory
+
+  - id: pointers_references-q03
+    type: mcq
+    difficulty: 2
+    prompt: "Which statement correctly distinguishes `==` from `is` in Python?"
+    options:
+      - {id: a, text: "== compares the contents of two objects; is checks whether they are the same object."}
+      - {id: b, text: "== checks identity; is compares contents.", why_wrong: "The roles are reversed: == compares values and is checks identity."}
+      - {id: c, text: "They always give the same answer.", why_wrong: "Two equal lists created separately are == but not is."}
+      - {id: d, text: "is can only be used with numbers.", why_wrong: "is works for any two objects."}
+    answer: a
+    explanation: "Two separately created lists with the same elements are equal under == but are different objects, so `is` is False."
+    misconception_tag: identity_vs_equality
+    diagnoses_prereq: variables_memory
+
+  - id: pointers_references-q04
+    type: mcq
+    difficulty: 2
+    prompt: "A Python program crashes with `AttributeError: 'NoneType' object has no attribute 'next'`. What is the most likely cause?"
+    options:
+      - {id: a, text: "A variable holding None (a null reference) was used as if it were an object.", }
+      - {id: b, text: "The attribute is misspelled in the language standard.", why_wrong: "The error names NoneType, which means the object itself is None, not a misspelling."}
+      - {id: c, text: "The computer ran out of memory.", why_wrong: "Out-of-memory problems raise MemoryError, not AttributeError."}
+      - {id: d, text: "The list is too long.", why_wrong: "Length is unrelated to this error; the reference is null."}
+    answer: a
+    explanation: "NoneType means the value is None. Following a null reference, for instance node.next on a missing node, raises this error."
+    misconception_tag: null_reference
+    diagnoses_prereq: variables_memory
+
+  - id: pointers_references-q05
+    type: multi_select
+    difficulty: 2
+    prompt: "Select every true statement about references and pointers."
+    options:
+      - {id: a, text: "Copying a reference does not copy the object it refers to."}
+      - {id: b, text: "In C++, dereferencing nullptr is undefined behaviour and usually crashes."}
+      - {id: c, text: "A shallow copy of a nested list also copies every inner list.", why_wrong: "A shallow copy shares the inner lists; deepcopy is needed to duplicate them."}
+      - {id: d, text: "A C++ reference can be reassigned to refer to a different variable after creation.", why_wrong: "A reference is bound once at initialisation and cannot be rebound."}
+    answer: [a, b]
+    explanation: "Reference copying is shallow and null dereferencing is unsafe. Shallow copies share nested objects and C++ references cannot be reseated."
+    misconception_tag: reference_semantics
+    diagnoses_prereq: null
+
+  - id: pointers_references-q06
+    type: true_false
+    difficulty: 1
+    prompt: "True or false: in C++, `*p` gives the address stored in the pointer p."
+    answer: false
+    explanation: "`p` holds the address; `*p` dereferences it and gives the value stored at that address."
+    misconception_tag: dereference_vs_address
+    diagnoses_prereq: variables_memory
+
+  - id: pointers_references-q07
+    type: code_output
+    difficulty: 2
+    prompt: "What does this program print?"
+    code: |
+      a = [[1], [2]]
+      b = a.copy()
+      b[0].append(9)
+      b.append([3])
+      print(a, len(b))
+    answer: "[[1, 9], [2]] 3"
+    explanation: "The shallow copy shares the inner lists, so appending 9 to b[0] changes a[0] as well. Appending a new inner list to b does not affect a, and b then has length 3."
+    misconception_tag: shallow_copy
+    diagnoses_prereq: variables_memory
+
+  - id: pointers_references-q08
+    type: short_answer
+    difficulty: 3
+    prompt: "A Python function receives a list and a colleague reports that calling it changed their list unexpectedly. Explain why this can happen and how to avoid it."
+    answer: "Python passes references, so the parameter refers to the same list object as the caller's variable; modifying it in place changes the caller's list. To avoid it, work on a copy such as items.copy() or build and return a new list."
+    explanation: "A strong answer names shared references (aliasing), in-place mutation, and copying or returning a new list as the remedy."
+    rubric:
+      key_points:
+        - "the parameter and caller's variable refer to the same object (aliasing)"
+        - "in-place mutation is visible to the caller"
+        - "copy the list or return a new list instead"
+      max_score: 1
+      partial_credit: true
+    misconception_tag: aliasing
+    diagnoses_prereq: variables_memory

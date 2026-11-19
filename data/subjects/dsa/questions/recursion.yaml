@@ -1,0 +1,112 @@
+concept_id: recursion
+questions:
+  - id: recursion-q01
+    type: mcq
+    difficulty: 1
+    prompt: "What is the purpose of the base case in a recursive function?"
+    options:
+      - {id: a, text: "It makes the function run faster.", why_wrong: "Speed is not its purpose; it exists to end the recursion."}
+      - {id: b, text: "It stops the recursion by returning a result directly for the smallest input."}
+      - {id: c, text: "It declares the function's variables.", why_wrong: "Variables are declared in the body; the base case is about termination."}
+      - {id: d, text: "It makes the function call itself again.", why_wrong: "That is the recursive case; the base case does the opposite and stops calls."}
+    answer: b
+    explanation: "Without a base case that returns directly, the function would call itself forever."
+    misconception_tag: base_case
+    diagnoses_prereq: call_stack
+
+  - id: recursion-q02
+    type: mcq
+    difficulty: 1
+    prompt: "For factorial(n) = n * factorial(n - 1), which input is the natural base case?"
+    options:
+      - {id: a, text: "n == 0 (factorial is 1)"}
+      - {id: b, text: "n == 100", why_wrong: "Nothing special happens at 100; the recursion must be able to reach smaller values."}
+      - {id: c, text: "n < 0 returns n", why_wrong: "Negative inputs are not part of the definition and would not stop the descent for positive n."}
+      - {id: d, text: "There is no need for one", why_wrong: "Without a base case the recursion would never end."}
+    answer: a
+    explanation: "Each call reduces n by one, so the descent reaches 0, where the answer 1 is defined directly."
+    misconception_tag: base_case
+    diagnoses_prereq: call_stack
+
+  - id: recursion-q03
+    type: mcq
+    difficulty: 2
+    prompt: "A student's recursive function `def f(n): return n + f(n + 1)` with base case `if n == 0: return 0` is called as f(5) and raises RecursionError. Why?"
+    options:
+      - {id: a, text: "The recursive call moves away from the base case (n + 1), so n never reaches 0."}
+      - {id: b, text: "Python does not allow functions to call themselves.", why_wrong: "Recursion is allowed; the problem is the direction of the recursive step."}
+      - {id: c, text: "The base case must come after the recursive call.", why_wrong: "The base case must be checked before recursing."}
+      - {id: d, text: "The function returns too many values.", why_wrong: "It returns a single value; the issue is non-termination."}
+    answer: a
+    explanation: "The argument grows from 5 upward and can never hit 0, so frames pile up until the depth limit is exceeded."
+    misconception_tag: progress_toward_base_case
+    diagnoses_prereq: call_stack
+
+  - id: recursion-q04
+    type: mcq
+    difficulty: 2
+    prompt: "Why does the naive recursive Fibonacci function become extremely slow for n around 40?"
+    options:
+      - {id: a, text: "It recomputes the same smaller subproblems many times, giving exponentially many calls."}
+      - {id: b, text: "Python integers are too small to hold Fibonacci numbers.", why_wrong: "Python integers grow as needed; the cost comes from repeated calls."}
+      - {id: c, text: "The recursion depth is 2^40 frames.", why_wrong: "The depth is only about n; the number of calls is what explodes."}
+      - {id: d, text: "Recursive functions cannot add numbers quickly.", why_wrong: "Addition is cheap; the slowness comes from the huge number of repeated calls."}
+    answer: a
+    explanation: "fib(n) calls fib(n - 1) and fib(n - 2), which repeat each other's work. The number of calls grows roughly like 1.6 to the power n."
+    misconception_tag: overlapping_subproblems
+    diagnoses_prereq: call_stack
+
+  - id: recursion-q05
+    type: multi_select
+    difficulty: 2
+    prompt: "Select every true statement about recursion."
+    options:
+      - {id: a, text: "Each recursive call has its own frame with its own local variables."}
+      - {id: b, text: "Any recursive algorithm can be rewritten with a loop and an explicit stack."}
+      - {id: c, text: "Recursion always uses constant extra memory.", why_wrong: "Each pending call occupies a stack frame, so memory grows with the depth."}
+      - {id: d, text: "A recursive function without a base case will eventually return.", why_wrong: "Without a reachable base case the calls never stop and the stack overflows."}
+    answer: [a, b]
+    explanation: "Frames are per call and recursion can be simulated with a stack. Depth costs memory and a missing base case never terminates."
+    misconception_tag: recursion_properties
+    diagnoses_prereq: call_stack
+
+  - id: recursion-q06
+    type: true_false
+    difficulty: 1
+    prompt: "True or false: a recursive function must return the result of its recursive call (or use it) for the answer to propagate back."
+    answer: true
+    explanation: "If the recursive call's result is ignored, the function returns None (or something unrelated) and the answer is lost."
+    misconception_tag: forgetting_return
+    diagnoses_prereq: functions
+
+  - id: recursion-q07
+    type: code_output
+    difficulty: 2
+    prompt: "What does this program print?"
+    code: |
+      def f(n):
+          if n == 0:
+              return 0
+          return n + f(n - 1)
+
+      print(f(4), f(0))
+    answer: "10 0"
+    explanation: "f(4) = 4 + 3 + 2 + 1 + 0 = 10, and f(0) hits the base case and returns 0."
+    misconception_tag: tracing_recursion
+    diagnoses_prereq: call_stack
+
+  - id: recursion-q08
+    type: short_answer
+    difficulty: 3
+    prompt: "A recursive function crashes with `RecursionError: maximum recursion depth exceeded` for a large input. Explain what goes wrong and how you would fix it."
+    answer: "Each recursive call adds a frame to the call stack, and a very deep chain, or one with a missing or unreachable base case, exceeds the allowed depth. Fix it by correcting the base case or the step toward it, or by rewriting the function as a loop or with an explicit stack."
+    explanation: "A good answer links recursion to stack frames, identifies the base case problem or excessive depth, and gives a remedy."
+    rubric:
+      key_points:
+        - "every recursive call adds a stack frame so depth is limited"
+        - "missing or unreachable base case, or simply too deep"
+        - "fix the base case or use a loop / explicit stack"
+      max_score: 1
+      partial_credit: true
+    misconception_tag: recursion_depth
+    diagnoses_prereq: call_stack

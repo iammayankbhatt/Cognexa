@@ -13,7 +13,7 @@
 **Mode:** autopilot, main only, no tags. One commit per phase (`feat(phase-NN): ...`), then `git push origin main` (explicitly authorised for autopilot; if push fails, log it under Human Action Needed and continue). No `gh` CLI and no Supabase CLI were found on this machine at start; CI runs are checked through the public GitHub API when possible.
 **Environment notes:** local `apps/api/.env` and `apps/web/.env.local` exist (created from the examples; fake LLM/embedding providers, `REPLACE_ME` for cloud values). Never open or print them; use `uv run --project apps/api python scripts/check_env.py`.
 **Phase order:** core 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 12 → 15 (prep only), then extras 11 → 13 → 14 → 16.
-**Current phase:** 3 — Content: concept notes, question bank, eval test set (Phase 2 complete, see Session 5)
+**Current phase:** 3 — Content: concept notes, question bank, eval test set (Phase 2 complete and CI-green, see Session 5)
 
 **Phase 2 checkpoints (done)**
 - [x] 2.1 Env files, `scripts/check_env.py`, `.env.example` for all phases
@@ -25,8 +25,8 @@
 - [x] 2.7 CI updated, full verification, wrap-up
 
 **Phase 3 checkpoints**
-- [ ] 3.1 Content tooling: `validate_content.py`, snippet runner, content/question schemas + tests
-- [ ] 3.2 Cluster: foundations (11 concepts)
+- [x] 3.1 Content tooling: `validate_content.py`, snippet runner, content/question schemas + tests
+- [x] 3.2 Cluster: foundations (11 concepts)
 - [ ] 3.3 Cluster: complexity (5)
 - [ ] 3.4 Cluster: linear (9)
 - [ ] 3.5 Cluster: searching_hashing (8)
@@ -35,8 +35,9 @@
 - [ ] 3.8 Cluster: graphs (10) and paradigms (6)
 - [ ] 3.9 Eval test set (80 items) + study sets, chunk seeding, `seed_vectors.py`, wrap-up
 
-**Next action:** 3.1
+**Next action:** 3.3 complexity cluster (5 concepts)
 
+**Last cluster note:** foundations 11/69 written, 88 questions, 22 snippets + 11 answer keys verified
 **Blockers:** none
 **Human Action Needed:** see the table below (grows as phases complete)
 
@@ -172,8 +173,8 @@ Key flows (details in docs/ARCHITECTURE.md once written):
 |---|---|---|---|---|---|---|---|
 | 0 | Manual setup: accounts & keys | 🔴 | | | — | | |
 | 1 | Scaffold, design system, CI | ⚠️ | 2026-11-19 | 2026-11-19 | `fb019e9` (PR #1 merge); CI fix `2fabc20` | | Merged. First GitHub CI run failed at typecheck (BUG-005); fix verified in a fresh clone, awaiting a green run on GitHub, then tag v0.1. |
-| 2 | Databases + DSA concept graph | ⚠️ | 2026-11-19 | 2026-11-19 | `feat(phase-02): databases and the DSA concept graph` | | Done and verified locally (79 backend tests, live Neo4j + Postgres). GitHub CI result for this commit not yet confirmed; Supabase-specific behaviour (CLI `db push`, real `auth` schema) untested. |
-| 3 | Content, question bank, eval test set | 🔴 | | | | | |
+| 2 | Databases + DSA concept graph | 🟢 | 2026-11-19 | 2026-11-19 | `0f2d90d` `feat(phase-02): databases and the DSA concept graph` | | Verified locally (79 tests) and on GitHub Actions (run 44499463362: backend + frontend jobs success). Supabase-specific behaviour (CLI `db push`, real `auth` schema) still untested (LIM-013). |
+| 3 | Content, question bank, eval test set | 🟡 | 2026-11-19 | | in progress (per-cluster commits, DEC-020) | | Foundations cluster written (11/69 concepts). |
 | 4 | Auth, roles, app shell, public pages | 🔴 | | | | | |
 | 5 | LLM layer, quotas, cost, cache, guardrails | 🔴 | | | | | |
 | 6 | GraphRAG + plain RAG + agentic step | 🔴 | | | | | |
@@ -476,6 +477,9 @@ Severity: **S1** critical (data loss, security, app down) · **S2** major (featu
 | DEC-017 | 2026-11-19 | RELATED_TO stored once (smaller id to larger id) and queried undirected; PREREQUISITE_OF edges are cycle-checked inside the write transaction; cycle checks count proposed edges too | Store both directions; check cycles in callers | No duplicates; the DAG rule cannot be bypassed; approving a proposal can never create a cycle | A concurrent pair of writes could still race (single admin editor, acceptable; LIM-012) |
 | DEC-018 | 2026-11-19 | Seeds are additive by default; `--prune` removes only human-sourced edges missing from the file; seed/migrate scripts refuse non-local databases without `--allow-remote`; `--wipe` requires typing WIPE | Always prune; no guards | Protects LLM-proposed edges, admin edits and production data | Autopilot never uses `--allow-remote` |
 | DEC-019 | 2026-11-19 | Autopilot mode: one commit per phase and `git push origin main` are authorised by the human's AUTOPILOT prompt; tags are never created. CLAUDE.md section 9 records this exception | Per-step commits and manual pushes (DEC-013) | Explicit user instruction for autonomous operation | Per-phase commits are large; DEC-013's small-commit rule applies again outside autopilot |
+| DEC-020 | 2026-11-19 | Phase 3 is committed per content cluster (`content(<cluster>): ...`), each followed by a push, instead of one commit per phase | One huge phase commit | Appendix D lists per-cluster commits; the phase is far too large for a single commit and clusters are natural, verifiable checkpoints | The phase still ends with a `feat(phase-03)`-style wrap-up commit for tooling/seeds/eval set |
+| DEC-021 | 2026-11-19 | Question conventions: q01 and q02 are parallel difficulty-1 MCQs; q03 and q04 are parallel difficulty-2 MCQs; q05 multi_select, q06 true_false, q07 code_output, q08 short_answer. Parallel pairs feed the pre/post study sets and quiz variety. `code_output` answers are machine-verified by running the program; incorrect MCQ options must carry `why_wrong` | Free-form question sets | Makes matched study forms possible and keeps answer keys honest | Authoring cost is higher; schema enforces the rules |
+| DEC-022 | 2026-11-19 | Content code samples are C++14 (not 17) and Python 3.12; every snippet is a complete program that asserts its own claims and is compiled/run by the test suite | C++17 | The only local compiler is MinGW GCC 6.3 (no `-std=c++17`); C++14 also works on every CI compiler | Notes avoid C++17 features (structured bindings, `std::optional`) |
 
 ---
 
@@ -543,13 +547,80 @@ _(Claude Code: keep this in sync with both .env.example files.)_
 
 ## 12. Content Review Checklist
 
-> Filled in during Phase 3. The reviewer is me (the sole developer). I tick a concept only after checking its notes, code and questions.
+> The reviewer is me (the sole developer). I tick a concept only after checking its notes, code and questions, and then set `reviewed: true` in the note's frontmatter.
+> `Written` is generated from the files by `scripts/update_review_checklist.py`; the other columns are mine and are preserved when the table is regenerated.
 
-| Cluster | Concept | Notes reviewed | Questions reviewed | Reviewer (me) | Date |
-|---|---|---|---|---|---|
-| _foundations_ | _call_stack_ | ☐ | ☐ | | |
-
----
+| Cluster | Concept | Written | Notes reviewed | Questions reviewed | Reviewer (me) | Date |
+|---|---|---|---|---|---|---|
+| foundations | discrete_math_basics | notes + questions | ☐ | ☐ |  |  |
+| foundations | variables_memory | notes + questions | ☐ | ☐ |  |  |
+| foundations | control_flow | notes + questions | ☐ | ☐ |  |  |
+| foundations | functions | notes + questions | ☐ | ☐ |  |  |
+| foundations | arrays | notes + questions | ☐ | ☐ |  |  |
+| foundations | strings | notes + questions | ☐ | ☐ |  |  |
+| foundations | pointers_references | notes + questions | ☐ | ☐ |  |  |
+| foundations | stack_heap_memory | notes + questions | ☐ | ☐ |  |  |
+| foundations | call_stack | notes + questions | ☐ | ☐ |  |  |
+| foundations | bit_manipulation | notes + questions | ☐ | ☐ |  |  |
+| foundations | recursion | notes + questions | ☐ | ☐ |  |  |
+| complexity | time_complexity | pending | ☐ | ☐ |  |  |
+| complexity | asymptotic_notation | pending | ☐ | ☐ |  |  |
+| complexity | space_complexity | pending | ☐ | ☐ |  |  |
+| complexity | recurrence_relations | pending | ☐ | ☐ |  |  |
+| linear | dynamic_arrays | pending | ☐ | ☐ |  |  |
+| complexity | amortized_analysis | pending | ☐ | ☐ |  |  |
+| linear | singly_linked_list | pending | ☐ | ☐ |  |  |
+| linear | doubly_circular_linked_list | pending | ☐ | ☐ |  |  |
+| linear | stack | pending | ☐ | ☐ |  |  |
+| linear | queue | pending | ☐ | ☐ |  |  |
+| linear | deque_circular_queue | pending | ☐ | ☐ |  |  |
+| linear | priority_queue_adt | pending | ☐ | ☐ |  |  |
+| linear | expression_evaluation | pending | ☐ | ☐ |  |  |
+| linear | monotonic_stack | pending | ☐ | ☐ |  |  |
+| searching_hashing | linear_search | pending | ☐ | ☐ |  |  |
+| searching_hashing | binary_search | pending | ☐ | ☐ |  |  |
+| searching_hashing | two_pointers | pending | ☐ | ☐ |  |  |
+| searching_hashing | sliding_window | pending | ☐ | ☐ |  |  |
+| searching_hashing | prefix_sums | pending | ☐ | ☐ |  |  |
+| searching_hashing | hash_functions | pending | ☐ | ☐ |  |  |
+| searching_hashing | hash_tables | pending | ☐ | ☐ |  |  |
+| searching_hashing | hash_sets_maps | pending | ☐ | ☐ |  |  |
+| sorting | elementary_sorts | pending | ☐ | ☐ |  |  |
+| sorting | divide_and_conquer | pending | ☐ | ☐ |  |  |
+| sorting | merge_sort | pending | ☐ | ☐ |  |  |
+| sorting | quick_sort | pending | ☐ | ☐ |  |  |
+| sorting | non_comparison_sorts | pending | ☐ | ☐ |  |  |
+| trees | tree_basics | pending | ☐ | ☐ |  |  |
+| sorting | sorting_lower_bound | pending | ☐ | ☐ |  |  |
+| trees | binary_tree | pending | ☐ | ☐ |  |  |
+| trees | dfs_tree_traversals | pending | ☐ | ☐ |  |  |
+| trees | level_order_traversal | pending | ☐ | ☐ |  |  |
+| trees | bst | pending | ☐ | ☐ |  |  |
+| trees | binary_heap | pending | ☐ | ☐ |  |  |
+| sorting | heap_sort | pending | ☐ | ☐ |  |  |
+| trees | avl_tree | pending | ☐ | ☐ |  |  |
+| trees | red_black_tree | pending | ☐ | ☐ |  |  |
+| trees | b_tree | pending | ☐ | ☐ |  |  |
+| trees | trie | pending | ☐ | ☐ |  |  |
+| trees | segment_tree | pending | ☐ | ☐ |  |  |
+| trees | fenwick_tree | pending | ☐ | ☐ |  |  |
+| trees | disjoint_set_union | pending | ☐ | ☐ |  |  |
+| graphs | graph_representation | pending | ☐ | ☐ |  |  |
+| graphs | bfs | pending | ☐ | ☐ |  |  |
+| graphs | dfs | pending | ☐ | ☐ |  |  |
+| graphs | topological_sort | pending | ☐ | ☐ |  |  |
+| graphs | cycle_detection | pending | ☐ | ☐ |  |  |
+| graphs | connectivity_scc | pending | ☐ | ☐ |  |  |
+| paradigms | backtracking | pending | ☐ | ☐ |  |  |
+| paradigms | greedy | pending | ☐ | ☐ |  |  |
+| graphs | dijkstra | pending | ☐ | ☐ |  |  |
+| graphs | bellman_ford | pending | ☐ | ☐ |  |  |
+| graphs | minimum_spanning_tree | pending | ☐ | ☐ |  |  |
+| paradigms | dp_fundamentals | pending | ☐ | ☐ |  |  |
+| graphs | floyd_warshall | pending | ☐ | ☐ |  |  |
+| paradigms | dp_classic | pending | ☐ | ☐ |  |  |
+| paradigms | string_matching | pending | ☐ | ☐ |  |  |
+| paradigms | complexity_classes | pending | ☐ | ☐ |  |  |
 
 ## 13. Evaluation Results
 

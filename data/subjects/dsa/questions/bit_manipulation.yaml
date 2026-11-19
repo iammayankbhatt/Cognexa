@@ -1,0 +1,112 @@
+concept_id: bit_manipulation
+questions:
+  - id: bit_manipulation-q01
+    type: mcq
+    difficulty: 1
+    prompt: "What is the value of 6 ^ 3 in Python (the bitwise XOR of 110 and 011)?"
+    options:
+      - {id: a, text: "9", why_wrong: "9 would be 6 + 3; XOR is not addition."}
+      - {id: b, text: "2", why_wrong: "2 is 6 & 3 (AND); XOR is one where bits differ."}
+      - {id: c, text: "5"}
+      - {id: d, text: "216", why_wrong: "216 is 6 ** 3, exponentiation, which the caret does not do in Python."}
+    answer: c
+    explanation: "XOR gives one where bits differ: 110 xor 011 is 101, which is 5."
+    misconception_tag: xor_basics
+    diagnoses_prereq: variables_memory
+
+  - id: bit_manipulation-q02
+    type: mcq
+    difficulty: 1
+    prompt: "What is the value of 5 ^ 3 in Python (the bitwise XOR of 101 and 011)?"
+    options:
+      - {id: a, text: "125", why_wrong: "125 is 5 ** 3; the caret is XOR in Python, not exponentiation."}
+      - {id: b, text: "1", why_wrong: "1 is 5 & 3 (AND); XOR gives one where bits differ."}
+      - {id: c, text: "8", why_wrong: "8 would be 5 + 3; XOR is not addition."}
+      - {id: d, text: "6"}
+    answer: d
+    explanation: "101 xor 011 is 110, which is 6."
+    misconception_tag: xor_basics
+    diagnoses_prereq: variables_memory
+
+  - id: bit_manipulation-q03
+    type: mcq
+    difficulty: 2
+    prompt: "Which expression is True exactly when a positive integer x is a power of two?"
+    options:
+      - {id: a, text: "x % 2 == 0", why_wrong: "Every even number passes, including 6 and 12, which are not powers of two."}
+      - {id: b, text: "x & (x - 1) == 0, written with parentheses as (x & (x - 1)) == 0"}
+      - {id: c, text: "x | (x - 1) == 0", why_wrong: "OR of x and x - 1 is never zero for positive x."}
+      - {id: d, text: "x ^ (x - 1) == 0", why_wrong: "XOR of x and x - 1 is never zero because the two numbers differ."}
+    answer: b
+    explanation: "A power of two has a single set bit. Subtracting one flips that bit and all lower bits, so the AND of the two numbers is zero."
+    misconception_tag: power_of_two_test
+    diagnoses_prereq: variables_memory
+
+  - id: bit_manipulation-q04
+    type: mcq
+    difficulty: 2
+    prompt: "Every number in a list appears exactly twice except one. Which operation applied across the whole list leaves the unpaired number?"
+    options:
+      - {id: a, text: "Adding all numbers", why_wrong: "The sum is the doubled total plus the unpaired value, which does not isolate it."}
+      - {id: b, text: "OR-ing all numbers", why_wrong: "OR keeps bits set by any value and does not cancel pairs."}
+      - {id: c, text: "AND-ing all numbers", why_wrong: "AND tends to produce zero and does not cancel pairs."}
+      - {id: d, text: "XOR-ing all numbers"}
+    answer: d
+    explanation: "x ^ x is 0 and x ^ 0 is x, and XOR is order-independent, so pairs cancel and only the unpaired value remains."
+    misconception_tag: xor_cancellation
+    diagnoses_prereq: variables_memory
+
+  - id: bit_manipulation-q05
+    type: multi_select
+    difficulty: 2
+    prompt: "Select every true statement about bitwise operations on non-negative integers."
+    options:
+      - {id: a, text: "Shifting left by k multiplies a value by 2 to the power k (without overflow)."}
+      - {id: b, text: "x ^ x equals 0 for every x."}
+      - {id: c, text: "x & 1 is 1 exactly when x is even.", why_wrong: "x & 1 is the lowest bit, which is 1 exactly when x is odd."}
+      - {id: d, text: "~x always equals -x in Python.", why_wrong: "In Python, ~x equals -x - 1."}
+    answer: [a, b]
+    explanation: "Shifts scale by powers of two and XOR with itself clears all bits. The lowest bit signals oddness and ~x is -x - 1."
+    misconception_tag: bit_identities
+    diagnoses_prereq: null
+
+  - id: bit_manipulation-q06
+    type: true_false
+    difficulty: 1
+    prompt: "True or false: in Python, `^` raises a number to a power."
+    answer: false
+    explanation: "Python uses `**` for exponentiation; `^` is bitwise XOR."
+    misconception_tag: caret_is_xor
+    diagnoses_prereq: variables_memory
+
+  - id: bit_manipulation-q07
+    type: code_output
+    difficulty: 2
+    prompt: "What does this program print?"
+    code: |
+      x = 0b1101
+      count = 0
+      while x:
+          x &= x - 1
+          count += 1
+      print(count, 3 << 2, 20 >> 2)
+    answer: "3 12 5"
+    explanation: "1101 has three set bits, and the loop clears one per iteration. 3 << 2 is 12 and 20 >> 2 is 5."
+    misconception_tag: bit_counting
+    diagnoses_prereq: variables_memory
+
+  - id: bit_manipulation-q08
+    type: short_answer
+    difficulty: 3
+    prompt: "Explain why `x & (x - 1)` removes the lowest set bit of x."
+    answer: "Subtracting one from x turns the lowest set bit into zero and sets all the bits below it to one, leaving higher bits unchanged. ANDing x with x - 1 therefore clears that lowest set bit and the lower bits stay zero."
+    explanation: "A strong answer describes the borrow effect of subtracting one and what the AND keeps."
+    rubric:
+      key_points:
+        - "subtracting 1 flips the lowest set bit to 0 and the lower zeros to 1"
+        - "higher bits are unchanged"
+        - "AND keeps only bits set in both, clearing the lowest set bit"
+      max_score: 1
+      partial_credit: true
+    misconception_tag: lowest_set_bit
+    diagnoses_prereq: variables_memory

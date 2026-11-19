@@ -1,0 +1,112 @@
+concept_id: discrete_math_basics
+questions:
+  - id: discrete_math_basics-q01
+    type: mcq
+    difficulty: 1
+    prompt: "Roughly how many times can 1,024 be halved (using integer division) before it reaches 1?"
+    options:
+      - {id: a, text: "10", }
+      - {id: b, text: "32", why_wrong: "32 is 1024 divided by 32; the halving count is the exponent of 2, not a divisor."}
+      - {id: c, text: "512", why_wrong: "512 is the value after one halving, not the number of halvings."}
+      - {id: d, text: "1,024", why_wrong: "That would be linear counting; halving shrinks the number far faster."}
+    answer: a
+    explanation: "1,024 equals 2 to the power 10, so ten halvings bring it down to 1."
+    misconception_tag: log_as_division
+    diagnoses_prereq: null
+
+  - id: discrete_math_basics-q02
+    type: mcq
+    difficulty: 1
+    prompt: "Roughly how many times can 4,096 be halved (using integer division) before it reaches 1?"
+    options:
+      - {id: a, text: "64", why_wrong: "64 is the square root of 4,096; halving counts powers of two, not square roots."}
+      - {id: b, text: "12"}
+      - {id: c, text: "2,048", why_wrong: "2,048 is the value after one halving, not the number of halvings."}
+      - {id: d, text: "4,096", why_wrong: "That would be counting every unit; halving is much faster."}
+    answer: b
+    explanation: "4,096 equals 2 to the power 12, so twelve halvings reach 1."
+    misconception_tag: log_as_division
+    diagnoses_prereq: null
+
+  - id: discrete_math_basics-q03
+    type: mcq
+    difficulty: 2
+    prompt: "What is the value of 1 + 2 + 3 + ... + 100?"
+    options:
+      - {id: a, text: "100", why_wrong: "That is only the last term; the series adds every number from 1 to 100."}
+      - {id: b, text: "10,000", why_wrong: "That is 100 squared, which ignores that the average term is only about 50."}
+      - {id: c, text: "5,050"}
+      - {id: d, text: "5,000", why_wrong: "This is 100 * 100 / 2, missing the +1 in n(n+1)/2."}
+    answer: c
+    explanation: "Use n(n+1)/2 with n = 100: 100 * 101 / 2 = 5,050. The off-by-one distractor 5,000 forgets the +1."
+    misconception_tag: arithmetic_series_formula
+    diagnoses_prereq: null
+
+  - id: discrete_math_basics-q04
+    type: mcq
+    difficulty: 2
+    prompt: "What is the value of 1 + 2 + 3 + ... + 200?"
+    options:
+      - {id: a, text: "20,100"}
+      - {id: b, text: "40,000", why_wrong: "That is 200 squared; the average term is about 100, not 200."}
+      - {id: c, text: "20,000", why_wrong: "This is 200 * 200 / 2, missing the +1 in n(n+1)/2."}
+      - {id: d, text: "200", why_wrong: "That is only the last term of the series."}
+    answer: a
+    explanation: "n(n+1)/2 with n = 200 gives 200 * 201 / 2 = 20,100."
+    misconception_tag: arithmetic_series_formula
+    diagnoses_prereq: null
+
+  - id: discrete_math_basics-q05
+    type: multi_select
+    difficulty: 2
+    prompt: "Select every true statement about logarithms and sums used in algorithm analysis."
+    options:
+      - {id: a, text: "log2 of n is how many times n can be halved before reaching 1 (floor)."}
+      - {id: b, text: "1 + 2 + 4 + ... + 2^(k-1) equals 2^k - 1."}
+      - {id: c, text: "The sum 1 + 2 + ... + n grows linearly in n.", why_wrong: "It equals n(n+1)/2, which grows quadratically."}
+      - {id: d, text: "Doubling the input size of an O(log n) process doubles its work.", why_wrong: "Doubling n adds only one extra halving, a constant amount of work."}
+    answer: [a, b]
+    explanation: "Halving counts and the geometric series are both standard facts. The arithmetic series is quadratic and logarithmic work barely changes when n doubles."
+    misconception_tag: growth_rates
+    diagnoses_prereq: null
+
+  - id: discrete_math_basics-q06
+    type: true_false
+    difficulty: 1
+    prompt: "True or false: in Python, (-1) % 8 evaluates to 7."
+    answer: true
+    explanation: "Python's modulo result takes the sign of the divisor, so for a positive modulus it is never negative. C++ would give -1."
+    misconception_tag: negative_modulo
+    diagnoses_prereq: null
+
+  - id: discrete_math_basics-q07
+    type: code_output
+    difficulty: 2
+    prompt: "What does this program print?"
+    code: |
+      n = 40
+      steps = 0
+      while n > 1:
+          n //= 2
+          steps += 1
+      print(steps, 17 % 5)
+    answer: "5 2"
+    explanation: "40 -> 20 -> 10 -> 5 -> 2 -> 1 takes 5 halvings, and 17 mod 5 is 2."
+    misconception_tag: halving_count
+    diagnoses_prereq: null
+
+  - id: discrete_math_basics-q08
+    type: short_answer
+    difficulty: 3
+    prompt: "Explain why searching a sorted list of one billion items by repeated halving needs only about 30 steps."
+    answer: "Each step discards half of the remaining items, so after k steps about n / 2^k remain. One billion is roughly 2^30, so after about 30 halvings only one item is left."
+    explanation: "A strong answer connects halving to powers of two and states that the step count is the logarithm base 2 of n."
+    rubric:
+      key_points:
+        - "each step discards half of the remaining items"
+        - "n / 2^k remain after k steps"
+        - "one billion is about 2^30, so about 30 steps (log2 n)"
+      max_score: 1
+      partial_credit: true
+    misconception_tag: log_as_halving
+    diagnoses_prereq: null

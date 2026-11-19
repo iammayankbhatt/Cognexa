@@ -1,0 +1,112 @@
+concept_id: control_flow
+questions:
+  - id: control_flow-q01
+    type: mcq
+    difficulty: 1
+    prompt: "Which list does list(range(1, 5)) produce in Python?"
+    options:
+      - {id: a, text: "[1, 2, 3, 4, 5]", why_wrong: "range excludes its upper bound, so 5 is not included."}
+      - {id: b, text: "[1, 2, 3, 4]"}
+      - {id: c, text: "[0, 1, 2, 3, 4]", why_wrong: "The start value is 1, so 0 is not produced."}
+      - {id: d, text: "[2, 3, 4]", why_wrong: "The start value 1 is included."}
+    answer: b
+    explanation: "range(a, b) yields a, a+1, ..., b-1, so it starts at 1 and stops before 5."
+    misconception_tag: range_upper_bound
+    diagnoses_prereq: variables_memory
+
+  - id: control_flow-q02
+    type: mcq
+    difficulty: 1
+    prompt: "Which list does list(range(3, 7)) produce in Python?"
+    options:
+      - {id: a, text: "[3, 4, 5, 6, 7]", why_wrong: "range excludes its upper bound, so 7 is not included."}
+      - {id: b, text: "[4, 5, 6]", why_wrong: "The start value 3 is included."}
+      - {id: c, text: "[3, 4, 5, 6]"}
+      - {id: d, text: "[0, 1, 2, 3, 4, 5, 6]", why_wrong: "The start value is 3, not 0."}
+    answer: c
+    explanation: "range(3, 7) yields 3, 4, 5, 6: the start is included and the end is excluded."
+    misconception_tag: range_upper_bound
+    diagnoses_prereq: variables_memory
+
+  - id: control_flow-q03
+    type: mcq
+    difficulty: 2
+    prompt: "A loop `i = 0; while i < 5: print(i)` never ends. What is the cause?"
+    options:
+      - {id: a, text: "The condition i < 5 is written incorrectly and should use <=.", why_wrong: "Changing < to <= still never ends; the counter never changes."}
+      - {id: b, text: "Python limits loops to 100 iterations.", why_wrong: "Python does not limit loop iterations."}
+      - {id: c, text: "The variable i is never updated inside the loop, so the condition stays true."}
+      - {id: d, text: "print cannot be used inside a while loop.", why_wrong: "print works anywhere; the problem is the missing update."}
+    answer: c
+    explanation: "Termination requires something in the body to move the loop toward its stopping condition. Adding i += 1 fixes it."
+    misconception_tag: infinite_loop
+    diagnoses_prereq: variables_memory
+
+  - id: control_flow-q04
+    type: mcq
+    difficulty: 2
+    prompt: "A loop `for i in range(n): for j in range(n): work()` calls work() how many times?"
+    options:
+      - {id: a, text: "n", why_wrong: "That would be a single loop; the inner loop repeats n times for every outer pass."}
+      - {id: b, text: "2n", why_wrong: "Nested loops multiply their counts; they do not add."}
+      - {id: c, text: "n * n"}
+      - {id: d, text: "n + n", why_wrong: "Nested loops multiply, they do not add."}
+    answer: c
+    explanation: "The inner loop runs n times for each of the n outer iterations, so the body runs n times n."
+    misconception_tag: nested_loops_multiply
+    diagnoses_prereq: variables_memory
+
+  - id: control_flow-q05
+    type: multi_select
+    difficulty: 2
+    prompt: "Select every true statement about loops and conditionals."
+    options:
+      - {id: a, text: "In an if-elif-else chain only the first branch whose condition is true runs."}
+      - {id: b, text: "A while loop whose condition is false at the start runs its body zero times."}
+      - {id: c, text: "break leaves every enclosing loop at once.", why_wrong: "break exits only the innermost loop it is written in."}
+      - {id: d, text: "continue stops the program.", why_wrong: "continue only skips the rest of the current iteration."}
+    answer: [a, b]
+    explanation: "Branches are mutually exclusive in an if-elif chain, and while tests before running the body. break and continue are narrower than the distractors claim."
+    misconception_tag: loop_control_statements
+    diagnoses_prereq: null
+
+  - id: control_flow-q06
+    type: true_false
+    difficulty: 1
+    prompt: "True or false: in `a and b`, Python evaluates b even when a is false."
+    answer: false
+    explanation: "Boolean operators short-circuit: if a is false the whole expression is false, so b is not evaluated."
+    misconception_tag: short_circuit
+    diagnoses_prereq: null
+
+  - id: control_flow-q07
+    type: code_output
+    difficulty: 2
+    prompt: "What does this program print?"
+    code: |
+      total = 0
+      for i in range(1, 5):
+          if i % 2 == 0:
+              continue
+          total += i
+      print(total, i)
+    answer: "4 4"
+    explanation: "Only the odd values 1 and 3 are added, giving 4. After the loop ends i keeps its last value, 4."
+    misconception_tag: loop_variable_after_loop
+    diagnoses_prereq: variables_memory
+
+  - id: control_flow-q08
+    type: short_answer
+    difficulty: 3
+    prompt: "Explain what a loop invariant is and how it helps you convince yourself a loop is correct."
+    answer: "A loop invariant is a statement that is true before the loop starts and remains true after every iteration. When the loop stops, the invariant together with the stopping condition implies the desired result."
+    explanation: "A good answer mentions truth before the first iteration, preservation by each iteration, and using the final state to conclude correctness."
+    rubric:
+      key_points:
+        - "true before the loop and after every iteration"
+        - "preserved by each pass of the body"
+        - "with the exit condition it implies the result"
+      max_score: 1
+      partial_credit: true
+    misconception_tag: loop_invariant
+    diagnoses_prereq: null
