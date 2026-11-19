@@ -11,12 +11,13 @@ Paste these prompts into **Claude Code** one at a time, in order. Each prompt is
 3. Open Claude Code in the `cognexa` folder. For each phase:
    - Paste the prompt. For big phases, ask Claude Code to **show its plan first** and approve it before it writes code.
    - Let it finish, **run the app yourself** and check the "Verify" list.
-   - Make sure it did the Standard Wrap-up (progressfile.md updated plus a commit).
+   - Make sure it did the Standard Wrap-up (progressfile.md updated plus small verified commits on `main`).
+   - **Push, watch CI, and tag.** When the phase is done, you run `git push`, watch the CI run on GitHub, and once it is green tag the phase (`git tag -a v0.N -m "Phase N: <name>" && git push --tags`). A red CI is fixed before you start the next phase. Details in Appendix D.
    - Start a fresh session (`/clear`) before the next phase. CLAUDE.md and progressfile.md carry the context forward.
 4. If something breaks, use the **Bug Fix prompt** (Appendix B). If you come back after a break, use the **Resume prompt** (Appendix A).
 5. Don't skip phases or merge several into one prompt. Small phases with checks in between are how you keep bugs out.
 
-> **A note on "no bugs":** No tool can guarantee zero bugs. This pack gets close by building in checks: every phase must pass lint, type checks, tests and a manual run before it counts as done. Phase 14 is a dedicated bug-hunt phase, and every bug found is logged in `progressfile.md`. Your team still has to click through each phase. Doing that is also your best preparation for the viva.
+> **A note on "no bugs":** No tool can guarantee zero bugs. This pack gets close by building in checks: every phase must pass lint, type checks, tests and a manual run before it counts as done. Phase 14 is a dedicated bug-hunt phase, and every bug found is logged in `progressfile.md`. You still have to click through each phase. Doing that is also your best preparation for the viva.
 
 ### Phase map
 
@@ -151,7 +152,7 @@ Finish with the Standard Wrap-up.
 
 ## Phase 3 — Content: concept notes, question bank, eval test set
 
-> This phase is mostly writing. Claude Code drafts it, and **your team must review it**, because examiners will check accuracy. Every file starts with `reviewed: false`. A team member sets it to true after checking.
+> This phase is mostly writing. Claude Code drafts it, and **you must review it**, because examiners will check accuracy. Every file starts with `reviewed: false`. You set it to true after checking.
 
 ```text
 Read CLAUDE.md and progressfile.md. Phase 3: write the learning content for all 69 DSA concepts in data/subjects/dsa/concepts.yaml, the question bank, and the evaluation test set. Quality matters more than speed. Work ONE CLUSTER AT A TIME (foundations, complexity, linear, searching_hashing, sorting, trees, graphs, paradigms). After each cluster, run the validators and commit, then continue to the next cluster in this same session. If the context gets long, stop after a cluster, do the wrap-up, and tell me which cluster is next.
@@ -639,14 +640,18 @@ Edge convention: listed **prerequisites** must be learned before the concept. **
 
 ## Appendix D — Git workflow & commit plan
 
-**Workflow (commits directly on `main`; no feature branches or pull requests; DEC-012)**
-1. Start every session with `git pull --rebase`.
-2. Make the small commits listed below, one per logical step. **Before every commit run the full verification for the app you touched** (backend: `ruff check`, `ruff format --check`, `mypy`, `pytest`; frontend: `lint`, `typecheck`, `test`, `build`). Never commit a failing state.
-3. `git pull --rebase` again, then push at the end of each phase (or sooner): `git push`. Watch the CI run on GitHub.
-4. **If CI fails, fixing it is the top priority before any new work.** Reproduce it from a clean checkout (no `.next`, `node_modules`, `.venv` or `.env`), fix it, log it in the Bug Log, and push the fix.
-5. When a phase is finished and CI is green, tag it on `main`: `git tag -a v0.NN -m "Phase NN: <name>" && git push --tags`.
-6. Last commit of every phase: `docs(progress): phase NN complete` (progressfile.md update).
-7. Claude Code does not push or tag unless asked; it prints the commands instead.
+**Workflow (single developer, `main` only; DEC-013, supersedes DEC-012)**
+
+There is one branch, `main`. Never create branches, pull requests or worktrees.
+
+1. Make the small commits listed below, one per logical step. **Before each commit run the full verification for the app you touched** (backend: `ruff check`, `ruff format --check`, `mypy`, `pytest`; frontend: `lint`, `typecheck`, `test`, `build`). Never commit a failing state.
+2. At the end of each phase you push: `git push`. Watch the CI run on GitHub.
+3. **If CI is red, fixing it is the top priority before any new work.** Reproduce it from a clean checkout (no `.next`, `node_modules`, `.venv` or `.env`), fix it, log it in the Bug Log, and push the fix.
+4. When CI is green, tag the phase: `git tag -a v0.NN -m "Phase NN: <name>" && git push --tags`.
+5. Last commit of every phase: `docs(progress): phase NN complete` (progressfile.md update).
+6. Claude Code never pushes or tags; it prints the commands instead.
+
+Note: run `git pull` first only if you ever commit from another machine or the GitHub web UI.
 
 **Message format:** Conventional Commits, `type(scope): summary`. Types: `feat`, `fix`, `test`, `docs`, `chore`, `refactor`, `perf`, `ci`, `build`, `style`, `content`. Never commit `.env` files or keys.
 
@@ -671,7 +676,6 @@ Edge convention: listed **prerequisites** must be learned before the concept. **
 | 16 | `docs: README with screenshots` · `docs: architecture diagrams` · `docs: API reference` · `docs: viva demo script` · `feat(data): example subject pack and adding-a-subject guide` · `docs(progress): final project summary` | v1.0.1 |
 
 **Rules of thumb**
-- Commit whenever one logical step works and its tests pass (see step 2 above). Never commit a broken build to `main`; because everyone commits to `main`, a red CI blocks the whole team until it is fixed.
+- Commit whenever one logical step works and its tests pass (see step 1 above). Never commit a broken build to `main`.
 - Bug fixes always reference the Bug Log ID: `fix(quiz): multi-select partial credit went negative (BUG-007)`.
 - If Claude Code bundles many changes into one commit, ask it to split them with `git reset --soft` before you push (only for commits that are not pushed yet).
-- Spread commits across all four teammates' accounts (e.g., each person runs and pushes some phases, or owns the content review commits for their clusters). Examiners sometimes check GitHub contribution history.

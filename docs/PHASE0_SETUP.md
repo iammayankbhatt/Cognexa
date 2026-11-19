@@ -51,7 +51,7 @@ git config --global user.email "you@example.com"
    git remote add origin https://github.com/cognexa-team/cognexa.git
    git push -u origin main
    ```
-5. **Protect main (light):** Repo → Settings → Rules → Rulesets (or Branches → Branch protection) → target `main` → **block force pushes and branch deletion only.** Do **not** require pull requests or required status checks: the team commits directly to `main` (DEC-012), and those rules would reject direct pushes. Instead, watch the CI run after every push and fix a red build before any new work.
+5. **Optional: block force pushes on `main`.** Repo → Settings → Rules → Rulesets (or Branches → Branch protection) → target `main` → block force pushes (and optionally branch deletion) only. Do **not** require pull requests or status checks: you commit directly to `main` (DEC-013) and those rules would reject your pushes. Instead, watch the CI run after every push and fix a red build before any new work.
 
 ---
 
@@ -73,7 +73,7 @@ For **each** project:
 6. **Auth settings:**
    - Authentication → Sign In / Providers → **Email**: enabled, **Confirm email: ON**.
    - Authentication → URL Configuration → **Site URL**: `http://localhost:3000` (dev project). For prod, set the Vercel URL in Phase 15. **Redirect URLs:** add `http://localhost:3000/**`.
-7. **Add teammates:** Organization Settings → Team → invite the three other personal emails. This matters because Supabase's built-in email sender **only delivers to team members** and only about 2 emails an hour. So during development, test sign-ups with teammates' addresses. Real users need Step 10.
+7. **Use your own email addresses for test sign-ups:** Supabase's built-in email sender **only delivers to members of your Supabase organisation**, which for this project means your own email address(es), and only about 2 emails an hour. So during development, test sign-ups with your own addresses until custom SMTP is set up (Step 10). Real users need Step 10.
 
 ---
 
@@ -146,7 +146,7 @@ Seeing a JSON list of models means the key works.
 
 ## Step 10 — Email sending for real users (custom SMTP) (20 min, needed before Phase 15 / user study)
 
-Supabase's default sender only emails team members, about 2 per hour, and on new free projects you can't even edit the email templates until custom SMTP is set up. Pick one option:
+Supabase's default sender only emails members of your Supabase organisation (just you, so test with your own addresses), about 2 per hour, and on new free projects you can't even edit the email templates until custom SMTP is set up. Pick one option:
 
 | Option | Cost | Needs a domain? | Daily limit (approx.) | Notes |
 |---|---|---|---|---|
@@ -192,8 +192,8 @@ In Phase 1, Claude Code creates `apps/api/.env.example` and `apps/web/.env.examp
 ## Step 13 — Done? Final checklist
 
 - [ ] All 4 laptops: `git`, `docker run hello-world`, `node -v`, `python3.12 --version`, `uv --version`, `claude --version` all work
-- [ ] GitHub org + repo created, all 4 members added, initial commit pushed, `main` protected
-- [ ] Supabase `cognexa-dev` + `cognexa-prod`: pgvector on, email auth with confirm, URL config, teammates invited
+- [ ] GitHub org + repo created, all 4 members added, initial commit pushed, force-push block on `main` (optional)
+- [ ] Supabase `cognexa-dev` + `cognexa-prod`: pgvector on, email auth with confirm, URL config, own test email address(es) noted for sign-up tests
 - [ ] Google OAuth client created with both Supabase callback URLs; Google enabled in both Supabase projects; test users added
 - [ ] Neo4j Aura Free running; credentials saved; `RETURN 1` works
 - [ ] Groq + Gemini keys created (dev + prod), model IDs and limits noted

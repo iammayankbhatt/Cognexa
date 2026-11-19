@@ -138,11 +138,10 @@ A task is done only when **all** of these are true:
    - Decisions Log for any non-obvious choice. Known Limitations for anything deferred.
    - "What we learned" notes (2–5 bullets the team can study).
    - Traceability Matrix: update the status of report objectives/features touched.
-3. Commit following docs/COGNEXA_PROMPTS.md Appendix D. **We work directly on `main`** (no feature branches, no PRs; DEC-012):
-   - Start every session with `git pull --rebase`.
-   - Before every commit, run the full verification for the app you touched (backend: ruff check, ruff format --check, mypy, pytest; frontend: lint, typecheck, test, build). Never commit a failing state.
-   - Small Conventional Commits, one per logical step, each passing; reference bug IDs in `fix:` commits; end the phase with `docs(progress): phase NN complete`.
-   - `git pull --rebase` again before pushing. The human pushes at the end of each phase (or sooner) and watches CI. **If CI fails, fixing it is the top priority before any new work.**
-   - Tag each finished phase on `main` (`v0.N`) once CI is green.
-   - **Don't push or tag unless the human asks;** give them the exact commands.
+3. Commit following docs/COGNEXA_PROMPTS.md Appendix D. **Single developer, single branch: everything is committed directly on `main` (DEC-013, supersedes DEC-012).** Never create branches, pull requests or worktrees.
+   - **Before each commit, run the full verification for the app you touched** (backend: `ruff check`, `ruff format --check`, `mypy`, `pytest`; frontend: `lint`, `typecheck`, `test`, `build`). Never commit a failing state.
+   - Small Conventional Commits, one per logical step, using the per-phase commit lists in Appendix D; reference bug IDs in `fix:` commits; end the phase with `docs(progress): phase NN complete`.
+   - At the end of each phase the human pushes, watches CI, and tags `v0.N` once it is green. **If CI is red, fixing it is the top priority before any new work.**
+   - **Never push or tag.** Give the human the exact commands instead.
+   - Note: run `git pull` first only if the human has ever committed from another machine or the GitHub web UI.
 4. Print a short summary: what's done, what's verified, anything the human must do manually (e.g., add an env var in a dashboard).

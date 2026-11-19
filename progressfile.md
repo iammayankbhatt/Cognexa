@@ -19,7 +19,7 @@
 | Repository | https://github.com/iammayankbhatt/Cognexa |
 | Live web app | _TBD (Vercel)_ |
 | Live API | _TBD (Render)_ |
-| Current phase | Phase 1 complete (merged to `main` via PR #1); next: Phase 2. Workflow now: commits directly on `main` (DEC-012) |
+| Current phase | Phase 1 complete (merged to `main` via PR #1); next: Phase 2. Workflow: single developer, `main` only (DEC-013) |
 | Overall status | 🟡 In progress |
 
 Status legend: 🔴 Not started · 🟡 In progress · 🟢 Done + verified · ⚠️ Done with known issues · ⏸️ Blocked
@@ -244,6 +244,26 @@ git tag -a v0.1 -m "Phase 1: Scaffold, design system, CI" && git push --tags   #
 - Branch protection that requires PRs or status checks silently contradicts a commit-to-main workflow.
 **Next step:** confirm green CI on GitHub, tag v0.1, then Phase 2: databases + DSA concept graph.
 
+### Session 4 — 2026-11-19 — Workflow change to single-developer main-only (DEC-013)
+**Goal:** Docs-only: replace the team workflow (DEC-012) with a solo, main-only workflow.
+**Built:** CLAUDE.md section 9 step 3; `docs/COGNEXA_PROMPTS.md` "How to use this pack", Phase 3 review note and Appendix D (workflow and rules of thumb; per-phase commit lists untouched); `docs/PHASE0_SETUP.md` step 5 (ruleset optional), Supabase email note, final checklist; progressfile.md (DEC-013, DEC-012 marked superseded, Phase tracker header, content review checklist reviewer).
+**Wording that was NOT found:** "don't run two Claude Code sessions on the same phase" appears in none of the docs; "split content clusters among teammates" appears only as "owns the content review commits for their clusters" (Appendix D rules of thumb), which was removed. The `git pull --rebase` steps were in CLAUDE.md section 9 and Appendix D (both replaced by the one-line `git pull` note).
+**Left unchanged on purpose (outside the list requested):** `docs/PHASE0_SETUP.md` still describes a shared team Google account, a GitHub organisation with four owners, four laptops and four test users; CLAUDE.md/progressfile.md still carry the project team credits (Team CSE27-125) and "bullets the team can study".
+**Files touched:** `CLAUDE.md`, `docs/COGNEXA_PROMPTS.md`, `docs/PHASE0_SETUP.md`, `progressfile.md`.
+**Commands run & results:** docs only, no code touched, so no lint/test/build run. Checked by grep that no `git pull --rebase`, branch, PR, teammate-review or "spread commits" wording remains in CLAUDE.md or Appendix D, and that CRLF line endings were preserved.
+**Bugs found this session:** none
+**Decisions:** DEC-013 (supersedes DEC-012)
+**Human action needed:** if you created a GitHub ruleset that requires PRs/status checks, relax it. Push, watch CI, tag v0.1 when green (commands below). Decide whether to also simplify the remaining team-oriented Phase 0 steps.
+```
+git push
+# watch: GitHub -> Actions (or: gh run watch)
+git tag -a v0.1 -m "Phase 1: Scaffold, design system, CI" && git push --tags   # only after CI is green
+```
+**What we learned:**
+- A requested edit list can reference wording that is not in the files; verify with grep and report what was and was not found.
+- Decisions are superseded, not deleted: DEC-012 stays in the log, marked.
+**Next step:** confirm green CI on GitHub, tag v0.1, then Phase 2: databases + DSA concept graph.
+
 ---
 
 ## 7. Bug Log
@@ -354,7 +374,8 @@ Severity: **S1** critical (data loss, security, app down) · **S2** major (featu
 | DEC-009 | 2026-11-19 | Local Postgres published on host port 5433 | Stop the native Postgres; keep 5432 | Do not touch the user's installed database | Local `DATABASE_URL` uses 5433; the CI service container still uses 5432 |
 | DEC-010 | 2026-11-19 | Own ThemeProvider (`useSyncExternalStore` over `data-theme`) + inline no-flash script instead of next-themes | next-themes | Three named themes, no system/class modes needed, fewer deps; next-themes removed | Profile sync in Phase 4 hooks into `setTheme` |
 | DEC-011 | 2026-11-19 | Vitest without `@vitejs/plugin-react`; `@types/node` bumped to 22 | Install the plugin with `--legacy-peer-deps` | The plugin caused a Babel peer-dependency conflict with shadcn's deps and is not needed for these tests; Vitest 5 requires `@types/node` 22+ | Avoid `--legacy-peer-deps` so the lockfile stays honest |
-| DEC-012 | 2026-11-19 | Team commits directly on `main`: no feature branches, no PRs. Before every commit run full verification for the touched app; `git pull --rebase` before a session and before pushing; push at the end of each phase (or sooner) and watch CI; a red CI is fixed before any new work; tag each finished phase (v0.N) on `main`; Claude Code does not push or tag unless asked. (Requested as DEC-008, but that ID was already taken by the Tailwind muted/accent mapping, so it is recorded as DEC-012.) | Phase branches + PRs with review (previous Appendix D workflow, used once for Phase 1 via PR #1) | Small team, simpler flow, CI watched after each push | No review record per phase; a broken push blocks everyone. `docs/PHASE0_SETUP.md` step 5 changed: do not require PRs or status checks on `main` (they would reject direct pushes). **Check the GitHub ruleset if one was already created from the old instructions.** |
+| DEC-012 | 2026-11-19 | **SUPERSEDED by DEC-013.** Team commits directly on `main`: no feature branches, no PRs. Before every commit run full verification for the touched app; `git pull --rebase` before a session and before pushing; push at the end of each phase (or sooner) and watch CI; a red CI is fixed before any new work; tag each finished phase (v0.N) on `main`; Claude Code does not push or tag unless asked. (Requested as DEC-008, but that ID was already taken by the Tailwind muted/accent mapping, so it is recorded as DEC-012.) | Phase branches + PRs with review (previous Appendix D workflow, used once for Phase 1 via PR #1) | Small team, simpler flow, CI watched after each push | No review record per phase; a broken push blocks everyone. `docs/PHASE0_SETUP.md` step 5 changed: do not require PRs or status checks on `main` (they would reject direct pushes). **Check the GitHub ruleset if one was already created from the old instructions.** |
+| DEC-013 | 2026-11-19 | Single developer, single branch: the human works alone on `main`. Never create branches, PRs or worktrees. Before each commit run the full verification for the touched app; small Conventional Commits as listed per phase in Appendix D. At the end of each phase the human pushes, watches CI and tags `v0.N` once green; red CI is fixed before new work. Claude Code never pushes or tags and gives the commands. Team-workflow wording (reviews/approvals, spreading commits across teammates, `git pull --rebase` routine) removed; one-line note kept: run `git pull` first only when committing from another machine or the GitHub web UI. Content review checklist: the reviewer is the human developer. GitHub ruleset optional (block force pushes only). | DEC-012 (team commits on `main` with a rebase routine); phase branches + PRs | The project is now developed by one person; the extra process added no value | No second reviewer: correctness relies on tests, CI and the human's own review. PHASE0_SETUP changed: Supabase built-in email only reaches organisation members (now: the developer's own addresses), so sign-up tests use own addresses until custom SMTP. Other team-oriented Phase 0 steps (shared team Google account, GitHub org with four owners, four test users) were not changed. |
 
 ---
 
@@ -416,9 +437,9 @@ _(Claude Code: keep this in sync with both .env.example files.)_
 
 ## 12. Content Review Checklist
 
-> Filled in during Phase 3. A team member ticks a concept only after checking its notes, code and questions.
+> Filled in during Phase 3. The reviewer is me (the sole developer). I tick a concept only after checking its notes, code and questions.
 
-| Cluster | Concept | Notes reviewed | Questions reviewed | Reviewer | Date |
+| Cluster | Concept | Notes reviewed | Questions reviewed | Reviewer (me) | Date |
 |---|---|---|---|---|---|
 | _foundations_ | _call_stack_ | ☐ | ☐ | | |
 
