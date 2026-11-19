@@ -13,7 +13,7 @@
 **Mode:** autopilot, main only, no tags. One commit per phase (`feat(phase-NN): ...`), then `git push origin main` (explicitly authorised for autopilot; if push fails, log it under Human Action Needed and continue). No `gh` CLI and no Supabase CLI were found on this machine at start; CI runs are checked through the public GitHub API when possible.
 **Environment notes:** local `apps/api/.env` and `apps/web/.env.local` exist (created from the examples; fake LLM/embedding providers, `REPLACE_ME` for cloud values). Never open or print them; use `uv run --project apps/api python scripts/check_env.py`.
 **Phase order:** core 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 12 → 15 (prep only), then extras 11 → 13 → 14 → 16.
-**Current phase:** 3 — Content: concept notes, question bank, eval test set (Phase 2 complete and CI-green, see Session 5)
+**Current phase:** 3 — Content (40 of 69 concepts written; next: trees cluster). Phase 2 complete and CI-green (Session 5); Phase 3 progress in Session 6.
 
 **Phase 2 checkpoints (done)**
 - [x] 2.1 Env files, `scripts/check_env.py`, `.env.example` for all phases
@@ -46,6 +46,8 @@
 | 1 | dashboards | Watch CI after each push | `gh` is not installed. After each autopilot push, open GitHub → Actions and confirm the run is green (or install GitHub CLI and run `gh auth login`). Red CI: tell Claude Code to fix it first. |
 | 2 | live checks | Supabase local stack not yet tried | Phase 4 will try `npx supabase start` (needs Docker). If it cannot run, real email sign-up/sign-in must be verified by you against a cloud Supabase project. |
 | 3 | content to review | Phase 2 graph edges | Review `data/subjects/dsa/concepts.yaml` (prerequisite edges, aliases, keywords, difficulty). Appendix C is a draft, not gospel. Flip nothing automatically: edge changes are made in the file, then `scripts/validate_graph.py` and `scripts/seed_neo4j.py --prune`. |
+| 4 | content to review | Phase 3 notes and questions (40 of 69 written so far) | Read the notes and questions in `data/subjects/dsa/` (start with the concepts you know best). The checklist is in progressfile.md section 12. When a concept is correct, tick it there and set `reviewed: true` in the note's frontmatter, then re-run `scripts/seed_postgres.py` and `scripts/seed_neo4j.py`. Everything is currently `reviewed: false`. |
+| 5 | live checks | Run the real embedding model | `scripts/seed_vectors.py` uses a deterministic fake embedding. After adding `GEMINI_API_KEY` and wiring the real provider (Phase 5), re-run it; chunks are re-embedded because the model name differs. |
 
 ---
 
@@ -334,6 +336,23 @@ git tag -a v0.1 -m "Phase 1: Scaffold, design system, CI" && git push --tags   #
 - Resolve `.env` relative to the package, not the working directory, or scripts only work from one folder.
 **Next step:** Phase 3 (content): tooling first, then cluster by cluster.
 
+
+### Session 6 — 2026-11-19 — Phase 3: Content (in progress, autopilot)
+**Goal:** Learning content for all 69 DSA concepts, the question bank, study sets and the eval test set; content tooling and seeding.
+**Built so far:**
+- Tooling (commit `efc832a`): note parser (10 required H2 sections become chunks), question / study-set / test-set schemas, `validate_content.py`, snippet runner (Python + C++14) with `code_output` answer-key verification, chunk and question seeding for Neo4j and Postgres, migrations 0007 (chunk hashes) and 0008 (question language), fake deterministic embeddings and resumable `seed_vectors.py`, review checklist generator, a validator rule rejecting unfinished or self-correcting text.
+- Content: **40 of 69 concepts** written with 8 questions each (320 questions): foundations (11), complexity (5), linear (9), searching_hashing (8), sorting (7). All Python and C++14 snippets run, and all `code_output` answers match real program output.
+**Still to do:** trees (13), graphs (10), paradigms (6), then `_study_sets.yaml` (two matched 20-question forms), `eval/testset.jsonl` (80+ items with the category minimums), switch CI to `validate_content.py --strict`, Phase 3 wrap-up.
+**Commands run & results (latest):** ruff ✅ · mypy ✅ · pytest ✅ (full suite 134 passed before the last content clusters; content gates 41 passed after) · validate_content ✅ · all snippets and answer keys ✅ · seeds twice ✅ · CI green on GitHub for the pushes through the searching_hashing cluster (run ids 44503011332 and later); the sorting push was not yet confirmed at the time of writing.
+**Bugs found this session:** BUG-008 to BUG-011
+**Decisions:** DEC-020 to DEC-022
+**Human action needed:** see the Autopilot State table.
+**What we learned:**
+- Machine-checking authored answer keys is worth the effort: the verifier caught three wrong keys I had written from memory (amortized_analysis-q07, stack-q07, binary_search-q07) and one muddled explanation. Trace code by hand first, and let the runner be the judge.
+- Authored text needs the same lint as code: a confused "wait, that window..." sentence reached a note and is now rejected by the validator.
+- Tooling layers can corrupt backslashes: `\b` in a regex and `\n` in a string became control characters when written through the shell. Prefer the file-writing tool for code containing backslashes and verify by running.
+- Old compilers constrain content: the local MinGW GCC 6.3 only supports C++14, so notes use C++14 (also compiled by a newer GCC in CI).
+**Next step:** trees cluster (3.7).
 ---
 
 ## 7. Bug Log
@@ -351,6 +370,10 @@ Severity: **S1** critical (data loss, security, app down) · **S2** major (featu
 | BUG-005 | 2026-11-19 | 1 | S2 | ci / frontend | GitHub Actions frontend job failed at `npm run typecheck`: `src/app/layout.tsx(17,50): error TS2304: Cannot find name 'LayoutProps'` | Fixed | `2fabc20` | The CI `typecheck` step itself (script now runs `next typegen` first); reproduced and verified from a fresh clone |
 | BUG-006 | 2026-11-19 | 2 | S3 | backend | `scripts/seed_neo4j.py` run from the repo root reported NEO4J_* not set although `apps/api/.env` exists | Fixed | Phase 2 commit | `tests/test_graph_repository.py` (seeds via Settings from any cwd), manual run from repo root |
 | BUG-007 | 2026-11-19 | 2 | S4 | backend | `ConceptId` required 2+ characters, rejecting valid one-letter ids used by fixtures and tests | Fixed | Phase 2 commit | `tests/test_graph_validation.py` |
+| BUG-008 | 2026-11-19 | 3 | S3 | graph | `GraphRepository.delete_stale_chunks` ran a `DETACH DELETE` through the read-only helper: `Writing in read access mode not allowed` | Fixed | `efc832a` | `tests/test_graph_repository.py::test_seed_chunks_is_idempotent_and_removes_stale_chunks` |
+| BUG-009 | 2026-11-19 | 3 | S4 | backend | `embed_pending` left an open read transaction, so callers could not `session.begin()` afterwards | Fixed | `efc832a` | `tests/test_content_db.py::test_only_changed_chunks_are_re_embedded` |
+| BUG-010 | 2026-11-19 | 3 | S3 | tooling | Backslash sequences written through the shell tool were corrupted (`\\b` became a backspace control character in a regex; `\\n` became a real newline in a string), so the stray-text rule matched nothing and one helper had a syntax error | Fixed | `acd5c5f` | `tests/test_content_tooling.py::test_stray_self_correction_text_is_rejected`; repo scanned for control characters (none) |
+| BUG-011 | 2026-11-19 | 3 | S3 | content | Authored `code_output` answers were wrong in 3 questions (amortized_analysis-q07, stack-q07, binary_search-q07) and a note contained a confused self-correction | Fixed | cluster commits | `tests/test_content_real.py::test_code_output_answers_match_real_program_output`; validator rejects stray self-correcting text |
 
 ### 7.2 Bug details
 
@@ -451,6 +474,49 @@ Severity: **S1** critical (data loss, security, app down) · **S2** major (featu
 - **Regression test:** `tests/test_graph_validation.py` (single-letter ids; cyclic fixture)
 - **Commit:** Phase 2 commit
 - **Lesson / pattern to avoid:** Keep one source of truth for a constraint.
+
+#### BUG-008 — Neo4j write executed through the read-only transaction helper
+- **Found:** 2026-11-19, Phase 3, by Claude Code (new integration test)
+- **Severity / Area:** S3 / graph
+- **Symptom:** `Neo.ClientError.Statement.AccessMode: Writing in read access mode not allowed` when removing stale chunks.
+- **Root cause:** `delete_stale_chunks` reused `_read` (an `execute_read` transaction) for a `DETACH DELETE`.
+- **Fix:** added a `_write` helper (`execute_write`) and used it.
+- **Files changed:** `apps/api/app/graph/repository.py`
+- **Regression test:** `test_seed_chunks_is_idempotent_and_removes_stale_chunks`
+- **Commit:** `efc832a`
+- **Lesson / pattern to avoid:** Keep read and write helpers separate and name them clearly; the driver enforces access mode per transaction.
+
+#### BUG-009 — Embedding helper left a read transaction open
+- **Found:** 2026-11-19, Phase 3, by Claude Code (test failed with "A transaction is already begun on this Session")
+- **Severity / Area:** S4 / backend
+- **Root cause:** after the final empty batch query the session had autobegun a transaction that was never ended.
+- **Fix:** `await session.commit()` before returning from `embed_pending`.
+- **Files changed:** `apps/api/app/content/vectors.py`
+- **Regression test:** `test_only_changed_chunks_are_re_embedded`
+- **Commit:** `efc832a`
+- **Lesson / pattern to avoid:** Helpers that take a session should leave it in a clean state.
+
+#### BUG-010 — Backslashes corrupted by the shell tool layer
+- **Found:** 2026-11-19, Phase 3, by Claude Code (a validator test that should fail passed; a script had a syntax error)
+- **Severity / Area:** S3 / tooling
+- **Symptom:** The stray-text regex `\b(...)` silently matched nothing; `"\n".join(...)` became a string containing a real newline.
+- **Root cause:** escape sequences inside heredocs passed through the shell tool were interpreted before reaching the file (`\b` became 0x08).
+- **Fix:** rewrote the regex without backslashes (lookarounds built from plain strings), replaced the newline join with `chr(10)`, and scanned all repository files for control characters (none left). Code containing backslashes is now written with the file-writing tool.
+- **Files changed:** `apps/api/app/content/validation.py`, `apps/api/app/content/snippets.py`
+- **Regression test:** `test_stray_self_correction_text_is_rejected`
+- **Commit:** `acd5c5f`
+- **Lesson / pattern to avoid:** When a test that should fail passes, suspect the test input pipeline, not only the code.
+
+#### BUG-011 — Wrong authored answer keys and a stray self-correction in content
+- **Found:** 2026-11-19, Phase 3, by the code-output verifier and by review
+- **Severity / Area:** S3 / content
+- **Symptom:** `expected '10 8' but program printed '12 8'` (amortized_analysis-q07); `expected 'abcd 4' but ... 'ab(d 4'` (stack-q07); `expected '5 3' ... '5 2'` (binary_search-q07); and a note contained "wait, that window is [1, 3, 2]...".
+- **Root cause:** answers were written from mental tracing instead of being run; one explanation was left half-corrected.
+- **Fix:** corrected the keys and explanations; replaced stack-q07; added the machine verification as a permanent test and a validator rule for unfinished text.
+- **Files changed:** the three question files, `sliding_window.md`, validator.
+- **Regression test:** `test_code_output_answers_match_real_program_output`, `test_stray_self_correction_text_is_rejected`
+- **Commit:** cluster commits (complexity, linear, searching_hashing)
+- **Lesson / pattern to avoid:** Never trust a hand-traced expected output; run it.
 
 ---
 
