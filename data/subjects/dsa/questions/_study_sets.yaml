@@ -1,0 +1,46 @@
+# User-study forms (Phase 3). Two parallel 20-question forms over the same 20 concepts with
+# matched difficulty; only auto-graded types (mcq, true_false, multi_select). pretest_A and
+# posttest_B never share a question. Validated by scripts/validate_content.py.
+pretest_A:
+- call_stack-q01
+- recursion-q03
+- time_complexity-q01
+- asymptotic_notation-q03
+- arrays-q01
+- singly_linked_list-q03
+- stack-q01
+- queue-q03
+- hash_tables-q01
+- binary_search-q03
+- merge_sort-q01
+- quick_sort-q03
+- binary_tree-q01
+- bst-q03
+- binary_heap-q01
+- bfs-q03
+- dfs-q01
+- dijkstra-q03
+- dp_fundamentals-q01
+- greedy-q03
+posttest_B:
+- call_stack-q02
+- recursion-q04
+- time_complexity-q02
+- asymptotic_notation-q04
+- arrays-q02
+- singly_linked_list-q04
+- stack-q02
+- queue-q04
+- hash_tables-q02
+- binary_search-q04
+- merge_sort-q02
+- quick_sort-q04
+- binary_tree-q02
+- bst-q04
+- binary_heap-q02
+- bfs-q04
+- dfs-q02
+- dijkstra-q04
+- dp_fundamentals-q02
+- greedy-q04
+

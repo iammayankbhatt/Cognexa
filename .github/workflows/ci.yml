@@ -60,7 +60,7 @@ jobs:
       - name: Validate concept graph
         run: uv run python ../../scripts/validate_graph.py
       - name: Validate content (notes, questions, study sets, eval set)
-        run: uv run python ../../scripts/validate_content.py
+        run: uv run python ../../scripts/validate_content.py --strict
       - name: Pytest (includes live Neo4j / Postgres integration tests)
         run: uv run pytest -q
       - name: Migrate and seed smoke test

@@ -13,7 +13,7 @@
 **Mode:** autopilot, main only, no tags. One commit per phase (`feat(phase-NN): ...`), then `git push origin main` (explicitly authorised for autopilot; if push fails, log it under Human Action Needed and continue). No `gh` CLI and no Supabase CLI were found on this machine at start; CI runs are checked through the public GitHub API when possible.
 **Environment notes:** local `apps/api/.env` and `apps/web/.env.local` exist (created from the examples; fake LLM/embedding providers, `REPLACE_ME` for cloud values). Never open or print them; use `uv run --project apps/api python scripts/check_env.py`.
 **Phase order:** core 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 12 → 15 (prep only), then extras 11 → 13 → 14 → 16.
-**Current phase:** 3 — Content (40 of 69 concepts written; next: trees cluster). Phase 2 complete and CI-green (Session 5); Phase 3 progress in Session 6.
+**Current phase:** 4 — Auth, roles, app shell, public pages (not started). Phase 3 complete (Sessions 6 and 7): 69/69 concepts, 552 questions, study sets, 85-item eval set.
 
 **Phase 2 checkpoints (done)**
 - [x] 2.1 Env files, `scripts/check_env.py`, `.env.example` for all phases
@@ -31,13 +31,22 @@
 - [x] 3.4 Cluster: linear (9)
 - [x] 3.5 Cluster: searching_hashing (8)
 - [x] 3.6 Cluster: sorting (7)
-- [ ] 3.7 Cluster: trees (13)
-- [ ] 3.8 Cluster: graphs (10) and paradigms (6)
-- [ ] 3.9 Eval test set (80 items) + study sets, chunk seeding, `seed_vectors.py`, wrap-up
+- [x] 3.7 Cluster: trees (13), commit `a966916`
+- [x] 3.8 Cluster: graphs (10) `4d5d964` and paradigms (6) `0fb67d4`
+- [x] 3.9 Eval test set (85 items) + study sets, CI `--strict`, seeds re-run, spot-check, wrap-up
 
-**Next action:** 3.7 trees cluster (13 concepts)
+**Phase 4 checkpoints** (to be refined at phase start)
+- [ ] 4.1 Try Supabase local stack (`npx supabase start`); else test-signed JWTs (log under Human Action Needed)
+- [ ] 4.2 Backend auth: JWT verification (JWKS / secret), role dependency, `/me`, profile + theme endpoints, tests
+- [ ] 4.3 Web: Supabase client, sign-up / sign-in / reset / verify pages, session handling, route guards
+- [ ] 4.4 App shell (sidebar, user menu, theme sync to profile), designed loading/empty/error states
+- [ ] 4.5 Public pages: landing, how-it-works, about, privacy, terms
+- [ ] 4.6 Data export + account deletion
+- [ ] 4.7 Tests (unit, integration, e2e), full verification, wrap-up
 
-**Last cluster note:** sorting 7/7 written; 40/69 concepts total
+**Next action:** read the Phase 4 prompt in docs/COGNEXA_PROMPTS.md and start 4.1
+
+**Last cluster note:** Phase 3 content complete; 69/69 concepts
 **Blockers:** none
 **Human Action Needed:** see the table below (grows as phases complete)
 
@@ -46,7 +55,7 @@
 | 1 | dashboards | Watch CI after each push | `gh` is not installed. After each autopilot push, open GitHub → Actions and confirm the run is green (or install GitHub CLI and run `gh auth login`). Red CI: tell Claude Code to fix it first. |
 | 2 | live checks | Supabase local stack not yet tried | Phase 4 will try `npx supabase start` (needs Docker). If it cannot run, real email sign-up/sign-in must be verified by you against a cloud Supabase project. |
 | 3 | content to review | Phase 2 graph edges | Review `data/subjects/dsa/concepts.yaml` (prerequisite edges, aliases, keywords, difficulty). Appendix C is a draft, not gospel. Flip nothing automatically: edge changes are made in the file, then `scripts/validate_graph.py` and `scripts/seed_neo4j.py --prune`. |
-| 4 | content to review | Phase 3 notes and questions (40 of 69 written so far) | Read the notes and questions in `data/subjects/dsa/` (start with the concepts you know best). The checklist is in progressfile.md section 12. When a concept is correct, tick it there and set `reviewed: true` in the note's frontmatter, then re-run `scripts/seed_postgres.py` and `scripts/seed_neo4j.py`. Everything is currently `reviewed: false`. |
+| 4 | content to review | Phase 3 notes and questions (all 69 concepts, 552 questions), study sets and the 85-item eval set (`data/subjects/dsa/eval/testset.jsonl`, especially the 27 `unnamed_prerequisite` items, which carry the project's central claim) | Read the notes and questions in `data/subjects/dsa/` (start with the concepts you know best). The checklist is in progressfile.md section 12. When a concept is correct, tick it there and set `reviewed: true` in the note's frontmatter, then re-run `scripts/seed_postgres.py` and `scripts/seed_neo4j.py`. Everything is currently `reviewed: false`. |
 | 5 | live checks | Run the real embedding model | `scripts/seed_vectors.py` uses a deterministic fake embedding. After adding `GEMINI_API_KEY` and wiring the real provider (Phase 5), re-run it; chunks are re-embedded because the model name differs. |
 
 ---
@@ -64,7 +73,7 @@
 | Repository | https://github.com/iammayankbhatt/Cognexa |
 | Live web app | _TBD (Vercel)_ |
 | Live API | _TBD (Render)_ |
-| Current phase | Phase 1 complete (merged to `main` via PR #1); next: Phase 2. Workflow: single developer, `main` only (DEC-013) |
+| Current phase | Phases 1 to 3 complete; next: Phase 4 (auth, app shell). Workflow: single developer, `main` only (DEC-013), autopilot (DEC-019) |
 | Overall status | 🟡 In progress |
 
 Status legend: 🔴 Not started · 🟡 In progress · 🟢 Done + verified · ⚠️ Done with known issues · ⏸️ Blocked
@@ -90,8 +99,8 @@ Update the **Status** and **Where in code** columns as phases complete. Examiner
 | O3a | Rule-based recommender: weak concepts → prerequisite to review (Obj. 3) | Rules R1–R5 | 9 | 🔴 | |
 | O3b | Uses quiz performance AND questions asked (Abstract) | Mastery + concept_interest signal | 8, 9 | 🔴 | |
 | O4 | Functional end-to-end system (Obj. 4) | Full product, deployed | 1–15 | 🔴 | |
-| O5a | User study: adaptive vs non-adaptive baseline (Obj. 5) | Study mode, groups, pre/post tests, export | 9, 12 | 🔴 | |
-| O5b | Comparison against plain, non-graph RAG (§1.9) | plain_rag mode + compare view + eval | 6, 12 | 🔴 | |
+| O5a | User study: adaptive vs non-adaptive baseline (Obj. 5) | Study mode, groups, pre/post tests, export | 3, 9, 12 | 🟡 matched pre/post forms ready | `data/subjects/dsa/questions/_study_sets.yaml` |
+| O5b | Comparison against plain, non-graph RAG (§1.9) | plain_rag mode + compare view + eval | 3, 6, 12 | 🟡 eval set ready (85 items, 27 unnamed-prerequisite); pgvector chunks seeded (fake embeddings) | `data/subjects/dsa/eval/testset.jsonl`, `scripts/seed_vectors.py` |
 | O5c | RAGAs reference-free metrics (§2.2 [10]) | ragas_eval.py + admin eval page | 12 | 🔴 | |
 | G1 | LLM proposes tags, human verifies against fixed schema (Gap I, §3.4) | Proposals pipeline + review queue + PDF ingestion | 11 | 🔴 | |
 | G2 | Prerequisites retrieved via explicit Cypher traversal (Gap II) | Traversal stage + "Why this answer?" panel | 6, 7 | 🔴 | |
@@ -176,7 +185,7 @@ Key flows (details in docs/ARCHITECTURE.md once written):
 | 0 | Manual setup: accounts & keys | 🔴 | | | — | | |
 | 1 | Scaffold, design system, CI | ⚠️ | 2026-11-19 | 2026-11-19 | `fb019e9` (PR #1 merge); CI fix `2fabc20` | | Merged. First GitHub CI run failed at typecheck (BUG-005); fix verified in a fresh clone, awaiting a green run on GitHub, then tag v0.1. |
 | 2 | Databases + DSA concept graph | 🟢 | 2026-11-19 | 2026-11-19 | `0f2d90d` `feat(phase-02): databases and the DSA concept graph` | | Verified locally (79 tests) and on GitHub Actions (run 44499463362: backend + frontend jobs success). Supabase-specific behaviour (CLI `db push`, real `auth` schema) still untested (LIM-013). |
-| 3 | Content, question bank, eval test set | 🟡 | 2026-11-19 | | in progress (per-cluster commits, DEC-020) | | Foundations cluster written (11/69 concepts). |
+| 3 | Content, question bank, eval test set | 🟢 | 2026-11-19 | 2026-11-19 | cluster commits (DEC-020) `67fc84b`…`0fb67d4` + `feat(phase-03)` wrap-up | | 69/69 notes, 552 questions, 138 snippets run, 69 code_output keys verified, study sets, 85-item eval set; validate_content `--strict` in CI. Content still `reviewed: false` (human review pending). |
 | 4 | Auth, roles, app shell, public pages | 🔴 | | | | | |
 | 5 | LLM layer, quotas, cost, cache, guardrails | 🔴 | | | | | |
 | 6 | GraphRAG + plain RAG + agentic step | 🔴 | | | | | |
@@ -353,6 +362,26 @@ git tag -a v0.1 -m "Phase 1: Scaffold, design system, CI" && git push --tags   #
 - Tooling layers can corrupt backslashes: `\b` in a regex and `\n` in a string became control characters when written through the shell. Prefer the file-writing tool for code containing backslashes and verify by running.
 - Old compilers constrain content: the local MinGW GCC 6.3 only supports C++14, so notes use C++14 (also compiled by a newer GCC in CI).
 **Next step:** trees cluster (3.7).
+
+### Session 7 — 2026-11-19 — Phase 3: Content completed (autopilot)
+**Goal:** Finish the remaining 29 concepts, the study sets and the eval test set; close Phase 3.
+**Built:**
+- Notes and 8 questions each for trees (13, `a966916`), graphs (10, `4d5d964`) and paradigms (6, `0fb67d4`). Every note has runnable Python and C++14 code that asserts its own claims, most with randomised brute-force cross-checks (for example Dijkstra against a Bellman-Ford reference, B-tree invariants for t = 2, 3, 5, Kruskal against Prim, LIS and knapsack against exhaustive search).
+- `questions/_study_sets.yaml`: pretest_A / posttest_B, 20 concepts each (the core recommender path from call_stack to dijkstra), one auto-graded question per concept per form, matched difficulty (alternating 1 and 2), no shared questions.
+- `eval/testset.jsonl`: 85 items: direct 22, unnamed_prerequisite 27, multi_concept 15, misconception 13, off_topic 8 (including one prompt-injection attempt). Every unnamed_prerequisite item describes a symptom, and the validator confirms the prerequisite is a real ancestor and is not named in the question.
+- CI now runs `validate_content.py --strict` (requires all 69 concepts, study sets and the category minimums).
+**Files touched:** `data/subjects/dsa/content/*.md` (29 new), `data/subjects/dsa/questions/*.yaml` (29 new + `_study_sets.yaml`), `data/subjects/dsa/eval/testset.jsonl`, `.github/workflows/ci.yml`, `progressfile.md`.
+**Commands run & results:** validate_content `--strict` ✅ (69/69 notes, 552 questions, study sets ok, 85 testset items, no warnings) · run_content_snippets ✅ (138 of 138 snippets passed, 0 skipped; 69 of 69 code_output answers match real output) · ruff ✅ · ruff format ✅ · mypy ✅ (31 files) · pytest ✅ (135 passed, live Neo4j + Postgres) · migrate ✅ · seed_postgres ×2 ✅ (690 chunks, 552 questions) · seed_neo4j ×2 ✅ (690 chunks, 0 stale) · seed_vectors ×2 ✅ (290 new embedded, then 0 / 690 skipped). Frontend untouched this session, so no frontend checks were run.
+**Manual verification (spot-check):** sampled 10 random auto-graded questions with a fixed seed (binary_tree-q01, dp_fundamentals-q02, merge_sort-q06, minimum_spanning_tree-q05, singly_linked_list-q02, binary_heap-q05, dfs-q01, recurrence_relations-q02, red_black_tree-q01, prefix_sums-q03): all answer keys correct. Sampled 5 concepts (red_black_tree, strings, sliding_window, expression_evaluation, amortized_analysis) and re-read their Complexity sections: accurate. Every worked example in the 29 new notes was traced by hand while writing, and the traces were then asserted in code.
+**Bugs found this session:** BUG-012, BUG-013
+**Decisions:** none new (DEC-020 to DEC-022 applied)
+**Human action needed:** Autopilot State items 1 and 4 (CI watch, content review).
+**What we learned:**
+- Self-checking code in notes pays off again: an over-strict assertion about DFS interval nesting (BUG-012) was caught by the snippet runner, not by reading.
+- Validators catch thin authoring: a 7-character `why_wrong` ("It can.") was rejected (BUG-013); short explanations are not useful to students either.
+- The "unnamed prerequisite" rule must be checked by machine. It is easy to name the prerequisite by accident (writing "call stack" in a RecursionError question), and the validator rejects it.
+- Heredoc Python with backslashes is still fragile (a `split('\\')` in a throwaway script broke); use `os.path` helpers instead of string escapes in shell-embedded code.
+**Next step:** Phase 4: auth, roles, app shell, public pages.
 ---
 
 ## 7. Bug Log
@@ -374,6 +403,8 @@ Severity: **S1** critical (data loss, security, app down) · **S2** major (featu
 | BUG-009 | 2026-11-19 | 3 | S4 | backend | `embed_pending` left an open read transaction, so callers could not `session.begin()` afterwards | Fixed | `efc832a` | `tests/test_content_db.py::test_only_changed_chunks_are_re_embedded` |
 | BUG-010 | 2026-11-19 | 3 | S3 | tooling | Backslash sequences written through the shell tool were corrupted (`\\b` became a backspace control character in a regex; `\\n` became a real newline in a string), so the stray-text rule matched nothing and one helper had a syntax error | Fixed | `acd5c5f` | `tests/test_content_tooling.py::test_stray_self_correction_text_is_rejected`; repo scanned for control characters (none) |
 | BUG-011 | 2026-11-19 | 3 | S3 | content | Authored `code_output` answers were wrong in 3 questions (amortized_analysis-q07, stack-q07, binary_search-q07) and a note contained a confused self-correction | Fixed | cluster commits | `tests/test_content_real.py::test_code_output_answers_match_real_program_output`; validator rejects stray self-correcting text |
+| BUG-012 | 2026-11-19 | 3 | S4 | content | `dfs.md` Python snippet asserted interval nesting in one direction only, so the self-check would have failed for an ancestor/descendant pair taken in reverse order | Fixed before commit | `4d5d964` | snippet runner (`run_content_snippets.py`, `test_content_real.py`) |
+| BUG-013 | 2026-11-19 | 3 | S4 | content | `connectivity_scc-q04` option c had a 7-character `why_wrong` ("It can."), rejected by the question schema (minimum 10 characters) | Fixed before commit | `4d5d964` | `QuestionFile` schema in `validate_content.py` |
 
 ### 7.2 Bug details
 
@@ -495,6 +526,28 @@ Severity: **S1** critical (data loss, security, app down) · **S2** major (featu
 - **Regression test:** `test_only_changed_chunks_are_re_embedded`
 - **Commit:** `efc832a`
 - **Lesson / pattern to avoid:** Helpers that take a session should leave it in a clean state.
+
+#### BUG-012 — One-sided interval-nesting assertion in the DFS note
+- **Found:** 2026-11-19, Phase 3, by Claude Code (reviewing the snippet before running it)
+- **Severity / Area:** S4 / content
+- **Symptom:** the check `disc[u] < disc[v] < fin[v] < fin[u] or disjoint` is false when v is an ancestor of u, so the snippet's own self-check would fail for the pair (u, v) = (3, 0).
+- **Root cause:** the parenthesis theorem is symmetric (either interval may contain the other); the assertion only covered u containing v.
+- **Fix:** loop over pairs and accept "u contains v", "v contains u" or disjoint.
+- **Files changed:** `data/subjects/dsa/content/dfs.md`
+- **Regression test:** the snippet itself is executed by `run_content_snippets.py` / `test_content_real.py`.
+- **Commit:** `4d5d964`
+- **Lesson / pattern to avoid:** when a property is symmetric, assert both orientations or iterate over unordered pairs.
+
+#### BUG-013 — `why_wrong` too short to pass the schema
+- **Found:** 2026-11-19, Phase 3, by `validate_content.py`
+- **Severity / Area:** S4 / content
+- **Symptom:** `connectivity_scc: questions file invalid ... incorrect option 'c' needs a why_wrong explanation`.
+- **Root cause:** the explanation "It can." is shorter than the 10-character minimum, which exists so every distractor gets a real explanation.
+- **Fix:** replaced it with a full sentence.
+- **Files changed:** `data/subjects/dsa/questions/connectivity_scc.yaml`
+- **Regression test:** `QuestionFile` validation (runs in CI via `validate_content.py --strict`).
+- **Commit:** `4d5d964`
+- **Lesson / pattern to avoid:** treat schema minimums as a writing standard, not an obstacle.
 
 #### BUG-010 — Backslashes corrupted by the shell tool layer
 - **Found:** 2026-11-19, Phase 3, by Claude Code (a validator test that should fail passed; a script had a syntax error)
@@ -656,37 +709,37 @@ _(Claude Code: keep this in sync with both .env.example files.)_
 | sorting | merge_sort | notes + questions | ☐ | ☐ |  |  |
 | sorting | quick_sort | notes + questions | ☐ | ☐ |  |  |
 | sorting | non_comparison_sorts | notes + questions | ☐ | ☐ |  |  |
-| trees | tree_basics | pending | ☐ | ☐ |  |  |
+| trees | tree_basics | notes + questions | ☐ | ☐ |  |  |
 | sorting | sorting_lower_bound | notes + questions | ☐ | ☐ |  |  |
-| trees | binary_tree | pending | ☐ | ☐ |  |  |
-| trees | dfs_tree_traversals | pending | ☐ | ☐ |  |  |
-| trees | level_order_traversal | pending | ☐ | ☐ |  |  |
-| trees | bst | pending | ☐ | ☐ |  |  |
-| trees | binary_heap | pending | ☐ | ☐ |  |  |
+| trees | binary_tree | notes + questions | ☐ | ☐ |  |  |
+| trees | dfs_tree_traversals | notes + questions | ☐ | ☐ |  |  |
+| trees | level_order_traversal | notes + questions | ☐ | ☐ |  |  |
+| trees | bst | notes + questions | ☐ | ☐ |  |  |
+| trees | binary_heap | notes + questions | ☐ | ☐ |  |  |
 | sorting | heap_sort | notes + questions | ☐ | ☐ |  |  |
-| trees | avl_tree | pending | ☐ | ☐ |  |  |
-| trees | red_black_tree | pending | ☐ | ☐ |  |  |
-| trees | b_tree | pending | ☐ | ☐ |  |  |
-| trees | trie | pending | ☐ | ☐ |  |  |
-| trees | segment_tree | pending | ☐ | ☐ |  |  |
-| trees | fenwick_tree | pending | ☐ | ☐ |  |  |
-| trees | disjoint_set_union | pending | ☐ | ☐ |  |  |
-| graphs | graph_representation | pending | ☐ | ☐ |  |  |
-| graphs | bfs | pending | ☐ | ☐ |  |  |
-| graphs | dfs | pending | ☐ | ☐ |  |  |
-| graphs | topological_sort | pending | ☐ | ☐ |  |  |
-| graphs | cycle_detection | pending | ☐ | ☐ |  |  |
-| graphs | connectivity_scc | pending | ☐ | ☐ |  |  |
-| paradigms | backtracking | pending | ☐ | ☐ |  |  |
-| paradigms | greedy | pending | ☐ | ☐ |  |  |
-| graphs | dijkstra | pending | ☐ | ☐ |  |  |
-| graphs | bellman_ford | pending | ☐ | ☐ |  |  |
-| graphs | minimum_spanning_tree | pending | ☐ | ☐ |  |  |
-| paradigms | dp_fundamentals | pending | ☐ | ☐ |  |  |
-| graphs | floyd_warshall | pending | ☐ | ☐ |  |  |
-| paradigms | dp_classic | pending | ☐ | ☐ |  |  |
-| paradigms | string_matching | pending | ☐ | ☐ |  |  |
-| paradigms | complexity_classes | pending | ☐ | ☐ |  |  |
+| trees | avl_tree | notes + questions | ☐ | ☐ |  |  |
+| trees | red_black_tree | notes + questions | ☐ | ☐ |  |  |
+| trees | b_tree | notes + questions | ☐ | ☐ |  |  |
+| trees | trie | notes + questions | ☐ | ☐ |  |  |
+| trees | segment_tree | notes + questions | ☐ | ☐ |  |  |
+| trees | fenwick_tree | notes + questions | ☐ | ☐ |  |  |
+| trees | disjoint_set_union | notes + questions | ☐ | ☐ |  |  |
+| graphs | graph_representation | notes + questions | ☐ | ☐ |  |  |
+| graphs | bfs | notes + questions | ☐ | ☐ |  |  |
+| graphs | dfs | notes + questions | ☐ | ☐ |  |  |
+| graphs | topological_sort | notes + questions | ☐ | ☐ |  |  |
+| graphs | cycle_detection | notes + questions | ☐ | ☐ |  |  |
+| graphs | connectivity_scc | notes + questions | ☐ | ☐ |  |  |
+| paradigms | backtracking | notes + questions | ☐ | ☐ |  |  |
+| paradigms | greedy | notes + questions | ☐ | ☐ |  |  |
+| graphs | dijkstra | notes + questions | ☐ | ☐ |  |  |
+| graphs | bellman_ford | notes + questions | ☐ | ☐ |  |  |
+| graphs | minimum_spanning_tree | notes + questions | ☐ | ☐ |  |  |
+| paradigms | dp_fundamentals | notes + questions | ☐ | ☐ |  |  |
+| graphs | floyd_warshall | notes + questions | ☐ | ☐ |  |  |
+| paradigms | dp_classic | notes + questions | ☐ | ☐ |  |  |
+| paradigms | string_matching | notes + questions | ☐ | ☐ |  |  |
+| paradigms | complexity_classes | notes + questions | ☐ | ☐ |  |  |
 
 ## 13. Evaluation Results
 
@@ -741,6 +794,9 @@ Run ID / date / models used: _TBD_
 | ASGI middleware | Code wrapping every request at the server-protocol level; used for request IDs | app/core/middleware.py |
 | WCAG AA contrast | Text needs at least 4.5:1 against its background; checked by a unit test | src/test/contrast.test.ts |
 | Health vs deep health | Liveness (cheap, no DB) vs readiness (pings dependencies) | /health, /health/deep |
+| Unnamed-prerequisite test item | An eval question that describes only a symptom ("RecursionError at n = 5000") whose gold answer needs a prerequisite it never names (call_stack) | `data/subjects/dsa/eval/testset.jsonl`, validator rule |
+| Matched pre/post forms | Two tests over the same concepts with the same difficulty profile and no shared items, so learning gain is not inflated by memorising questions | `questions/_study_sets.yaml` |
+| Self-verifying content | Every code sample asserts its own claims and every `code_output` key is checked against real program output | `app/content/snippets.py`, `scripts/run_content_snippets.py` |
 
 ---
 
