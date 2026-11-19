@@ -61,10 +61,24 @@ describe.each(THEMES)("%s contrast", (theme) => {
     ["muted", "surface"],
     ["muted", "surface-2"],
     ["primary-fg", "primary"],
+    ["accent", "bg"],
+    ["accent", "surface"],
+    ["accent", "surface-2"],
     ["success", "surface"],
     ["warning", "surface"],
     ["danger", "surface"],
   ])("%s on %s is at least 4.5:1", (fg, bg) => {
     expect(ratio(t[fg], t[bg])).toBeGreaterThanOrEqual(4.5);
+  });
+
+  // Panels must read as distinct from the page (LIM-007): borders clearly visible against the
+  // background, and raised surfaces stepping up from it, without relying on shadows.
+  it("keeps panel borders visibly distinct from the background (>= 1.3:1)", () => {
+    expect(ratio(t.border, t.bg)).toBeGreaterThanOrEqual(1.3);
+  });
+
+  it("keeps surfaces distinct from the background (>= 1.08:1)", () => {
+    expect(ratio(t.surface, t.bg)).toBeGreaterThanOrEqual(1.08);
+    expect(ratio(t["surface-2"], t.bg)).toBeGreaterThanOrEqual(1.08);
   });
 });

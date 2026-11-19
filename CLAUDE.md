@@ -94,14 +94,14 @@ Three themes, switchable from the user menu and saved to the user's profile. Def
 | Token | Neon Noir (default, dark) | Titanium Dark | Titanium Light (projector) |
 |---|---|---|---|
 | `--bg` | `#07060B` | `#111214` | `#F4F5F7` |
-| `--surface` | `#11101A` | `#1A1C20` | `#FFFFFF` |
-| `--surface-2` | `#1A1726` | `#24272C` | `#E9EBEE` |
-| `--border` | `#2A2540` | `#34373D` | `#D3D6DB` |
+| `--surface` | `#17142A` | `#1A1C20` | `#FFFFFF` |
+| `--surface-2` | `#231E38` | `#24272C` | `#E9EBEE` |
+| `--border` | `#332C4D` | `#34373D` | `#D3D6DB` |
 | `--text` | `#ECEAF5` | `#E2E4E8` | `#16181C` |
 | `--muted` | `#9C98B0` | `#9499A1` | `#5B616B` |
 | `--primary` | `#7C3AED` (deep purple) | `#E11D2E` (red) | `#C8102E` (red) |
 | `--primary-fg` | `#FFFFFF` | `#FFFFFF` | `#FFFFFF` |
-| `--accent` | `#22D3EE` (electric cyan) | `#C0C4CC` (silver) | `#8A9099` (steel) |
+| `--accent` | `#22D3EE` (electric cyan) | `#C0C4CC` (silver) | `#5F6670` (steel) |
 | `--success` / `--warning` / `--danger` | `#34D399` / `#FBBF24` / `#F43F5E` | same | `#15803D` / `#B45309` / `#BE123C` |
 
 Rules: theme colours only through CSS variables (never hardcode hex in components). All text meets WCAG AA contrast. Purple is for surfaces and buttons (with white text), not body text on black. Fonts via `next/font`: **Geist** or **Inter** for UI, **JetBrains Mono** for code. Subtle motion only (150–250 ms), and respect `prefers-reduced-motion`. Mastery colours: low → `--danger`, mid → `--warning`, high → `--accent`/`--success`. Every page needs designed loading, empty and error states. No unstyled defaults, ever.

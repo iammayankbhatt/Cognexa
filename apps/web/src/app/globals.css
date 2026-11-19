@@ -13,9 +13,9 @@
 [data-theme="neon-noir"] {
   color-scheme: dark;
   --bg: #07060b;
-  --surface: #11101a;
-  --surface-2: #1a1726;
-  --border: #2a2540;
+  --surface: #17142a;
+  --surface-2: #231e38;
+  --border: #332c4d;
   --text: #eceaf5;
   --muted: #9c98b0;
   --primary: #7c3aed;
@@ -52,7 +52,7 @@
   --muted: #5b616b;
   --primary: #c8102e;
   --primary-fg: #ffffff;
-  --accent: #8a9099;
+  --accent: #5f6670;
   --success: #15803d;
   --warning: #b45309;
   --danger: #be123c;
