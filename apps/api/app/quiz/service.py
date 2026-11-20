@@ -29,7 +29,9 @@ from app.quiz import selection
 from app.quiz.grading import Grade, InvalidResponseError, QuestionData, check_response, grade_auto
 from app.quiz.judge import judge_short_answer, pending_grade, to_grade
 from app.quiz.repository import QuizRepository
-from app.tutor.suggest import SyllabusGraph, next_concept
+from app.recommender.engine import recommend
+from app.recommender.service import build_graph, learner_state, mark_completed
+from app.tutor.suggest import SyllabusGraph
 from app.usage.guard import UsageGuard
 
 logger = logging.getLogger(__name__)
@@ -106,8 +108,11 @@ class QuizService:
                 order = [c["id"] for c in await repo.concept_rows(subject_id)]
                 nxt = None
                 if self.graph is not None:
-                    suggestion = await next_concept(self.graph, subject_id, effective)
-                    nxt = suggestion["concept_id"] if suggestion else None
+                    # The recommender's next best step joins the weakest concepts (Phase 9).
+                    graph = await build_graph(self.graph, subject_id)
+                    state = await learner_state(session, user.id, subject_id, self.params, _now())
+                    top = recommend(graph, state, 1)
+                    nxt = top[0].concept_id if top else None
                 targets = selection.adaptive_concepts(effective, nxt, order)
                 pool = await repo.questions(subject_id, concept_ids=targets)
                 picked = selection.for_adaptive(pool, targets, effective, seen, n, self.rng)
@@ -238,6 +243,7 @@ class QuizService:
                 await repo.finish_session(
                     session_id, round(score, 3), float(len(sess["question_ids"])), now
                 )
+                await self._after_submit(session, user, sess, questions, answers, now)
         return await self.get(user, session_id)
 
     # ---------------------------------------------------------------- regrade
@@ -305,6 +311,32 @@ class QuizService:
         return {"items": items, "page": page, "page_size": page_size, "total": total}
 
     # ---------------------------------------------------------------- internals
+    async def _after_submit(
+        self,
+        session: Any,
+        user: CurrentUser,
+        sess: dict[str, Any],
+        questions: dict[str, QuestionData],
+        answers: list[dict[str, Any]],
+        now: dt.datetime,
+    ) -> None:
+        """Spaced review for every concept in the quiz (not on study tests) and completion of
+        recommendations for concepts passed with >= 60 %."""
+        totals: dict[str, list[float]] = {}
+        by_q = {a["question_id"]: a for a in answers}
+        for qid in sess["question_ids"]:
+            q = questions.get(qid)
+            if q is None:
+                continue
+            a = by_q.get(qid)
+            t = totals.setdefault(q.concept_id, [0.0, 0.0])
+            t[0] += float(a["score"] or 0) if a else 0.0
+            t[1] += 1
+        ratios = {c: got / n for c, (got, n) in totals.items() if n}
+        if str(sess["mode"]) not in ("pretest", "posttest"):
+            await MasteryRepository(session, self.params).schedule_reviews(user.id, ratios, now)
+        await mark_completed(session, user.id, [c for c, r in ratios.items() if r >= 0.6], now)
+
     @staticmethod
     async def _subject_concepts(repo: QuizRepository, subject_id: str) -> set[str]:
         return {str(c["id"]) for c in await repo.concept_rows(subject_id)}

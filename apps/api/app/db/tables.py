@@ -200,6 +200,7 @@ mastery = Table(
     Column("last_practiced_at", DateTime(timezone=True)),
     Column("next_review_at", DateTime(timezone=True)),
     Column("ease", Numeric(4, 2), nullable=False, server_default="2.5"),
+    Column("review_interval_days", SmallInteger, nullable=False, server_default="0"),
     _updated(),
 )
 
@@ -241,6 +242,7 @@ recommendations_log = Table(
     Column("shown_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
     Column("clicked_at", DateTime(timezone=True)),
     Column("completed_at", DateTime(timezone=True)),
+    Column("surface", Text, nullable=False, server_default="dashboard"),
 )
 
 chat_threads = Table(

@@ -138,7 +138,12 @@ test.describe("phase 7 tutor (needs local Supabase + API in fake mode)", () => {
         await page.waitForURL(/\/app$/, { timeout: 30_000 });
 
         await page.goto("/app/tutor");
-        await page.getByText(/Continue learning:/).waitFor({ timeout: 30_000 });
+        await page
+          .getByText(
+            /Start here|Next in the syllabus|Fix the root cause|Focused review|Due for review/,
+          )
+          .first()
+          .waitFor({ timeout: 30_000 });
         await shot("1-empty");
 
         await ask(

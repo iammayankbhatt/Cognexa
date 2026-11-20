@@ -138,7 +138,16 @@ export interface StreamErrorData {
 
 export interface Suggestions {
   starters: { title: string; prompt: string }[];
-  continue: { concept_id: string; name: string; cluster: string; reason: string } | null;
+  continue: {
+    id: string | null;
+    concept_id: string;
+    name: string;
+    reason: string;
+    rule: "R1" | "R2" | "R3" | "R4" | "R5" | "BASELINE";
+    action: "learn" | "practice" | "review";
+    path: { source: string; target: string }[];
+    names?: Record<string, string>;
+  } | null;
 }
 
 export interface CompareSide {

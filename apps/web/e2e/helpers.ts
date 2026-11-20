@@ -17,11 +17,14 @@ export const PASSWORD = "Str0ng-pass!e2e";
 
 export async function localStack(): Promise<LocalStack | null> {
   try {
-    const raw = execSync("npx supabase status -o json", {
-      cwd: "../..",
-      stdio: ["ignore", "pipe", "ignore"],
-      timeout: 60_000,
-    }).toString();
+    // Read once per run by global-setup.ts; fall back to a direct lookup (single spec runs).
+    const raw =
+      process.env.E2E_SUPABASE_STATUS ??
+      execSync("npx supabase status -o json", {
+        cwd: "../..",
+        stdio: ["ignore", "pipe", "ignore"],
+        timeout: 60_000,
+      }).toString();
     const s = JSON.parse(raw) as Record<string, string>;
     const stack = {
       url: s.API_URL,

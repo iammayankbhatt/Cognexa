@@ -24,10 +24,11 @@ from app.db.session import Database, get_database
 from app.db.tables import content_chunks
 from app.graph.provider import GraphProvider
 from app.llm.deps import get_usage_guard
+from app.recommender.service import RecommenderService
 from app.tutor.plain_rag import PgVectorSearch
 from app.tutor.repository import ChatRepository
 from app.tutor.service import DEFAULT_TITLE, SSEEvent, TutorDeps, TutorService
-from app.tutor.suggest import STARTERS, next_concept
+from app.tutor.suggest import STARTERS
 from app.usage.guard import UsageGuard
 
 router = APIRouter(prefix="/tutor", tags=["tutor"])
@@ -339,15 +340,31 @@ async def suggestions(
     user: User,
     request: Request,
     db: Annotated[Database, Depends(get_database)],
+    settings: Annotated[Settings, Depends(get_settings)],
     subject_id: Annotated[str, Query(pattern=SUBJECT_PATTERN)] = "dsa",
 ) -> dict[str, Any]:
-    """Starter prompts and the next concept to learn (empty state of the tutor)."""
+    """Starter prompts and the next best step (the recommender, routed by study group)."""
     graph: GraphProvider = request.app.state.graph
-    async with db.sessions()() as session:
-        mastery = await ChatRepository(session).mastery_map(user.id, subject_id)
+    recs = await RecommenderService(db, settings, graph.repository()).for_user(
+        user, subject_id, surface="tutor", limit=1
+    )
+    top = recs["items"][0] if recs["items"] else None
     return {
         "starters": STARTERS,
-        "continue": await next_concept(graph.repository(), subject_id, mastery),
+        "continue": (
+            {
+                "concept_id": top["concept_id"],
+                "name": top["name"],
+                "reason": top["reason"],
+                "rule": top["rule"],
+                "action": top["action"],
+                "path": top["path"],
+                "names": top["names"],
+                "id": top["id"],
+            }
+            if top
+            else None
+        ),
     }
 
 

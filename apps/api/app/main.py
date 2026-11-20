@@ -5,7 +5,19 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import admin_ai, admin_users, concepts, graph, health, learn, me, notes, quiz, tutor
+from app.api import (
+    admin_ai,
+    admin_users,
+    concepts,
+    graph,
+    health,
+    learn,
+    me,
+    notes,
+    quiz,
+    recommendations,
+    tutor,
+)
 from app.auth.deps import ProfileCache
 from app.auth.jwks import JwksCache
 from app.cache.service import CachedQueryEmbedder, LLMCache
@@ -82,6 +94,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(quiz.router)
     app.include_router(learn.router)
     app.include_router(notes.router)
+    app.include_router(recommendations.router)
     return app
 
 

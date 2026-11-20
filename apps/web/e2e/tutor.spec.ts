@@ -70,7 +70,11 @@ test("ask → trace → answer → why panel → report → persists after reloa
   await expect(page.getByRole("heading", { name: "What are you stuck on?" })).toBeVisible({
     timeout: NAV_TIMEOUT,
   });
-  await expect(page.getByText(/Continue learning:/)).toBeVisible({ timeout: NAV_TIMEOUT });
+  await expect(
+    page
+      .getByText(/Start here|Next in the syllabus|Fix the root cause|Focused review|Due for review/)
+      .first(),
+  ).toBeVisible({ timeout: NAV_TIMEOUT });
 
   await ask(page, CANONICAL);
   await expect(page).toHaveURL(/\/app\/tutor\?thread=/, { timeout: NAV_TIMEOUT });

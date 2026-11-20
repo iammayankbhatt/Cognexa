@@ -7,7 +7,7 @@ import uuid
 from dataclasses import dataclass
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -20,6 +20,7 @@ from app.mastery.model import (
     penalised_prereq,
     updated_score,
 )
+from app.recommender.engine import MASTERED, review_interval, updated_ease
 
 
 @dataclass(frozen=True)
@@ -156,3 +157,38 @@ class MasteryRepository:
                 )
             )
         return {cid: state[cid]["score"] for cid in sorted(changed)}
+
+    async def schedule_reviews(
+        self,
+        user_id: uuid.UUID,
+        results: dict[str, float],
+        now: dt.datetime | None = None,
+    ) -> dict[str, dt.datetime]:
+        """Spaced review after a quiz: per concept, success (ratio >= 0.6) moves one step up the
+        1 -> 3 -> 7 -> 14 -> 30 day ladder and raises ease; failure resets to 1 day and lowers it.
+        Only concepts that already have a mastery row are scheduled. Must run in a transaction."""
+        now = now or _now()
+        if not results:
+            return {}
+        rows = await self.session.execute(
+            select(mastery.c.concept_id, mastery.c.review_interval_days, mastery.c.ease)
+            .where(mastery.c.user_id == user_id, mastery.c.concept_id.in_(sorted(results)))
+            .order_by(mastery.c.concept_id)
+            .with_for_update()
+        )
+        scheduled: dict[str, dt.datetime] = {}
+        for r in rows:
+            success = results[r.concept_id] >= MASTERED
+            days = review_interval(int(r.review_interval_days), success)
+            due = now + dt.timedelta(days=days)
+            await self.session.execute(
+                update(mastery)
+                .where(mastery.c.user_id == user_id, mastery.c.concept_id == r.concept_id)
+                .values(
+                    review_interval_days=days,
+                    next_review_at=due,
+                    ease=updated_ease(float(r.ease), success),
+                )
+            )
+            scheduled[r.concept_id] = due
+        return scheduled

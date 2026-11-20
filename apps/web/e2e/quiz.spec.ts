@@ -5,7 +5,8 @@ import { createUser, deleteUser, localStack, setProfile, type LocalStack } from 
 /** Quiz flows against the local stack (Supabase auth + API with questions seeded). */
 let stack: LocalStack | null = null;
 const created: string[] = [];
-const NAV_TIMEOUT = 30_000;
+// Cold dev-server compiles of several routes at once can take > 30 s on a laptop.
+const NAV_TIMEOUT = 60_000;
 
 test.use({ viewport: { width: 1440, height: 900 } });
 
@@ -106,4 +107,30 @@ test("the onboarding diagnostic seeds mastery", async ({ page }) => {
   await expect(page.getByText(/You have practised (\d+)\./)).not.toHaveText(/practised 0\./, {
     timeout: NAV_TIMEOUT,
   });
+});
+
+test("the dashboard shows the next best step and a quiz schedules a review", async ({ page }) => {
+  await signIn(page, true);
+  const card = page.getByRole("region", { name: "Next best step" });
+  await expect(card.getByText("Start here")).toBeVisible({ timeout: NAV_TIMEOUT });
+  await page.goto("/app/review");
+  await expect(page.getByRole("heading", { name: "Nothing is due" })).toBeVisible({
+    timeout: NAV_TIMEOUT,
+  });
+  await page.goto("/app/learn/queue");
+  await page.getByRole("button", { name: "Practice this concept" }).click();
+  await expect(page).toHaveURL(/\/app\/quizzes\/[0-9a-f-]+/, { timeout: NAV_TIMEOUT });
+  const nav = page.getByRole("navigation", { name: "Questions" }).getByRole("button");
+  await expect(nav).toHaveCount(8, { timeout: NAV_TIMEOUT });
+  for (let i = 0; i < 8; i++) {
+    await answerCurrent(page);
+    await page.getByRole("button", { name: "Check answer" }).click();
+    await page.getByRole("button", { name: i === 7 ? "See results" : "Next question" }).click();
+  }
+  await expect(page.getByRole("region", { name: "Next best step" })).toBeVisible({
+    timeout: NAV_TIMEOUT,
+  });
+  await page.goto("/app/review");
+  await expect(page.getByText("tomorrow")).toBeVisible({ timeout: NAV_TIMEOUT });
+  await expect(page.getByText("1 concept(s) scheduled")).toBeVisible();
 });

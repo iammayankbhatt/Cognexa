@@ -1,8 +1,8 @@
 "use client";
 
-import { ArrowRight, BookOpen, Sparkles } from "lucide-react";
-import Link from "next/link";
+import { Sparkles } from "lucide-react";
 
+import { NextStep } from "@/components/recommend/next-step-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSuggestions } from "@/lib/tutor/use-tutor";
 
@@ -49,19 +49,9 @@ export function ChatEmpty({ onPick }: { onPick: (prompt: string) => void }) {
             ))}
       </div>
       {data?.continue && (
-        <Link
-          href={`/app/learn/${encodeURIComponent(data.continue.concept_id)}`}
-          className="flex w-full items-center gap-3 rounded-xl border border-border bg-surface-2 p-3 text-left transition-colors duration-150 outline-none hover:border-accent focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <BookOpen aria-hidden className="size-5 shrink-0 text-accent" />
-          <span className="min-w-0 flex-1">
-            <span className="block text-sm font-medium text-text">
-              Continue learning: {data.continue.name}
-            </span>
-            <span className="block text-xs text-muted">{data.continue.reason}</span>
-          </span>
-          <ArrowRight aria-hidden className="size-4 text-muted" />
-        </Link>
+        <div className="w-full rounded-xl border border-border bg-surface-2 p-4 text-left">
+          <NextStep item={data.continue} compact />
+        </div>
       )}
     </div>
   );

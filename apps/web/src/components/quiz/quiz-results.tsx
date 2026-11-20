@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 import { describeAnswer } from "@/components/quiz/question-view";
 import { FeedbackPanel, tutorLink } from "@/components/quiz/feedback-panel";
+import { NextStepCard } from "@/components/recommend/next-step-card";
 import { masteryLevel } from "@/components/shared/mastery";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { ApiError } from "@/lib/api";
@@ -163,6 +164,8 @@ export function QuizResults({ session }: { session: QuizSession }) {
           </ul>
         </section>
       )}
+
+      {session.mode !== "pretest" && session.mode !== "posttest" && <NextStepCard surface="quiz" />}
 
       <section className="space-y-3">
         <h2 className="text-sm font-semibold">Questions</h2>
