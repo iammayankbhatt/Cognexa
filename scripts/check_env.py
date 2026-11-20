@@ -2,10 +2,13 @@
 
 Prints only the variable name, the phase that needs it and a status. Never prints values.
 Usage: uv run --project apps/api python scripts/check_env.py
+COGNEXA_ENV_FILE=apps/api/.env.production checks that file instead of apps/api/.env (the API's
+own settings honour the same variable), e.g. before seeding production.
 """
 
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
@@ -37,6 +40,7 @@ VARS: list[tuple[str, str, int, bool]] = [
     ("LLM_TIMEOUT_S", "apps/api/.env", 5, False),
     ("AGENTIC_MODE", "apps/api/.env", 6, False),
     ("STUDY_MODE", "apps/api/.env", 12, False),
+    ("ALLOWED_ORIGINS", "apps/api/.env", 15, False),
     ("NEXT_PUBLIC_API_URL", "apps/web/.env.local", 4, True),
     ("NEXT_PUBLIC_SUPABASE_URL", "apps/web/.env.local", 4, False),
     ("NEXT_PUBLIC_SUPABASE_ANON_KEY", "apps/web/.env.local", 4, False),
@@ -66,13 +70,22 @@ def classify(values: dict[str, str], name: str) -> str:
     return "SET"
 
 
+def env_path(rel: str) -> Path:
+    override = os.environ.get("COGNEXA_ENV_FILE")
+    if rel == "apps/api/.env" and override:
+        return Path(override) if Path(override).is_absolute() else ROOT / override
+    return ROOT / rel
+
+
 def main() -> int:
     cache: dict[str, dict[str, str]] = {}
+    if os.environ.get("COGNEXA_ENV_FILE"):
+        print(f"API variables read from COGNEXA_ENV_FILE={os.environ['COGNEXA_ENV_FILE']}")
     print(f"{'VARIABLE':34} {'FILE':22} {'PHASE':>5}  STATUS")
     blocking_missing = False
     for name, rel, phase, needed_locally in VARS:
         if rel not in cache:
-            cache[rel] = parse_env(ROOT / rel)
+            cache[rel] = parse_env(env_path(rel))
         status = classify(cache[rel], name)
         print(f"{name:34} {rel:22} {phase:>5}  {status}")
         if needed_locally and status == "MISSING":

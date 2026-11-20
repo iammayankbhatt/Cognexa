@@ -1,0 +1,76 @@
+# Render Blueprint for the Cognexa API (one free Docker web service). See docs/DEPLOYMENT.md.
+# Spec checked against https://render.com/docs/blueprint-spec (2026-11-20): `runtime: docker`
+# (replaces `env`), `autoDeployTrigger` (replaces `autoDeploy`).
+#
+# Secrets use `sync: false`: Render asks for them ONCE, when the Blueprint is first created.
+# Later syncs ignore them, so a secret added afterwards goes in the dashboard
+# (service -> Environment). Never write a secret value in this file.
+services:
+  - type: web
+    name: cognexa-api
+    runtime: docker
+    plan: free
+    region: singapore # closest to India; cannot be changed after creation
+    # The build context is the repository root because the image bundles data/subjects.
+    dockerfilePath: ./apps/api/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    # Deploy main only after GitHub Actions CI is green.
+    branch: main
+    autoDeployTrigger: checksPass
+    buildFilter:
+      paths:
+        - apps/api/**
+        - data/**
+        - render.yaml
+      ignoredPaths:
+        - apps/api/tests/**
+        - data/subjects/*/eval/**
+    envVars:
+      # ---- non-secret settings ----
+      - key: APP_ENV
+        value: production
+      - key: LOG_LEVEL
+        value: INFO
+      - key: DEFAULT_SUBJECT_ID
+        value: dsa
+      - key: EMBEDDING_DIM
+        value: "768" # must equal vector(768) in supabase/migrations
+      - key: HEALTH_CHECK_TIMEOUT_S
+        value: "5" # Aura Free can be slow on the first query after a pause
+      - key: LLM_PRIMARY_PROVIDER
+        value: groq
+      - key: LLM_FALLBACK_PROVIDER
+        value: gemini
+      - key: LLM_JUDGE_PROVIDER
+        value: gemini
+      - key: EMBEDDING_PROVIDER
+        value: gemini
+      # ---- asked once at Blueprint creation (values in docs/DEPLOYMENT.md, step "Env vars") ----
+      - key: ALLOWED_ORIGINS # https://<your-app>.vercel.app (comma-separated, no localhost)
+        sync: false
+      - key: DATABASE_URL # Supabase pooler URL, postgresql+asyncpg://... port 6543
+        sync: false
+      - key: NEO4J_URI # neo4j+s://<id>.databases.neo4j.io
+        sync: false
+      - key: NEO4J_USER
+        sync: false
+      - key: NEO4J_PASSWORD
+        sync: false
+      - key: SUPABASE_URL # https://<project-ref>.supabase.co
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      # Model ids are never hardcoded (CLAUDE.md): check the providers' model lists when deploying.
+      - key: LLM_PRIMARY_MODEL
+        sync: false
+      - key: LLM_FALLBACK_MODEL
+        sync: false
+      - key: LLM_JUDGE_MODEL
+        sync: false
+      - key: EMBEDDING_MODEL
+        sync: false

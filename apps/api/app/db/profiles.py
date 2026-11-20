@@ -141,7 +141,7 @@ class ProfileRepository:
         return found.scalar_one_or_none()
 
     async def admin_update(
-        self, actor: uuid.UUID, target: uuid.UUID, changes: dict[str, Any]
+        self, actor: uuid.UUID | None, target: uuid.UUID, changes: dict[str, Any]
     ) -> dict[str, Any] | None:
         allowed = {"role", "quota_override", "study_group"}
         values = {k: v for k, v in changes.items() if k in allowed}

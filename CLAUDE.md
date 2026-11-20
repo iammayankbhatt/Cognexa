@@ -92,6 +92,10 @@ uv run --project apps/api python scripts/seed_neo4j.py && uv run --project apps/
 uv run --project apps/api python scripts/llm_smoke.py           # one real call per configured LLM/embedding provider (offline in fake mode)
 # e2e
 cd apps/web && npx playwright test
+# deployment (docs/DEPLOYMENT.md; production values only via COGNEXA_ENV_FILE=apps/api/.env.production)
+docker build -f apps/api/Dockerfile -t cognexa-api:local .       # API image (context = repo root)
+uv run --project apps/api python scripts/promote_admin.py <email> [--allow-remote]
+uv run --project apps/api python scripts/prod_smoke.py --api <api-url> --web <web-url>
 ```
 
 ## 6. Design system: "presentable" is a requirement

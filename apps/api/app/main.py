@@ -29,6 +29,7 @@ from app.core.config import Settings, get_settings
 from app.core.errors import register_error_handlers
 from app.core.logging import configure_logging
 from app.core.middleware import RequestIdMiddleware
+from app.core.prod_check import production_problems
 from app.db.session import Database
 from app.graph.provider import GraphProvider
 from app.llm.embeddings import EmbeddingProviderUnavailableError, get_embedding_provider
@@ -43,6 +44,8 @@ logger = logging.getLogger(__name__)
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or get_settings()
     configure_logging(settings.log_level)
+    for problem in production_problems(settings):
+        logger.warning("production config: %s", problem)
     db = Database(settings)
     graph_provider = GraphProvider(settings)
     llm = build_router(settings)

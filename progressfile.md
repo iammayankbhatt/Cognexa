@@ -13,7 +13,7 @@
 **Mode:** autopilot, main only, no tags. One commit per phase (`feat(phase-NN): ...`), then `git push origin main` (explicitly authorised for autopilot; if push fails, log it under Human Action Needed and continue). No `gh` CLI and no Supabase CLI were found on this machine at start; CI runs are checked through the public GitHub API when possible.
 **Environment notes:** local `apps/api/.env` and `apps/web/.env.local` exist (created from the examples; fake LLM/embedding providers, `REPLACE_ME` for cloud values). Never open or print them; use `uv run --project apps/api python scripts/check_env.py`.
 **Phase order:** core 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 12 → 15 (prep only), then extras 11 → 13 → 14 → 16.
-**Current phase:** 15 — Deployment preparation only (files, configs, runbook; no dashboard actions). Phase 12 complete (Session 15). Then extras 11 → 13 → 14 → 16.
+**Current phase:** 11 — Admin console + LLM proposals (extras). Core phases done; Phase 15 preparation complete (Session 16; the live deploy is Human Action 21-27). Then 13 → 14 → 16.
 
 **Phase 2 checkpoints (done)**
 - [x] 2.1 Env files, `scripts/check_env.py`, `.env.example` for all phases
@@ -122,7 +122,17 @@
 - [x] 12.9 `evaluation/study_analysis.ipynb` (describe, Welch t, Mann-Whitney U, Cohen's d, plots, power analysis, results paragraph template)
 - [x] 12.10 Tests (assignment balancing, CSV anonymisation, gain), fake-mode full eval run + committed report, wrap-up
 
-**Next action:** Phase 15 (prep only): read its prompt, then write the Dockerfile (copy `data/`, LIM-026), `render.yaml`, Vercel config notes, keep-alive workflow, `docs/DEPLOYMENT.md` runbook, production smoke script. No dashboard actions: everything live goes to Human Action Needed.
+**Phase 15 checkpoints (preparation done; live deploy = Human Action)**
+- [x] 15.1 `apps/api/Dockerfile` (python:3.12-slim, uv 0.11.28 build stage, non-root uid 10001, one uvicorn worker on `$PORT`, HEALTHCHECK /health, bundles `data/`, LIM-026) + root `.dockerignore`; built (82.5 MB compressed) and run locally against the Docker services
+- [x] 15.2 Production config audit at start-up (`app/core/prod_check.py`, names only, never values) + `COGNEXA_ENV_FILE` override so scripts can target `apps/api/.env.production`; `check_env.py` honours it
+- [x] 15.3 `render.yaml` Blueprint (free Docker web service, repo-root context, `/health`, `autoDeployTrigger: checksPass`, build filter, `sync: false` secrets)
+- [x] 15.4 Vercel: `apps/web/vercel.json` deploys `main` only (previews disabled, DEC-054); env vars documented
+- [x] 15.5 `scripts/promote_admin.py` (first admin by e-mail, audited, idempotent) + integration test
+- [x] 15.6 `scripts/prod_smoke.py` (11 automated checks) + manual checklist; 11/11 against the local stack
+- [x] 15.7 Keep-alive fails on a degraded `/health/deep` (BUG-035); CI `container` job builds and boots the image
+- [x] 15.8 `docs/DEPLOYMENT.md` runbook; full verification; wrap-up; commit
+
+**Next action:** Phase 11 (extras): read its prompt in docs/COGNEXA_PROMPTS.md, split into checkpoints (admin graph editor with DAG check, LLM edge proposals + review queue, moderation of reported answers, content admin), then implement.
 **Local stack:** `npx supabase start -x realtime,storage-api,imgproxy,studio,edge-runtime,logflare,vector,supavisor,postgres-meta` (mail UI http://127.0.0.1:54324); schema changes: `npx supabase migration up` (local Supabase) and `DATABASE_URL=<docker url> uv run ... scripts/migrate.py` (docker test DB)
 
 **Last cluster note:** Phase 3 content complete; 69/69 concepts
@@ -150,7 +160,14 @@
 | 17 | live checks | Short-answer grading with the real judge model | After item 13 (set `LLM_JUDGE_PROVIDER` / `LLM_JUDGE_MODEL`, e.g. the Gemini model): take a concept quiz that includes a short-answer question (e.g. Practice this concept on Recursion until one appears, or use the API), answer it once well and once poorly, and check the score, the matched/missing points and the feedback make sense. One AI request is used per graded short answer. |
 | 16 | live checks | Phase 7 tutor with real models (screen capture) | After item 13: start the API and web app on dev, ask the canonical recursion question and two of your own, open the Why panel, try Stop on a long answer, and record a short screen capture (or screenshots) into `docs/screenshots/phase7/real/`. Check that answers cite concepts as chips, that follow-ups appear, and that the quick check appears for a student with a weak practised prerequisite (Phase 8 creates real mastery). |
 | 15 | live checks | Phase 6 smoke run with real models (review together) | After item 13 (real keys): `uv run --project apps/api python scripts/phase6_smoke.py` (needs the dev Neo4j and Postgres seeded: `scripts/seed_neo4j.py`, `seed_postgres.py`, `seed_vectors.py`). It rewrites `evaluation/reports/phase6_smoke.md` with 10 test-set questions through both modes. Read each answer: right concepts matched? weak prerequisite explained? anything not in the context? Note problems in the report's review section and tell Claude Code. The committed report is the fake-mode run (retrieval only). |
-| 12 | live checks | Make yourself admin | After signing up on the cloud project: Supabase SQL editor → `update public.profiles set role = 'admin' where id = (select id from auth.users where email = '<your email>');` Wait 30 s (role cache) and reload; the Admin link appears. |
+| 21 | dashboards | Deploy: database schema on `cognexa-prod` | docs/DEPLOYMENT.md §3.1: `npx supabase login`, `npx supabase link --project-ref <ref>`, `npx supabase db push --dry-run` (check the list), `npx supabase db push`. |
+| 22 | live checks | Deploy: seed production data | docs/DEPLOYMENT.md §3.2: create `apps/api/.env.production` (gitignored), `export COGNEXA_ENV_FILE=apps/api/.env.production`, run `check_env.py`, `seed_neo4j.py --allow-remote`, `seed_postgres.py --allow-remote`, `seed_vectors.py --allow-remote` (real embeddings, resumable). |
+| 23 | dashboards | Deploy: API on Render | docs/DEPLOYMENT.md §3.3: Render → New → Blueprint → this repo (`render.yaml`), fill the `sync: false` variables (table §2.1, model ids from the provider consoles), Apply; check `/health/deep` and the `production config:` lines in the logs. |
+| 24 | dashboards | Deploy: web on Vercel | docs/DEPLOYMENT.md §3.4: import the repo, Root Directory `apps/web`, the three `NEXT_PUBLIC_*` variables (Production), Deploy. Then confirm in Settings → Git that only `main` deploys (LIM-035). |
+| 25 | dashboards | Deploy: CORS + Supabase auth URLs + Google origins + branded e-mail templates | docs/DEPLOYMENT.md §3.5-3.6: Render `ALLOWED_ORIGINS` = Vercel URL; Supabase Site URL + redirect `https://<vercel>/auth/callback`; Google OAuth client authorised origin = Vercel URL; SMTP on; brand "Confirm signup" and "Reset password". |
+| 26 | live checks | Deploy: first admin + keep-alive | §3.7: sign up on the live site, then `scripts/promote_admin.py <you> --allow-remote` with `COGNEXA_ENV_FILE`. §3.8: GitHub variable `API_URL` = Render URL, run Actions → Keep-alive once (green). |
+| 27 | live checks | Production smoke test (records the live URLs) | §4: `scripts/prod_smoke.py --api <render> --web <vercel> --report smoke.md` with a test account in `SMOKE_EMAIL` / `SMOKE_PASSWORD` (+ `SUPABASE_URL`, `SUPABASE_ANON_KEY`), then the manual checklist. Paste the table and the live URLs into progressfile.md (§0 Live web app / Live API) and tell Claude Code. |
+| 12 | live checks | Make yourself admin | Superseded by item 26 (`scripts/promote_admin.py`, audited). The SQL editor alternative still works: `update public.profiles set role = 'admin' where id = (select id from auth.users where email = '<your email>');` Wait 30 s (role cache) and reload; the Admin link appears. |
 
 ---
 
@@ -167,7 +184,7 @@
 | Repository | https://github.com/iammayankbhatt/Cognexa |
 | Live web app | _TBD (Vercel)_ |
 | Live API | _TBD (Render)_ |
-| Current phase | Phases 1 to 10 and 12 complete; next: Phase 15 (deployment prep). Workflow: single developer, `main` only (DEC-013), autopilot (DEC-019) |
+| Current phase | Phases 1 to 10 and 12 complete; Phase 15 prepared (deploy runbook ready, live deploy pending the human); next: Phase 11. Workflow: single developer, `main` only (DEC-013), autopilot (DEC-019) |
 | Overall status | 🟡 In progress |
 
 Status legend: 🔴 Not started · 🟡 In progress · 🟢 Done + verified · ⚠️ Done with known issues · ⏸️ Blocked
@@ -192,7 +209,7 @@ Update the **Status** and **Where in code** columns as phases complete. Examiner
 | O2c | LLM generates grounded answer from retrieved context (Obj. 2) | Answer stage + citations + SSE | 6, 7 | 🟢 locally (real model: Human Action 15/16) | `app/tutor/answer.py`, `app/tutor/pipeline.py`, `app/api/tutor.py`, `tests/test_tutor_api.py` |
 | O3a | Rule-based recommender: weak concepts → prerequisite to review (Obj. 3) | Rules R1–R5 | 9 | 🟢 | `app/recommender/engine.py`, `app/recommender/service.py`, `tests/test_recommender_{engine,api}.py` (canonical chain → call_stack), Next best step card |
 | O3b | Uses quiz performance AND questions asked (Abstract) | Mastery + concept_interest signal | 8, 9 | 🟢 weak = low mastery with attempts OR asked ≥ 3 times in 7 days (`weak_concepts`) | `app/mastery/`, `app/quiz/`, `concept_interest` (migration 12), `docs/ARCHITECTURE.md` |
-| O4 | Functional end-to-end system (Obj. 4) | Full product, deployed | 1–15 | 🔴 | |
+| O4 | Functional end-to-end system (Obj. 4) | Full product, deployed | 1–15 | 🟡 | Full product runs end to end locally (prod smoke 11/11 on the local stack); deployment prepared, live deploy pending (Human Action 21-27) |
 | O5a | User study: adaptive vs non-adaptive baseline (Obj. 5) | Study mode, groups, pre/post tests, export | 3, 9, 12 | 🟢 built (running the study = Human Action 20) | `app/study/`, `app/api/study.py`, `/app/study`, `/admin/study`, `evaluation/study_analysis.ipynb` | `data/subjects/dsa/questions/_study_sets.yaml` |
 | O5b | Comparison against plain, non-graph RAG (§1.9) | plain_rag mode + compare view + eval | 3, 6, 7, 12 | 🟢 harness + fake-mode results (real run = Human Action 18) | `evaluation/`, `/admin/evaluation`, `evaluation/reports/fake-offline-full/` | `app/tutor/plain_rag.py`, `scripts/phase6_smoke.py`, `evaluation/reports/phase6_smoke.md`, `data/subjects/dsa/eval/testset.jsonl` |
 | O5c | RAGAs reference-free metrics (§2.2 [10]) | ragas_eval.py + admin eval page | 12 | 🟡 wired through our provider layer; numbers need the real judge (Human Action 18) | `evaluation/ragas_adapter.py` |
@@ -226,7 +243,7 @@ Update the **Status** and **Where in code** columns as phases complete. Examiner
 | Admin: graph editor, content/question editor, moderation, users, usage, settings | 4, 11 | 🟡 users page (role, study group, quota override, audit log) done in Phase 4 | `app/api/admin_users.py`, `src/app/admin/users/` |
 | Data export + account deletion | 4 | 🟢 | `GET /me/export`, `DELETE /me` (`app/api/me.py`, `app/auth/admin.py`), settings page, `tests/test_auth_api.py` |
 | Security hardening, a11y, performance, observability, backups | 13 | 🔴 | |
-| Free-tier deployment + keep-alive | 15 | 🔴 | |
+| Free-tier deployment + keep-alive | 15 | 🟡 | Prepared and verified locally (image, Blueprint, runbook, smoke test, keep-alive); live deploy is Human Action 21-27 |
 | Database schema + RLS (23 tables), migrations runnable on Supabase and plain Postgres | 2, 4 | 🟢 locally; all 9 migrations also apply on the Supabase local stack (Postgres 17) | `supabase/migrations/`, `supabase/shim/auth_shim.sql`, `scripts/migrate.py`, `tests/test_db_migrations.py` |
 
 ---
@@ -288,10 +305,10 @@ Key flows (details in docs/ARCHITECTURE.md once written):
 | 9 | Recommender, baseline, spaced review | 🟢 | 2026-11-20 | 2026-11-20 | `df5115d` `feat(phase-09)` | | GitHub Actions green (run 44674166034). Verified locally: backend 382 passed (after BUG-031); Playwright 29/29; web 181 unit; live two-group check on the local stack. |
 | 10 | Dashboard, knowledge map, notes | 🟢 | 2026-11-20 | 2026-11-20 | `d669b13` `feat(phase-10)` | | GitHub Actions green (run 44689275333). Verified locally: backend 387 passed; Playwright 32 (31 + the tutor spec rerun after a locator fix); web 186 unit; screenshots in docs/screenshots/phase10 (3 themes). |
 | 11 | Admin console + LLM proposals | 🔴 | | | | | |
-| 12 | Evaluation + user study | 🟢 (fake-mode numbers; real run = Human Action 18) | 2026-11-20 | 2026-11-20 | `feat(phase-12)` (see git log) | | Verified locally: backend 400 passed (after updating one Phase 8 test to the new study gating), web 188 unit, Playwright 34/34; fake-mode full evaluation committed. |
+| 12 | Evaluation + user study | 🟢 (fake-mode numbers; real run = Human Action 18) | 2026-11-20 | 2026-11-20 | `5a31418` `feat(phase-12)` | | GitHub Actions green (run 44694456973). Verified locally: backend 400 passed (after updating one Phase 8 test to the new study gating), web 188 unit, Playwright 34/34; fake-mode full evaluation committed. |
 | 13 | Hardening | 🔴 | | | | | |
 | 14 | Bug hunt + fresh-eyes review | 🔴 | | | | | |
-| 15 | Deployment + keep-alive | 🔴 | | | | | |
+| 15 | Deployment + keep-alive | 🟡 prepared (live deploy = Human Action 21-27) | 2026-11-20 | | `feat(phase-15)` (see git log) | | Verified locally: backend 425 passed (25 new), web lint/typecheck/188 unit/build; image built and run (non-root, `$PORT`, healthy); `prod_smoke.py` 11/11 against the local stack. |
 | 16 | Docs, diagrams, demo script | 🔴 | | | | | |
 
 ### Phase 0 checklist (human)
@@ -664,6 +681,31 @@ git tag -a v0.1 -m "Phase 1: Scaffold, design system, CI" && git push --tags   #
 - Power analysis before recruiting turns "we found no difference" into an honest statement about what the study could detect.
 **Next step:** Phase 15: deployment preparation.
 
+### Session 16 — 2026-11-20 — Phase 15: deployment preparation (autopilot; no dashboard actions)
+**Goal:** Everything needed to deploy on free tiers, tested locally, with exact steps for the human: container, Blueprint, Vercel config, production data, first admin, keep-alive, runbook, smoke test.
+**Built:**
+- `apps/api/Dockerfile`: two stages (uv 0.11.28 installs the locked, non-dev dependencies into `/srv/.venv`; runtime has no uv or build tools), non-root `app` user (uid 10001), one uvicorn worker on `$PORT` with proxy headers, Python-based HEALTHCHECK on `/health`, and `data/` copied so the layout mirrors the repo (the app finds `data/subjects` relative to its source; closes LIM-026). Root `.dockerignore` keeps `.env*`, tests, the web app, docs and eval data out of the context.
+- `app/core/prod_check.py`: with `APP_ENV=production` the API logs one `production config:` warning per problem (missing DB/Neo4j/Supabase settings, fake providers, missing keys for configured providers, localhost / `*` / plain-HTTP CORS origins); names only, never values (DEC-056).
+- `COGNEXA_ENV_FILE` override in `Settings` and `check_env.py`, so the seed and admin scripts can target a gitignored `apps/api/.env.production`.
+- `render.yaml`: free Docker web service, repo-root build context, `/health`, `autoDeployTrigger: checksPass` (deploys only after green CI, DEC-055), build filter (`apps/api/**`, `data/**`), fixed settings plus `sync: false` secrets and model ids. Field names checked against the Render Blueprint spec.
+- `apps/web/vercel.json`: Git deployments for `main` only (previews disabled, DEC-054; syntax from Vercel's git-configuration docs).
+- `scripts/promote_admin.py` + `app/auth/promote.py`: role by e-mail (case-insensitive, idempotent, audited through `ProfileRepository.admin_update` with a null actor, refuses remote hosts without `--allow-remote`).
+- `scripts/prod_smoke.py`: 11 checks (wake, deep health, CORS allow/deny, 401 envelope, seeded graph, landing page, Supabase password-grant sign-in, `/me`, canonical recursion question → `call_stack` in the trace and quota +1, recommendations, knowledge map), Markdown report, exit code; credentials from env only.
+- Keep-alive now parses `/health/deep` and fails on `degraded` (BUG-035), with a 60-day-inactivity note; new CI job `container` builds the image and checks boot on a custom `$PORT`, `/health`, non-root, bundled data and the config audit.
+- `docs/DEPLOYMENT.md`: accounts, env-var tables (API / web / GitHub), deploy order (schema via `supabase db push`, seeding, Render, Vercel, CORS, Supabase auth + Google + SMTP + branded templates, first admin, keep-alive), verify (script + manual checklist), roll back, re-seed Neo4j, rotate keys, free-tier limits.
+**Files touched:** `apps/api/Dockerfile`, `.dockerignore`, `render.yaml`, `apps/web/vercel.json`, `apps/api/app/core/{config,prod_check}.py`, `apps/api/app/auth/promote.py`, `apps/api/app/db/profiles.py` (nullable actor), `apps/api/app/main.py`, `apps/api/tests/test_{prod_check,promote_admin,prod_smoke}.py`, `scripts/{promote_admin,prod_smoke,check_env}.py`, `.github/workflows/{ci,keepalive}.yml`, `docs/DEPLOYMENT.md`, `CLAUDE.md` (§5 commands), `progressfile.md`.
+**Commands run & results:** `docker build -f apps/api/Dockerfile .` ✅ (368 MB on disk, 82.5 MB compressed) · container on the compose network: `/health` ✅, `/health/deep` postgres + neo4j ok ✅, CORS allows the configured origin and rejects others ✅, uid 10001 ✅, Docker health `healthy` ✅, data path ✅, 9 config warnings with an empty config ✅ · backend ruff ✅ · format ✅ · mypy ✅ (107 files) · pytest ✅ 425 passed (25 new) · web lint ✅ · typecheck ✅ · vitest ✅ 188 · build ✅ · `prod_smoke.py` against API :8000 + `next start` :3000 + local Supabase ✅ 11/11 · `promote_admin.py` against the local Supabase DB ✅ (unknown e-mail → clear message, exit 1).
+**Manual verification:** container run and probed by hand; smoke script against the full local stack with a fresh confirmed user created through the local Auth admin API.
+**Bugs found this session:** BUG-035 (pre-existing since Phase 2), BUG-036 (introduced and fixed in new tests)
+**Decisions:** DEC-054 to DEC-057
+**What we learned:**
+- A health endpoint that always answers 200 (so the page can show partial status) needs a monitor that reads the body; `curl --fail` only sees the status code (BUG-035).
+- Building the image from the repository root lets the container keep the repo's layout, so code that finds data files relative to itself works unchanged.
+- Multi-stage builds keep build tools (uv, compilers, caches) out of the runtime image; running as a fixed non-root uid limits what a compromised process can do.
+- Logging configuration problems at start-up (names only) is safer than refusing to boot on free tiers where keys arrive after the first deploy, and it never leaks values.
+- Gating deploys on CI (`checksPass`) makes "red CI never reaches production" a platform rule, not a habit.
+**Next step:** Phase 11 (extras): admin console and LLM proposals.
+
 ## 7. Bug Log
 
 ### 7.1 Bug index
@@ -704,6 +746,8 @@ Severity: **S1** critical (data loss, security, app down) · **S2** major (featu
 | BUG-031 | 2026-11-20 | 9 | S2 | backend | `GET /tutor/chunks` returned 404: replacing the `/tutor/suggestions` handler by text slice also deleted the endpoint that followed it | Fixed | `feat(phase-09)` | `tests/test_tutor_api.py::test_chunks_endpoint_returns_note_text_in_order` (existing; caught it) |
 | BUG-032 | 2026-11-20 | 10 | S2 | frontend | The knowledge map drew nothing: Cytoscape's canvases had height 0 | Fixed | `feat(phase-10)` | `e2e/progress.spec.ts` waits for the visible node canvas |
 | BUG-033 | 2026-11-20 | 12 | S4 | backend | mypy failed on `app/llm/gemini.py` once the eval group (Pillow) was installed: `list[str]` did not match the SDK's widened, invariant list type | Fixed | `feat(phase-12)` | `tests/test_llm_providers.py` asserts the unchanged embed request shape; mypy runs with and without the group |
+| BUG-035 | 2026-11-20 | 15 (pre-existing since 2) | S2 | deploy | The keep-alive workflow could never fail on an unhealthy dependency | Fixed | `feat(phase-15)` | Workflow parses the JSON and fails on `degraded`; logic mirrored by `prod_smoke.py` deep-health check (tests/test_prod_smoke.py) |
+| BUG-036 | 2026-11-20 | 15 | S4 | tests | Two new tests failed on first run: the start-up warning was invisible to `caplog`, and loading `prod_smoke.py` by path crashed in `@dataclass` | Fixed | `feat(phase-15)` | the tests themselves |
 | BUG-034 | 2026-11-20 | 12 (pre-existing since 4) | S3 | frontend | Dev server error "Could not validate that a segment in your UI has instant navigation" on admin pages | Fixed | `feat(phase-12)` | `e2e/study.spec.ts` admin test; the log check showed 0 occurrences after the fix |
 | BUG-018 | 2026-11-20 | 4 | S2 | ci / tests | GitHub Actions backend job failed at pytest after the Phase 4 push (run 44593254858); everything passed locally | Fixed | `fix(ci)` after `fbbdc49` | CI-identical local run: empty Neo4j container, fresh database, no Supabase env (161 passed) |
 
@@ -1103,6 +1147,28 @@ Severity: **S1** critical (data loss, security, app down) · **S2** major (featu
 - **Commit:** `feat(phase-12)`
 - **Lesson / pattern to avoid:** read framework warnings in the dev-server log after e2e runs; they point at real rendering issues.
 
+#### BUG-035 — Keep-alive could not detect an unhealthy database
+- **Found:** 2026-11-20, Phase 15, by Claude Code while reviewing `keepalive.yml` against the Phase 15 prompt ("fail loudly if unhealthy")
+- **Severity / Area:** S2 / deploy (pre-existing since the workflow was added in Phase 2)
+- **Symptom:** none yet (not deployed); a paused Supabase or Neo4j would have left the daily run green.
+- **Root cause:** `/health/deep` deliberately always returns HTTP 200 with per-dependency status, but the workflow relied on `curl --fail`, which only fails on HTTP errors.
+- **Fix:** the workflow reads the JSON with `jq` and exits 1 with a GitHub error annotation unless `status` is `ok`; retries cover the Render wake-up.
+- **Files changed:** `.github/workflows/keepalive.yml`
+- **Regression test:** `prod_smoke.py`'s deep-health check applies the same rule and is unit-tested with a degraded response (`tests/test_prod_smoke.py::test_failures_are_reported_without_stopping_the_run`); the workflow itself runs only after deployment (Human Action 26).
+- **Commit:** `feat(phase-15)`
+- **Lesson / pattern to avoid:** when an endpoint encodes health in its body, every monitor must read the body.
+
+#### BUG-036 — New Phase 15 tests failed on first run (test harness)
+- **Found:** 2026-11-20, Phase 15, by Claude Code (first pytest run of the new files)
+- **Severity / Area:** S4 / tests
+- **Symptom:** (1) `test_problems_are_logged_at_startup` saw no records although the warning was printed; (2) every test in `test_prod_smoke.py` errored with `AttributeError: 'NoneType' object has no attribute '__dict__'` from `dataclasses`.
+- **Root cause:** (1) `configure_logging` installs its own JSON stdout handler and the record never reached pytest's `caplog` handler; (2) a module loaded with `importlib.util.module_from_spec` is not in `sys.modules` until registered, and `@dataclass` looks its module up there while the class is created.
+- **Fix:** (1) assert on `capsys` stdout (the real output format); (2) register the module in `sys.modules` before `exec_module`.
+- **Files changed:** `apps/api/tests/test_prod_check.py`, `apps/api/tests/test_prod_smoke.py`
+- **Regression test:** the tests themselves
+- **Commit:** `feat(phase-15)`
+- **Lesson / pattern to avoid:** test logging through the configured output; register path-loaded modules before executing them.
+
 ---
 
 ## 8. Decisions Log (lightweight ADRs)
@@ -1160,6 +1226,10 @@ Severity: **S1** critical (data loss, security, app down) · **S2** major (featu
 | DEC-050 | 2026-11-20 | Evaluation calls the pipeline code directly with the response cache and the agentic step off | Use the /tutor/compare HTTP endpoint; agentic on | Same code as production without HTTP and quota overhead; a diagnostic question would replace the answer and make modes incomparable | Agentic behaviour needs its own evaluation (future work) |
 | DEC-051 | 2026-11-20 | Statistics in pure Python (Wilcoxon, rank-biserial, bootstrap) with a one-off scipy cross-check | Depend on scipy everywhere | CI and the API image stay light; results verified against scipy | scipy only in the optional `eval` group |
 | DEC-052 | 2026-11-20 | RAGAs runs through a custom judge LLM/embeddings adapter over our router | RAGAs' own provider factories | CLAUDE.md rule 1 (one provider layer: retries, fallback, metering) | Adapter must follow RAGAs' base-class API (checked on 0.4.4) |
+| DEC-054 | 2026-11-20 | Vercel deploys `main` only; no preview deployments | Previews against the production API; previews against the dev backend | Previews would need extra CORS origins and would touch production data, and the project is single-branch (DEC-013) | Changes are tried locally before pushing; `vercel.json` placement to be confirmed after the first deploy (LIM-035) |
+| DEC-055 | 2026-11-20 | Render deploys with `autoDeployTrigger: checksPass` and a build filter | Deploy on every commit (`commit`) | A red CI never reaches production; docs-only commits do not rebuild | A deploy waits for CI (about 3 min) |
+| DEC-056 | 2026-11-20 | Production misconfiguration is logged at start-up, not fatal | Refuse to start | On free tiers the service goes live before every key is added; a crash loop hides the cause | Operators must read the start-up log (runbook §3.3) |
+| DEC-057 | 2026-11-20 | Image built from the repo root with the repo's layout (`/srv/apps/api`, `/srv/data`); Render region Singapore | Context `apps/api` + moving data; Oregon (default) | Data files are found relative to the code without changes; Singapore is the closest Render region to Mumbai (Supabase) | Larger build context, kept small by `.dockerignore` |
 | DEC-053 | 2026-11-20 | Study gating: the tutor pauses while a study test is open, open tests are resumed, tests are forced timed + exam mode | Trust students not to use AI during tests | "No AI" during the pre-test must hold for the comparison to be fair | A test left open blocks the tutor until it expires |
 | DEC-022 | 2026-11-19 | Content code samples are C++14 (not 17) and Python 3.12; every snippet is a complete program that asserts its own claims and is compiled/run by the test suite | C++17 | The only local compiler is MinGW GCC 6.3 (no `-std=c++17`); C++14 also works on every CI compiler | Notes avoid C++17 features (structured bindings, `std::optional`) |
 
@@ -1194,7 +1264,7 @@ Severity: **S1** critical (data loss, security, app down) · **S2** major (featu
 | LIM-023 | Only one streaming answer can be stopped at a time; switching to another chat while an answer streams lets it finish in the background (saved normally) | Rare: a student who switches mid-answer cannot stop the old one | Acceptable; the answer is saved and visible when they return |
 | LIM-024 | ~~"Continue learning" on the tutor's empty state uses a temporary syllabus rule~~ **CLOSED 2026-11-20 (Phase 9: the recommender replaced it)** — (first unmastered concept whose prerequisites are mastered, `app/tutor/suggest.py`) | Not adaptive yet | **TODO Phase 9:** replace `next_concept` with the rule-based recommender (R1–R5) and log recommendations |
 | LIM-025 | Stop-generating is unit/integration tested on the server (partial answer saved) but not covered by an e2e spec, because the fake provider answers too fast to press Stop | A UI regression in Stop could slip through | Covered manually in Human Action 16 with a real model; Phase 13 can add a slow fake mode for e2e |
-| LIM-026 | Pretest/posttest read the study forms from `data/subjects/<id>/questions/_study_sets.yaml` at runtime | The deployed API needs the `data/` folder | Phase 15 Dockerfile must copy `data/` (or Phase 12 moves the forms into the database) |
+| ~~LIM-026~~ | ~~Pretest/posttest read the study forms from `data/subjects/<id>/questions/_study_sets.yaml` at runtime~~ | ~~The deployed API needs the `data/` folder~~ | **Closed 2026-11-20 (Phase 15):** the Dockerfile copies `data/`; the CI `container` job checks it |
 | LIM-027 | The judge model's grades are not yet calibrated against human grading | Short-answer scores may be too strict or lenient | Human Action 17 spot check; Phase 12 can compare judge vs reviewer grades on a sample |
 | LIM-028 | ~~Local e2e specs skip themselves when `npx supabase status` cannot be read in time;~~ **CLOSED 2026-11-20 (Session 13): `e2e/global-setup.ts` reads it once per run and passes it to workers; 29/29 with no skips.** under heavy load one worker's lookup can time out, turning a test into a silent skip | A regression could hide behind a skip in a local run | Check the "skipped" count after each full run (done in Session 12); CI does not run these specs; Phase 13 can raise the lookup timeout or share one lookup per run |
 | LIM-029 | R1 counts never-practised prerequisites as gaps (spec), so a learner who fails a mid-syllabus quiz without earlier practice is sent to the syllabus root | Can feel like a step back for students who know the basics but never took a quiz on them | The onboarding diagnostic seeds mastery across clusters; Phase 12 can tune (e.g. count only gaps with evidence) using study data |
@@ -1202,6 +1272,9 @@ Severity: **S1** critical (data loss, security, app down) · **S2** major (featu
 | LIM-031 | The full 69-node knowledge map is wide at "fit" zoom; labels are small until the student zooms in | Overview labels are hard to read on small screens | Cluster filter, path fit and the list view mitigate; Phase 13 can add compound cluster nodes |
 | LIM-032 | The committed evaluation numbers come from fake mode (retrieval only); answer quality (RAGAs) is not yet measured | The report cannot quote answer-quality results yet | Human Action 18 (real run) |
 | LIM-033 | RAGAs adapter verified against the 0.4.4 base-class API but not yet run end to end with a real judge | A judge-format issue could surface in the real run | Run the 15-item manual workflow first (Human Action 19) |
+| LIM-035 | `apps/web/vercel.json` (`git.deploymentEnabled`, main only) is untested on Vercel; the docs do not say whether it is read from the Root Directory in a monorepo | Preview deployments might still be created | Runbook §3.4 step 5: check after the first deploy; fallback "Ignored Build Step" command documented |
+| LIM-036 | Production is not deployed yet: Supabase cloud migrations, Render, Vercel, Aura and the keep-alive are prepared and verified locally only | Live URLs unknown; Objective 4 "deployed" open | Human Action 21-27 (runbook docs/DEPLOYMENT.md) |
+| LIM-037 | One API instance with in-process rate-limit windows and caches | They reset whenever the free instance sleeps or restarts | Acceptable at this scale; quotas and usage live in Postgres |
 | LIM-034 | The tutor stays paused until an abandoned study test's timer runs out | A student who closes the tab mid-test waits up to 20 min | Acceptable for study integrity; the pre-test can be resumed |
 
 ---
@@ -1411,6 +1484,10 @@ Run ID / date / models used: `fake-offline-full`, 2026-11-20, FakeProvider + fak
 | Atomic conditional upsert | `INSERT ... ON CONFLICT DO UPDATE ... WHERE count < limit RETURNING` increments only while under the limit, in one statement | `app/usage/repository.py` |
 | Trojan Source | Invisible Unicode (bidi overrides, zero-width) that makes code display differently from how it runs | `tests/test_source_hygiene.py` |
 | Route prefetching | Next.js loads a linked page's code in the background; useful, but it adds that code to the current page's cost | DEC-024 |
+| Multi-stage Docker build | One stage installs dependencies with build tools, the final stage copies only the result, so the shipped image is smaller and has fewer tools an attacker could use | `apps/api/Dockerfile` |
+| Infrastructure as code (Blueprint) | The service's settings live in a versioned file instead of only in a dashboard, so they are reviewed and reproducible | `render.yaml` |
+| Liveness vs deep health | `/health` says "the process answers"; `/health/deep` also queries the databases. Platforms restart on the first; monitors and keep-alive use the second | `app/api/health.py`, keep-alive |
+| Smoke test | A short end-to-end check right after a deploy that the critical paths work, not a full test suite | `scripts/prod_smoke.py` |
 
 ---
 

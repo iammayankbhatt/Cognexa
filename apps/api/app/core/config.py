@@ -1,5 +1,6 @@
 """Application settings, loaded from environment variables / .env."""
 
+import os
 from functools import lru_cache
 from pathlib import Path
 from typing import Annotated
@@ -7,8 +8,9 @@ from typing import Annotated
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
-# Absolute so scripts work from any directory: apps/api/.env
-ENV_FILE = Path(__file__).resolve().parents[2] / ".env"
+# Absolute so scripts work from any directory: apps/api/.env. COGNEXA_ENV_FILE points scripts at
+# another file, e.g. the never-committed apps/api/.env.production used to seed production.
+ENV_FILE = Path(os.environ.get("COGNEXA_ENV_FILE") or Path(__file__).resolve().parents[2] / ".env")
 
 
 class Settings(BaseSettings):

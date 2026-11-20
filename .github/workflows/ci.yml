@@ -98,3 +98,24 @@ jobs:
         run: npm run test
       - name: Build
         run: npm run build
+
+  container:
+    name: API container (build, boot, /health)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the production image (same Dockerfile and context as render.yaml)
+        run: docker build -f apps/api/Dockerfile -t cognexa-api:ci .
+      - name: Boot it on a custom $PORT and probe /health
+        run: |
+          docker run -d --name api -p 8080:9000 -e PORT=9000 cognexa-api:ci
+          for i in $(seq 1 30); do curl -fsS localhost:8080/health && break; sleep 1; done
+          curl -fsS localhost:8080/health | grep -q '"ok"'
+      - name: Runs as non-root and bundles the subject data
+        run: |
+          test "$(docker exec api id -u)" != "0"
+          docker exec api python -c "from app.graph.loader import SUBJECTS_DIR; assert (SUBJECTS_DIR / 'dsa' / 'concepts.yaml').is_file()"
+      - name: Production config audit is logged
+        if: always()
+        run: docker logs api 2>&1 | grep -q "production config:"
