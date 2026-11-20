@@ -442,3 +442,15 @@ async def test_fake_classifier_unsure_goes_to_fallback_not_decline(dsa: InMemory
     assert "call_stack" in {c.concept_id for c in trace.chunks}
     pizza = done(await run(pipeline, TurnInput(question="what's the best pizza topping?"))).trace
     assert pizza.is_on_topic is False
+
+
+async def test_edges_between_matched_concepts_are_recorded(dsa: InMemoryGraph) -> None:
+    matched = [
+        ConceptMatch(id="recursion", name="Recursion", confidence=0.9),
+        ConceptMatch(id="call_stack", name="Call Stack", confidence=0.9),
+    ]
+    concepts = await traverse(dsa, matched, {}, depth=2)
+    call_stack = next(c for c in concepts if c.id == "call_stack")
+    assert call_stack.role == "matched"
+    assert [(e.source, e.target) for e in call_stack.path] == [("call_stack", "recursion")]
+    assert [c.id for c in concepts].count("call_stack") == 1

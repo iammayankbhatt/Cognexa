@@ -127,3 +127,14 @@ async def test_catalogue_cache_formats_and_reuses_vectors(
     assert len(nearest) == 2
     cache.invalidate(sid)
     assert (await cache.get(graph_repo, sid)).vectors is None
+
+
+async def test_syllabus_queries_match_in_memory_graph(
+    graph_repo: GraphRepository, seeded: tuple[str, ConceptFile]
+) -> None:
+    sid, doc = seeded
+    mem = InMemoryGraph(doc)
+    assert await graph_repo.topological_order(sid) == await mem.topological_order(sid)
+    neo = {(e.source, e.target, e.type) for e in await graph_repo.list_edges(sid)}
+    ram = {(e.source, e.target, e.type) for e in await mem.list_edges(sid)}
+    assert neo == ram

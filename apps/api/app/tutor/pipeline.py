@@ -320,6 +320,7 @@ class TutorPipeline:
     ) -> AsyncIterator[Event]:
         self._fill_chunks(trace, gathered)
         trace.cached = True
+        trace.cache_key = key
         content = str(hit.get("content", ""))
         raw_followups = hit.get("followups")
         followups = [str(f) for f in raw_followups] if isinstance(raw_followups, list) else []
@@ -380,6 +381,7 @@ class TutorPipeline:
         if final is not None:
             calls.append(final)
         if key is not None and self.cache is not None and content:
+            trace.cache_key = key
             await self.cache.put_response(
                 key,
                 {"content": content, "followups": trace.followups},

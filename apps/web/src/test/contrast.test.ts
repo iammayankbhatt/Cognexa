@@ -71,6 +71,20 @@ describe.each(THEMES)("%s contrast", (theme) => {
     expect(ratio(t[fg], t[bg])).toBeGreaterThanOrEqual(4.5);
   });
 
+  // Code blocks sit on --bg (and inline code on --surface-2); every highlight colour must be AA.
+  it.each([
+    "code-keyword",
+    "code-string",
+    "code-number",
+    "code-title",
+    "code-builtin",
+    "code-comment",
+  ])("%s is at least 4.5:1 on bg and surface-2", (fg) => {
+    expect(t[fg], `--${fg}`).toMatch(/^#[0-9a-f]{6}$/i);
+    expect(ratio(t[fg], t.bg)).toBeGreaterThanOrEqual(4.5);
+    expect(ratio(t[fg], t["surface-2"])).toBeGreaterThanOrEqual(4.5);
+  });
+
   // Panels must read as distinct from the page (LIM-007): borders clearly visible against the
   // background, and raised surfaces stepping up from it, without relying on shadows.
   it("keeps panel borders visibly distinct from the background (>= 1.3:1)", () => {

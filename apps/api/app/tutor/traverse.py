@@ -47,7 +47,11 @@ async def traverse(
         for p in await graph.get_prerequisites(m.id, depth):
             cid = p.concept.id
             if cid in matched_ids:
-                continue  # one matched concept can be a prerequisite of another; it stays matched
+                # One matched concept can be a prerequisite of another: it stays matched, and the
+                # direct edge between them is recorded so the trace graph can draw it.
+                if p.depth == 1:
+                    out[matched_ids.index(cid)].path.extend(path_edges(p.path_ids))
+                continue
             known = prereqs.get(cid)
             if known is not None and known.depth <= p.depth:
                 continue

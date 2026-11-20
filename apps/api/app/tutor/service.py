@@ -140,7 +140,10 @@ class TutorService:
         mode: Mode,
         *,
         regenerate_of: uuid.UUID | None = None,
+        replaces: uuid.UUID | None = None,
     ) -> PreparedTurn:
+        """`regenerate_of`: answer the same question again (the old answer is superseded).
+        `replaces`: edit-and-resend; that user message and its answers are superseded."""
         flags = await self.check_mode(user, mode)
         limits = await self.guard.limits_for(user)
         question = clean_user_text(text, limits.max_input_chars)
@@ -163,6 +166,11 @@ class TutorService:
                     raise AppError("not_found", "Message not found.", 404)
                 reply_to = question_row["id"]
                 before = question_row["created_at"]
+            elif replaces is not None:
+                edited = await repo.get_message(user.id, replaces)
+                if edited is None or edited["thread_id"] != thread_id:
+                    raise AppError("not_found", "Message not found.", 404)
+                before = edited["created_at"]
             history = await repo.history(thread_id, self.settings.tutor_history_turns, before)
             previous = await repo.last_assistant(thread_id, before)
             mastery = await repo.mastery_map(user.id, thread["subject_id"])
@@ -183,6 +191,8 @@ class TutorService:
             async with self.db.sessions()() as session, session.begin():
                 repo = ChatRepository(session)
                 if regenerate_of is None:
+                    if replaces is not None:
+                        await repo.supersede_turn(replaces)
                     row = await repo.add_message(
                         thread_id=thread_id, user_id=user.id, role="user", content=question,
                         mode=mode,

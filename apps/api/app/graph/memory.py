@@ -8,6 +8,7 @@ counts as approved, as it does after `seed_neo4j.py`.
 
 from __future__ import annotations
 
+import heapq
 import re
 from collections import deque
 from collections.abc import Iterable
@@ -15,7 +16,7 @@ from collections.abc import Iterable
 from app.content.loader import load_chunks
 from app.content.notes import Chunk
 from app.graph.loader import load_subject
-from app.graph.models import ConceptFile, GraphConcept
+from app.graph.models import ConceptFile, GraphConcept, GraphEdge
 from app.graph.repository import STOPWORDS, ChunkRecord, PathConcept, _depth
 
 _WORD = re.compile(r"[a-z0-9]+")
@@ -145,3 +146,34 @@ class InMemoryGraph:
             if wanted is None or ch.kind in wanted
         ]
         return out[: max(1, limit)]
+
+    async def list_edges(self, subject_id: str) -> list[GraphEdge]:
+        if subject_id != self.subject_id:
+            return []
+        edges = [
+            GraphEdge(source=a, target=b, type="PREREQUISITE_OF")
+            for b, pres in self.prereqs_of.items()
+            for a in pres
+        ]
+        # RELATED_TO is undirected; stored smaller id first, as seeding does (app.graph.seed)
+        pairs = {tuple(sorted((a, b))) for a, others in self.related.items() for b in others}
+        edges.extend(GraphEdge(source=a, target=b, type="RELATED_TO") for a, b in sorted(pairs))
+        return edges
+
+    async def topological_order(self, subject_id: str) -> list[str]:
+        """Every prerequisite before its dependents; ties broken by order_index (as in Neo4j)."""
+        if subject_id != self.subject_id:
+            return []
+        indeg = {cid: len([p for p in self.prereqs_of.get(cid, []) if p in self.concepts])
+                 for cid in self.concepts}  # fmt: skip
+        heap = [(self._order(c), c) for c, n in indeg.items() if n == 0]
+        heapq.heapify(heap)
+        out: list[str] = []
+        while heap:
+            _, cid = heapq.heappop(heap)
+            out.append(cid)
+            for nxt in self.dependents_of.get(cid, []):
+                indeg[nxt] -= 1
+                if indeg[nxt] == 0:
+                    heapq.heappush(heap, (self._order(nxt), nxt))
+        return out

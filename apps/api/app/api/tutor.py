@@ -15,16 +15,19 @@ from typing import Annotated, Any, Literal
 from fastapi import APIRouter, Depends, Query, Request, Response
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
+from sqlalchemy import select
 
 from app.auth.deps import CurrentUser, get_current_user, require_role
 from app.core.config import Settings, get_settings
 from app.core.errors import AppError
 from app.db.session import Database, get_database
+from app.db.tables import content_chunks
 from app.graph.provider import GraphProvider
 from app.llm.deps import get_usage_guard
 from app.tutor.plain_rag import PgVectorSearch
 from app.tutor.repository import ChatRepository
 from app.tutor.service import DEFAULT_TITLE, SSEEvent, TutorDeps, TutorService
+from app.tutor.suggest import STARTERS, next_concept
 from app.usage.guard import UsageGuard
 
 router = APIRouter(prefix="/tutor", tags=["tutor"])
@@ -77,6 +80,25 @@ class MessageIn(BaseModel):
     mode: ModeName = "graphrag"
 
 
+class ReportIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    reason: Literal["incorrect", "incomplete", "off_topic", "harmful", "other"]
+    comment: str | None = Field(default=None, max_length=2000)
+
+
+class FeedbackIn(BaseModel):
+    """`rating` 1 / -1 sets a thumb, 0 clears it; `report` flags the answer for review."""
+
+    model_config = ConfigDict(extra="forbid")
+    rating: Literal[-1, 0, 1] | None = None
+    report: ReportIn | None = None
+
+
+class EditIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    content: str = Field(min_length=1, max_length=8000)
+
+
 class CompareIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
     question: str = Field(min_length=1, max_length=8000)
@@ -110,6 +132,7 @@ class MessageOut(BaseModel):
     truncated: bool
     reply_to: uuid.UUID | None
     created_at: dt.datetime
+    feedback: dict[str, Any] | None = None  # {"rating": -1|1|null, "reported": bool}
 
 
 def _thread(row: dict[str, Any]) -> ThreadOut:
@@ -181,7 +204,11 @@ async def get_thread(
         if thread is None:
             raise AppError("not_found", "Chat thread not found.", 404)
         messages = await repo.list_messages(thread_id)
-    return {"thread": _thread(thread), "messages": [_message(m) for m in messages]}
+        feedback = await repo.feedback_for_thread(user.id, thread_id)
+    return {
+        "thread": _thread(thread),
+        "messages": [_message({**m, "feedback": feedback.get(m["id"])}) for m in messages],
+    }
 
 
 @router.patch("/threads/{thread_id}")
@@ -248,6 +275,102 @@ async def regenerate(
         regenerate_of=message_id,
     )  # fmt: skip
     return sse_response(service.stream(prep))
+
+
+@router.post("/messages/{message_id}/edit")
+async def edit_and_resend(
+    message_id: uuid.UUID,
+    body: EditIn,
+    user: User,
+    service: Service,
+    db: Annotated[Database, Depends(get_database)],
+) -> StreamingResponse:
+    """Replace the latest question with an edited one and answer it (the old turn is hidden)."""
+    async with db.sessions()() as session:
+        repo = ChatRepository(session)
+        msg = await repo.get_message(user.id, message_id)
+        if msg is None or msg["role"] != "user" or msg["superseded_at"] is not None:
+            raise AppError("not_found", "Message not found.", 404)
+        latest = await repo.last_user_message(msg["thread_id"])
+        if latest is None or latest["id"] != message_id:
+            raise AppError("conflict", "Only the latest question can be edited.", 409)
+    prep = await service.prepare(
+        user, msg["thread_id"], body.content, msg["mode"] or "graphrag", replaces=message_id
+    )
+    return sse_response(service.stream(prep))
+
+
+@router.post("/messages/{message_id}/feedback")
+async def feedback(
+    message_id: uuid.UUID,
+    body: FeedbackIn,
+    user: User,
+    db: Annotated[Database, Depends(get_database)],
+    request: Request,
+) -> dict[str, Any]:
+    if body.rating is None and body.report is None:
+        raise AppError("validation_error", "Send a rating or a report.", 422)
+    values: dict[str, Any] = {}
+    if body.rating is not None:
+        values["rating"] = body.rating or None
+    if body.report is not None:
+        comment = " ".join(body.report.comment.split()) if body.report.comment else None
+        values.update(report_reason=body.report.reason, comment=comment or None, status="open")
+    async with db.sessions()() as session, session.begin():
+        repo = ChatRepository(session)
+        msg = await repo.get_message(user.id, message_id)
+        if msg is None or msg["role"] != "assistant":
+            raise AppError("not_found", "Message not found.", 404)
+        row = await repo.upsert_feedback(message_id, user.id, values)
+    key = (msg.get("retrieval_trace") or {}).get("cache_key")
+    if body.report is not None and key:
+        deps: TutorDeps = request.app.state.tutor
+        if deps.cache is not None:
+            await deps.cache.invalidate_key(str(key))  # never serve a reported answer again
+    return {
+        "message_id": str(message_id),
+        "rating": row["rating"],
+        "reported": row["report_reason"] is not None,
+    }
+
+
+@router.get("/suggestions")
+async def suggestions(
+    user: User,
+    request: Request,
+    db: Annotated[Database, Depends(get_database)],
+    subject_id: Annotated[str, Query(pattern=SUBJECT_PATTERN)] = "dsa",
+) -> dict[str, Any]:
+    """Starter prompts and the next concept to learn (empty state of the tutor)."""
+    graph: GraphProvider = request.app.state.graph
+    async with db.sessions()() as session:
+        mastery = await ChatRepository(session).mastery_map(user.id, subject_id)
+    return {
+        "starters": STARTERS,
+        "continue": await next_concept(graph.repository(), subject_id, mastery),
+    }
+
+
+@router.get("/chunks")
+async def chunks(
+    _: User,
+    db: Annotated[Database, Depends(get_database)],
+    ids: Annotated[list[str], Query(min_length=1, max_length=20)],
+) -> list[dict[str, Any]]:
+    """Text of course-note chunks by id (the "chunks used" list of the Why-this-answer panel)."""
+    wanted = [i for i in dict.fromkeys(ids) if len(i) <= 200]
+    async with db.sessions()() as session:
+        rows = await session.execute(
+            select(
+                content_chunks.c.id,
+                content_chunks.c.concept_id,
+                content_chunks.c.kind,
+                content_chunks.c.heading,
+                content_chunks.c.text,
+            ).where(content_chunks.c.id.in_(wanted))
+        )
+        found = {r.id: dict(r._mapping) for r in rows}
+    return [found[i] for i in wanted if i in found]
 
 
 @router.post("/compare")

@@ -572,3 +572,116 @@ async def test_retryable_failure_mid_stream_keeps_partial(tenv: TEnv) -> None:
         await tenv.env.db.fetchval("select ai_requests from usage_daily where user_id = $1", uid)
         == 1
     )
+
+
+# ---------------------------------------------------------------- phase 7 backend additions
+
+
+async def test_feedback_thumbs_report_and_cache_invalidation(tenv: TEnv) -> None:
+    uid, h = await tenv.env.user("ada@example.com")
+    thread = await new_thread(tenv, h)
+    done = last(await ask(tenv, h, thread, "What is a binary heap?"), "done")
+    mid = done["message_id"]
+    url = f"/tutor/messages/{mid}/feedback"
+    r = await tenv.client.post(url, headers=h, json={"rating": 1})
+    assert r.status_code == 200 and r.json() == {"message_id": mid, "rating": 1, "reported": False}
+    r = await tenv.client.post(url, headers=h, json={"rating": 0})
+    assert r.json()["rating"] is None
+    assert (await tenv.client.post(url, headers=h, json={})).status_code == 422
+    assert (await tenv.client.post(url, headers=h, json={"rating": 2})).status_code == 422
+    bad_reason = {"report": {"reason": "spam"}}
+    assert (await tenv.client.post(url, headers=h, json=bad_reason)).status_code == 422
+
+    assert await tenv.env.db.fetchval("select count(*) from response_cache") >= 1
+    r = await tenv.client.post(
+        url,
+        headers=h,
+        json={"rating": -1, "report": {"reason": "incorrect", "comment": " wrong  heap "}},
+    )
+    assert r.json() == {"message_id": mid, "rating": -1, "reported": True}
+    row = await tenv.env.db.fetchrow(
+        "select rating, report_reason, comment, status from message_feedback where message_id = $1",
+        uuid.UUID(mid),
+    )
+    assert (row["rating"], row["report_reason"], row["comment"], row["status"]) == (
+        -1, "incorrect", "wrong heap", "open",
+    )  # fmt: skip
+    # the reported answer is no longer served from the cache
+    again = last(await ask(tenv, h, await new_thread(tenv, h), "What is a binary heap?"), "done")
+    assert again["cached"] is False
+
+    view = (await tenv.client.get(f"/tutor/threads/{thread}", headers=h)).json()
+    assert view["messages"][1]["feedback"] == {"rating": -1, "reported": True}
+    assert view["messages"][0]["feedback"] is None
+    _, bob = await tenv.env.user("bob@example.com")
+    assert (await tenv.client.post(url, headers=bob, json={"rating": 1})).status_code == 404
+    user_msg = view["messages"][0]["id"]
+    r = await tenv.client.post(
+        f"/tutor/messages/{user_msg}/feedback", headers=h, json={"rating": 1}
+    )
+    assert r.status_code == 404
+    assert uid
+
+
+async def test_edit_and_resend_replaces_the_last_turn(tenv: TEnv) -> None:
+    _, h = await tenv.env.user("ada@example.com")
+    thread = await new_thread(tenv, h)
+    await ask(tenv, h, thread, "explain binary search")
+    await ask(tenv, h, thread, "explain stacks")
+    view = (await tenv.client.get(f"/tutor/threads/{thread}", headers=h)).json()
+    first_q, last_q = view["messages"][0]["id"], view["messages"][2]["id"]
+    r = await tenv.client.post(f"/tutor/messages/{first_q}/edit", headers=h, json={"content": "x"})
+    assert r.status_code == 409
+    r = await tenv.client.post(
+        f"/tutor/messages/{last_q}/edit", headers=h, json={"content": "explain queues"}
+    )
+    assert r.status_code == 200, r.text
+    events = parse_sse(r.text)
+    assert "queue" in [m["id"] for m in events[0][1]["matched"]]
+    view = (await tenv.client.get(f"/tutor/threads/{thread}", headers=h)).json()
+    contents = [m["content"] for m in view["messages"] if m["role"] == "user"]
+    assert contents == ["explain binary search", "explain queues"]
+    assert len(view["messages"]) == 4
+    hidden = await tenv.env.db.fetchval(
+        "select count(*) from chat_messages where thread_id = $1 and superseded_at is not null",
+        uuid.UUID(thread),
+    )
+    assert hidden == 2  # the old question and its answer
+    r = await tenv.client.post(f"/tutor/messages/{view['messages'][1]['id']}/edit", headers=h,
+                               json={"content": "x"})  # fmt: skip
+    assert r.status_code == 404  # an assistant message cannot be edited
+
+
+async def test_suggestions_follow_the_syllabus(tenv: TEnv) -> None:
+    uid, h = await tenv.env.user("ada@example.com")
+    r = await tenv.client.get("/tutor/suggestions", headers=h)
+    assert r.status_code == 200
+    body = r.json()
+    assert len(body["starters"]) == 4 and "recursion" in body["starters"][0]["prompt"]
+    order = await _GRAPH.topological_order("dsa")
+    first = body["continue"]
+    assert first["concept_id"] == order[0] and "start" in first["reason"]
+    # master the first concept: the next one whose prerequisites are mastered comes up
+    await tenv.env.db.execute(
+        "insert into mastery (user_id, concept_id, subject_id, score, attempts, correct) "
+        "values ($1, $2, 'dsa', 0.9, 5, 5)",
+        uid,
+        order[0],
+    )
+    nxt = (await tenv.client.get("/tutor/suggestions", headers=h)).json()["continue"]
+    assert nxt["concept_id"] != order[0]
+    assert all(p == order[0] for p in _GRAPH.prereqs_of[nxt["concept_id"]])
+    assert (await tenv.client.get("/tutor/suggestions", headers=h,
+                                  params={"subject_id": "Bad"})).status_code == 422  # fmt: skip
+
+
+async def test_chunks_endpoint_returns_note_text_in_order(tenv: TEnv) -> None:
+    _, h = await tenv.env.user("ada@example.com")
+    ids = [c.id for c in _GRAPH.chunks["call_stack"][:2]]
+    r = await tenv.client.get("/tutor/chunks", headers=h, params={"ids": [ids[1], ids[0], "nope"]})
+    assert r.status_code == 200
+    body = r.json()
+    assert [c["id"] for c in body] == [ids[1], ids[0]]
+    assert body[0]["concept_id"] == "call_stack" and body[0]["text"]
+    assert (await tenv.client.get("/tutor/chunks", headers=h)).status_code == 422
+    assert (await tenv.client.get("/tutor/chunks", params={"ids": ids})).status_code == 401

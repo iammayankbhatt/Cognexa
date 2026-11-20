@@ -92,3 +92,86 @@ test.describe("phase 5 admin AI pages (needs local Supabase + API)", () => {
     });
   }
 });
+
+test.describe("phase 7 tutor (needs local Supabase + API in fake mode)", () => {
+  for (const theme of ["neon-noir", "titanium-light"] as const) {
+    test(`phase 7: ${theme}`, async ({ page }) => {
+      const stack = await localStack();
+      test.skip(!stack, "local Supabase / API are not running");
+      test.setTimeout(180_000);
+      const out = path.join(SHOTS, "phase7");
+      const u = await createUser(stack!, "Ada Admin");
+      const shot = async (name: string) => {
+        await settle(page);
+        await page.screenshot({ path: path.join(out, `${name}-${theme}.png`) });
+      };
+      const ask = async (text: string) => {
+        await page.getByLabel("Your question").fill(text);
+        await page.getByLabel("Your question").press("Enter");
+      };
+      try {
+        await setProfile(stack!, u.id, { role: "admin", onboarding_completed: true, theme });
+        // a practised-but-weak prerequisite so the agentic quick check appears
+        await fetch(`${stack!.url}/rest/v1/mastery`, {
+          method: "POST",
+          headers: {
+            apikey: stack!.serviceKey,
+            Authorization: `Bearer ${stack!.serviceKey}`,
+            "Content-Type": "application/json",
+            Prefer: "return=minimal",
+          },
+          body: JSON.stringify({
+            user_id: u.id,
+            concept_id: "call_stack",
+            subject_id: "dsa",
+            score: 0.3,
+            attempts: 5,
+            correct: 1,
+          }),
+        });
+        await page.addInitScript((t) => localStorage.setItem("cognexa-theme", t), theme);
+        await page.emulateMedia({ reducedMotion: "reduce" });
+        await page.goto("/login");
+        await page.getByLabel("Email").fill(u.email);
+        await page.getByLabel("Password").fill(u.password);
+        await page.getByRole("button", { name: "Sign in" }).click();
+        await page.waitForURL(/\/app$/, { timeout: 30_000 });
+
+        await page.goto("/app/tutor");
+        await page.getByText(/Continue learning:/).waitFor({ timeout: 30_000 });
+        await shot("1-empty");
+
+        await ask(
+          "Why does my recursive function crash for big inputs with maximum recursion depth exceeded?",
+        );
+        await page.getByLabel("Suggested follow-up questions").waitFor({ timeout: 30_000 });
+        await page.getByRole("img", { name: /Traversed graph/ }).waitFor();
+        await shot("2-answer-why-panel");
+
+        await page.getByRole("button", { name: "New chat" }).click();
+        await ask("Why does my recursive function crash?");
+        await page.getByRole("group", { name: "Quick check" }).waitFor({ timeout: 30_000 });
+        await shot("3-quick-check");
+        await page
+          .getByLabel("Your answer")
+          .fill("each call adds a stack frame until memory runs out");
+        await page.getByRole("button", { name: "Answer", exact: true }).click();
+        await page.getByText("Continuing:").waitFor({ timeout: 30_000 });
+        await page.getByLabel("Suggested follow-up questions").waitFor({ timeout: 30_000 });
+        await shot("4-quick-check-continued");
+
+        await page.getByRole("button", { name: "New chat" }).click();
+        await page.getByRole("button", { name: "Compare with plain RAG" }).click();
+        await ask(
+          "Why does my recursive DFS on a 1000 x 1000 grid in Python crash before visiting all the cells?",
+        );
+        await page
+          .getByRole("region", { name: "Plain RAG (baseline)" })
+          .waitFor({ timeout: 60_000 });
+        await shot("5-compare");
+      } finally {
+        await deleteUser(stack!, u.id);
+      }
+    });
+  }
+});

@@ -114,6 +114,50 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
   }
 }
 
+/**
+ * POST that returns the raw streaming Response (Server-Sent Events). Same auth, 401 retry and
+ * error envelope as `api`; an error status throws ApiError before any event is read.
+ */
+export async function apiStream(
+  path: string,
+  body: unknown,
+  signal?: AbortSignal,
+): Promise<Response> {
+  const init: RequestInit = {
+    method: "POST",
+    body: body === undefined ? undefined : JSON.stringify(body),
+    headers: { Accept: "text/event-stream" },
+    signal,
+  };
+  let slow = false;
+  const timer = setTimeout(() => {
+    slow = true;
+    inflightSlow += 1;
+    notify();
+  }, COLD_START_MS);
+  try {
+    let token = await accessToken();
+    let res = await send(path, init, token);
+    if (res.status === 401) {
+      token = await accessToken(true);
+      if (token) res = await send(path, init, token);
+    }
+    if (!res.ok) throw await parseError(res);
+    if (!res.body) throw new ApiError(0, "network_error", "The server sent no answer stream.");
+    return res;
+  } catch (err) {
+    if (err instanceof ApiError) throw err;
+    if (err instanceof DOMException && err.name === "AbortError") throw err;
+    throw new ApiError(0, "network_error", "Could not reach the server. Check your connection.");
+  } finally {
+    clearTimeout(timer);
+    if (slow) {
+      inflightSlow -= 1;
+      notify();
+    }
+  }
+}
+
 /** Fire-and-forget warm-up so a sleeping free-tier backend is awake by the time it is needed. */
 export function warmApi(): void {
   void api("/health", { anonymous: true }).catch(() => undefined);

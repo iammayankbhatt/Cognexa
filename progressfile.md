@@ -13,7 +13,7 @@
 **Mode:** autopilot, main only, no tags. One commit per phase (`feat(phase-NN): ...`), then `git push origin main` (explicitly authorised for autopilot; if push fails, log it under Human Action Needed and continue). No `gh` CLI and no Supabase CLI were found on this machine at start; CI runs are checked through the public GitHub API when possible.
 **Environment notes:** local `apps/api/.env` and `apps/web/.env.local` exist (created from the examples; fake LLM/embedding providers, `REPLACE_ME` for cloud values). Never open or print them; use `uv run --project apps/api python scripts/check_env.py`.
 **Phase order:** core 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 12 → 15 (prep only), then extras 11 → 13 → 14 → 16.
-**Current phase:** 7 — Tutor chat UI (not started). Phase 6 complete (Session 10).
+**Current phase:** 8 — Quiz engine, auto-grading, mastery model (not started). Phase 7 complete (Session 11).
 
 **Phase 2 checkpoints (done)**
 - [x] 2.1 Env files, `scripts/check_env.py`, `.env.example` for all phases
@@ -73,7 +73,17 @@
 - [x] 6.7 Tests: canonical failure case, fallback, off-topic, multi-concept, budget, personalisation, controller bound, SSE order, disconnect
 - [x] 6.8 `scripts/phase6_smoke.py` → `evaluation/reports/phase6_smoke.md` (10 testset questions, both modes; fake now, real providers = Human Action), wrap-up, commit
 
-**Next action:** Phase 7: read its prompt in docs/COGNEXA_PROMPTS.md and split it into checkpoints here. Backend contract it builds on: `POST /tutor/threads/{id}/messages` SSE (trace, token, citation, followups, done, error), threads CRUD, regenerate, compare (see Session 10).
+**Phase 7 checkpoints (done)**
+- [x] 7.1 Backend additions: feedback/report (cache invalidation), edit-and-resend, suggestions, chunk text, feedback state on threads; tests
+- [x] 7.2 Web data layer: `apiStream`, SSE parser, citation/trailer helpers, thread grouping, chat hook (snapshot + in-flight turn, run ids); unit tests
+- [x] 7.3 Workspace layout: thread list (search, groups, rename, archive, delete + undo), full-bleed route, mobile drawers
+- [x] 7.4 Messages: Markdown (code copy, KaTeX, highlight tokens AA-tested), concept chips, follow-ups, actions, composer (shortcuts, counter), stop / regenerate / edit
+- [x] 7.5 Live trace strip and Why-this-answer panel (mini graph, chunks, agentic steps, model info)
+- [x] 7.6 Quick check card, report dialog, empty state with Continue learning, error cards
+- [x] 7.7 Admin/reviewer compare view
+- [x] 7.8 Tests (vitest, 5 Playwright specs), screenshots, BUG-026/027, wrap-up
+
+**Next action:** Phase 8: read its prompt in docs/COGNEXA_PROMPTS.md and split it into checkpoints here. The onboarding diagnostic placeholder (Phase 4) and the tutor's mastery-based personalisation both start using real data once mastery is written.
 **Local stack:** `npx supabase start -x realtime,storage-api,imgproxy,studio,edge-runtime,logflare,vector,supavisor,postgres-meta` (mail UI http://127.0.0.1:54324); schema changes: `npx supabase migration up` (local Supabase) and `DATABASE_URL=<docker url> uv run ... scripts/migrate.py` (docker test DB)
 
 **Last cluster note:** Phase 3 content complete; 69/69 concepts
@@ -95,6 +105,7 @@
 | 11 | live checks | Lighthouse on the deployed landing page | After Phase 15: run Lighthouse (mobile) on the Vercel URL. The local lab score on this laptop was performance 74-80 (desktop 100); target 90+. If it is still below 90 on Vercel, tell Claude Code (LIM-015). |
 | 13 | live checks | Real LLM and embedding calls (Phase 5) | After adding `GROQ_API_KEY` and `GEMINI_API_KEY` and setting `LLM_PRIMARY_PROVIDER=groq`, `LLM_PRIMARY_MODEL=<current Groq model id>`, `LLM_FALLBACK_PROVIDER=gemini`, `LLM_FALLBACK_MODEL=<current Gemini model id>`, `EMBEDDING_PROVIDER=gemini`, `EMBEDDING_MODEL=<Gemini embedding model id>` (keep `EMBEDDING_DIM=768`) in `apps/api/.env`: run `uv run --project apps/api python scripts/llm_smoke.py`. Every line must say `ok`. If the Gemini `json` check fails with HTTP 400, set `GEMINI_API_VERSION=v1beta` and re-run. Then re-run `scripts/seed_vectors.py` (re-embeds with the real model, item 5) and, signed in as admin, press **Run live check** on /admin/usage. |
 | 14 | live checks | Quota message in the browser | Signed in as a student on the deployed site, set your own daily quota to 1 under Admin → Users (as admin), ask the tutor twice (Phase 7) and check the friendly "Daily AI limit reached" message with the reset time. Locally this is covered by API and unit tests. |
+| 16 | live checks | Phase 7 tutor with real models (screen capture) | After item 13: start the API and web app on dev, ask the canonical recursion question and two of your own, open the Why panel, try Stop on a long answer, and record a short screen capture (or screenshots) into `docs/screenshots/phase7/real/`. Check that answers cite concepts as chips, that follow-ups appear, and that the quick check appears for a student with a weak practised prerequisite (Phase 8 creates real mastery). |
 | 15 | live checks | Phase 6 smoke run with real models (review together) | After item 13 (real keys): `uv run --project apps/api python scripts/phase6_smoke.py` (needs the dev Neo4j and Postgres seeded: `scripts/seed_neo4j.py`, `seed_postgres.py`, `seed_vectors.py`). It rewrites `evaluation/reports/phase6_smoke.md` with 10 test-set questions through both modes. Read each answer: right concepts matched? weak prerequisite explained? anything not in the context? Note problems in the report's review section and tell Claude Code. The committed report is the fake-mode run (retrieval only). |
 | 12 | live checks | Make yourself admin | After signing up on the cloud project: Supabase SQL editor → `update public.profiles set role = 'admin' where id = (select id from auth.users where email = '<your email>');` Wait 30 s (role cache) and reload; the Admin link appears. |
 
@@ -113,7 +124,7 @@
 | Repository | https://github.com/iammayankbhatt/Cognexa |
 | Live web app | _TBD (Vercel)_ |
 | Live API | _TBD (Render)_ |
-| Current phase | Phases 1 to 6 complete; next: Phase 7 (Tutor chat UI). Workflow: single developer, `main` only (DEC-013), autopilot (DEC-019) |
+| Current phase | Phases 1 to 7 complete; next: Phase 8 (Quiz engine, grading, mastery). Workflow: single developer, `main` only (DEC-013), autopilot (DEC-019) |
 | Overall status | 🟡 In progress |
 
 Status legend: 🔴 Not started · 🟡 In progress · 🟢 Done + verified · ⚠️ Done with known issues · ⏸️ Blocked
@@ -135,18 +146,18 @@ Update the **Status** and **Where in code** columns as phases complete. Examiner
 | O1 | KG of 40–80 core concepts in Neo4j with PREREQUISITE_OF and RELATED_TO (Obj. 1) | 69-concept DSA graph, validator, seed | 2 | 🟢 | `data/subjects/dsa/concepts.yaml`, `scripts/validate_graph.py`, `scripts/seed_neo4j.py`, `apps/api/app/graph/`, `tests/test_graph_*.py` |
 | O2a | Question → concept mapping by LLM, zero-shot (Obj. 2, §1.8) | Classifier + hybrid fallback | 6 | 🟢 locally (real model: Human Action 15) | `app/tutor/classify.py`, `app/tutor/catalogue.py`, `GraphRepository.search_concepts`, `tests/test_tutor_pipeline.py` (fallback, invalid JSON, off-topic, multi-concept) |
 | O2b | Graph traversal for prerequisite + related content (Obj. 2) | Cypher traversal, personalised ranking | 6 | 🟢 | `app/tutor/traverse.py`, `GraphRepository._walk` (shortest paths), `app/tutor/gather.py`; canonical failure case `tests/test_tutor_pipeline.py::test_canonical_failure_case_brings_in_call_stack`; Neo4j/in-memory parity `tests/test_tutor_graph.py` |
-| O2c | LLM generates grounded answer from retrieved context (Obj. 2) | Answer stage + citations + SSE | 6, 7 | 🟡 backend done (SSE API, citations, follow-ups); UI in Phase 7 | `app/tutor/answer.py`, `app/tutor/pipeline.py`, `app/api/tutor.py`, `tests/test_tutor_api.py` |
+| O2c | LLM generates grounded answer from retrieved context (Obj. 2) | Answer stage + citations + SSE | 6, 7 | 🟢 locally (real model: Human Action 15/16) | `app/tutor/answer.py`, `app/tutor/pipeline.py`, `app/api/tutor.py`, `tests/test_tutor_api.py` |
 | O3a | Rule-based recommender: weak concepts → prerequisite to review (Obj. 3) | Rules R1–R5 | 9 | 🔴 | |
 | O3b | Uses quiz performance AND questions asked (Abstract) | Mastery + concept_interest signal | 8, 9 | 🔴 | |
 | O4 | Functional end-to-end system (Obj. 4) | Full product, deployed | 1–15 | 🔴 | |
 | O5a | User study: adaptive vs non-adaptive baseline (Obj. 5) | Study mode, groups, pre/post tests, export | 3, 9, 12 | 🟡 matched pre/post forms ready | `data/subjects/dsa/questions/_study_sets.yaml` |
-| O5b | Comparison against plain, non-graph RAG (§1.9) | plain_rag mode + compare view + eval | 3, 6, 12 | 🟡 plain_rag mode, `POST /tutor/compare` and a smoke report done; full evaluation in Phase 12 | `app/tutor/plain_rag.py`, `scripts/phase6_smoke.py`, `evaluation/reports/phase6_smoke.md`, `data/subjects/dsa/eval/testset.jsonl` |
+| O5b | Comparison against plain, non-graph RAG (§1.9) | plain_rag mode + compare view + eval | 3, 6, 7, 12 | 🟡 plain_rag mode, compare API + live compare view (admin/reviewer) and a smoke report done; full evaluation in Phase 12 | `app/tutor/plain_rag.py`, `scripts/phase6_smoke.py`, `evaluation/reports/phase6_smoke.md`, `data/subjects/dsa/eval/testset.jsonl` |
 | O5c | RAGAs reference-free metrics (§2.2 [10]) | ragas_eval.py + admin eval page | 12 | 🔴 | |
 | G1 | LLM proposes tags, human verifies against fixed schema (Gap I, §3.4) | Proposals pipeline + review queue + PDF ingestion | 11 | 🔴 | |
-| G2 | Prerequisites retrieved via explicit Cypher traversal (Gap II) | Traversal stage + "Why this answer?" panel | 6, 7 | 🟡 traversal + exact edge paths in the trace; panel in Phase 7 | `app/tutor/traverse.py`, `app/tutor/trace.py` |
+| G2 | Prerequisites retrieved via explicit Cypher traversal (Gap II) | Traversal stage + "Why this answer?" panel | 6, 7 | 🟢 | `app/tutor/traverse.py`, `app/tutor/trace.py`, `apps/web/src/components/tutor/{why-panel,trace-graph,trace-strip}.tsx` |
 | G3 | One graph powers both tutor and recommender (Gap III) | Shared GraphRepository | 6, 9 | 🟡 tutor side done; recommender in Phase 9 | `app/graph/repository.py`, `app/tutor/graph_source.py` |
 | T | "Agentic" (title) | Bounded agentic controller (answer / diagnostic check / expand) | 6 | 🟢 locally | `app/tutor/controller.py`; tests `test_controller_never_exceeds_two_steps`, `test_controller_diagnostic_ends_turn_and_reply_resumes_it`, `test_diagnostic_question_then_reply_continues_turn` |
-| X | Explainability: show the edge responsible for a retrieval (§2.3) | Trace + mini-graph in UI | 7 | 🟡 trace (matched, paths, chunks, controller, timings) stored and streamed; UI in Phase 7 | `app/tutor/trace.py`, `chat_messages.retrieval_trace` |
+| X | Explainability: show the edge responsible for a retrieval (§2.3) | Trace + mini-graph in UI | 7 | 🟢 | `app/tutor/trace.py`, `apps/web/src/components/tutor/why-panel.tsx` (mini graph with edge titles, exact paths), `docs/screenshots/phase7/` |
 | F | Future scope designed for: multi-subject, ML mastery, diagram parsing (§1.7) | subject_id everywhere, ADDING_A_SUBJECT.md | 2, 16 | 🟡 schema + seeds are subject-agnostic; guide in Phase 16 | `supabase/migrations/*`, `app/graph/loader.py` (`data/subjects/<id>/`), `scripts/seed_*.py --subject` |
 
 ### Product features (beyond the report)
@@ -161,9 +172,9 @@ Update the **Status** and **Where in code** columns as phases complete. Examiner
 | Per-user quotas, rate limits, global cap, cost metering | 5 | 🟢 | `apps/api/app/usage/`, `llm_calls` table (migration 10), `GET /me/usage`, `/admin/usage`, `tests/test_usage_guard.py` (20 parallel requests, exact limits) |
 | Response / classification / embedding caching | 5, 6 | 🟢 used by the tutor (answers to first questions, query embeddings) | `apps/api/app/cache/`, `scripts/seed_postgres.py` invalidation, `tests/test_cache.py` |
 | Prompt-injection guardrails, off-topic handling | 5, 6, 13 | 🟢 input cleaning, delimiter-safe templates, output checks, classifier off-topic decline (no further calls) | `apps/api/app/guardrails/`, `tests/test_guardrails.py`, `tests/test_source_hygiene.py` |
-| Chat history (threads: search, rename, archive, delete) | 6, 7 | 🟡 backend API done | `app/api/tutor.py`, `app/tutor/repository.py` |
-| Streaming answers, citations, follow-ups, regenerate | 6, 7 | 🟡 backend SSE API, regenerate and compare done | `app/api/tutor.py`, `app/tutor/service.py` |
-| Thumbs up/down + report bad answer → moderation | 7, 11 | 🔴 | |
+| Chat history (threads: search, rename, archive, delete) | 6, 7 | 🟢 | `app/api/tutor.py`, `apps/web/src/components/tutor/thread-list.tsx`, `e2e/tutor.spec.ts` |
+| Streaming answers, citations, follow-ups, regenerate | 6, 7 | 🟢 (incl. stop, edit-and-resend) | `app/api/tutor.py`, `apps/web/src/lib/tutor/`, `apps/web/src/components/tutor/` |
+| Thumbs up/down + report bad answer → moderation | 7, 11 | 🟡 feedback + reports stored, reported answers dropped from the cache; moderation queue in Phase 11 | `POST /tutor/messages/{id}/feedback`, `components/tutor/report-dialog.tsx` |
 | Quiz engine (6 modes, 5 question types), auto-grading, LLM short-answer grading | 8 | 🔴 | |
 | Mastery model with decay; spaced review (SM-2 lite) | 8, 9 | 🔴 | |
 | Concept library + concept pages | 8 | 🔴 | |
@@ -228,8 +239,8 @@ Key flows (details in docs/ARCHITECTURE.md once written):
 | 3 | Content, question bank, eval test set | 🟢 | 2026-11-19 | 2026-11-19 | cluster commits (DEC-020) `67fc84b`…`0fb67d4` + `feat(phase-03)` wrap-up | | 69/69 notes, 552 questions, 138 snippets run, 69 code_output keys verified, study sets, 85-item eval set; validate_content `--strict` in CI. Content still `reviewed: false` (human review pending). |
 | 4 | Auth, roles, app shell, public pages | 🟢 | 2026-11-19 | 2026-11-20 | `fbbdc49` `feat(phase-04): auth, roles, app shell, public pages` | | Verified locally: backend 161 tests, web 103 unit + 24 e2e (live auth cycle on the Supabase local stack), build without env vars (CI parity). GitHub Actions: first run red (BUG-018, test relied on seeded local Neo4j), green after `3e5419b` (run 44596309127). Google OAuth and cloud Supabase are live checks (Human Action 2, 7-10, 12). |
 | 5 | LLM layer, quotas, cost, cache, guardrails | 🟢 | 2026-11-20 | 2026-11-20 | `5750e49` `feat(phase-05): LLM layer, quotas, cost, cache, guardrails` | | GitHub Actions green (run 44604324609). Verified locally: backend 240 passed (CI-identical run: empty Neo4j, fresh DB, no keys), web 119 unit + 29 e2e from a cold server, builds with and without env. Real provider calls are a live check (Human Action 13). |
-| 6 | GraphRAG + plain RAG + agentic step | 🟢 | 2026-11-20 | 2026-11-20 | `feat(phase-06)` (see git log) | | Verified locally: backend 288 passed (48 new tutor tests), ruff, format, mypy clean. Live API run against local Neo4j + Supabase auth. Real-model smoke run is Human Action 15. |
-| 7 | Tutor chat UI | 🔴 | | | | | |
+| 6 | GraphRAG + plain RAG + agentic step | 🟢 | 2026-11-20 | 2026-11-20 | `f888d3a` `feat(phase-06)` | | GitHub Actions green (run 44656821252). Verified locally: backend 288 passed (48 new tutor tests), ruff, format, mypy clean. Live API run against local Neo4j + Supabase auth. Real-model smoke run is Human Action 15. |
+| 7 | Tutor chat UI | 🟢 | 2026-11-20 | 2026-11-20 | `feat(phase-07)` (see git log) | | Verified locally: backend 294 passed; web 167 unit + 26 e2e; screenshots in docs/screenshots/phase7. Real-model run is Human Action 16. |
 | 8 | Quiz engine, grading, mastery | 🔴 | | | | | |
 | 9 | Recommender, baseline, spaced review | 🔴 | | | | | |
 | 10 | Dashboard, knowledge map, notes | 🔴 | | | | | |
@@ -500,6 +511,35 @@ git tag -a v0.1 -m "Phase 1: Scaffold, design system, CI" && git push --tags   #
 - `CREATE DATABASE ... TEMPLATE` turns a 40 s seeded-database setup into a sub-second copy per test.
 **Next step:** Phase 7: Tutor chat UI.
 
+### Session 11 — 2026-11-20 — Phase 7: Tutor chat UI (autopilot)
+**Goal:** The tutor experience in the web app, polished like a commercial AI chat product, on top of the Phase 6 SSE API.
+**Built:**
+- `/app/tutor` workspace (`components/tutor/tutor-workspace.tsx`): thread list on the left (desktop panel, mobile drawer), chat in the centre, collapsible "Why this answer?" panel on the right (desktop column, mobile sheet). The app shell's `main` is full-bleed for this route. The active thread lives in component state, mirrored to `?thread=` (BUG-027).
+- Thread list: search, New chat, Today / Yesterday / Last 7 days / Older groups, inline rename, archive / restore (Archived view), delete with a 5 s Undo toast (the DELETE is only sent when the toast expires).
+- Streaming: `apiStream` (same auth, 401 retry, error envelope and cold-start banner as `api`) + an SSE parser over `fetch` + `ReadableStream` (`lib/tutor/sse.ts`); the chat hook (`lib/tutor/use-tutor.ts`) shows a snapshot of the thread plus the in-flight turn, then refetches and drops the overlay; each turn has a run id and a thread id so a turn finishing in the background never touches the open chat. Stop (button or Esc) aborts the fetch; the server saves the partial answer. Regenerate and edit-and-resend (latest only) stream through the new endpoints. Connection loss mid-answer shows the saved state and an error card with retry.
+- Messages: Markdown (react-markdown 10.1.0 + remark-gfm 4.0.1 + remark-math 6.0.0 + rehype-katex 7.0.1 / katex 0.19.1 + rehype-highlight 7.0.2 / highlight.js 11.11.2), no raw HTML, code blocks with language label and copy button, highlight colours as theme tokens (AA-checked in all three themes), `[[concept_id]]` citations as ConceptChips linking to `/app/learn?concept=…`, follow-up chips, copy / thumbs up / thumbs down / report / regenerate actions, "Reported for review" flag, moderated-answer note.
+- Live trace strip ("Matched: Recursion (0.95) → walking prerequisites → Call Stack ⚠ weak", staggered fade-in, reduced-motion safe) shown on the `trace` event before any token.
+- Why-this-answer panel: matched concepts with confidence and classification path (LLM / hybrid fallback lists / continued), an SVG mini graph of the traversed subgraph (top-to-bottom layers; matched filled with --primary, weak prerequisites outlined in --danger, related dashed in a bottom row; edge titles; legend), the prerequisite list with weakness and exact paths, the agentic steps, the chunks used (expandable to the note text via the new `GET /tutor/chunks`), and provider / model / latency / tokens / flags.
+- Quick check card for the agentic diagnostic question, with an input that continues the turn.
+- Report dialog (reason enum + optional comment) → `POST /tutor/messages/{id}/feedback`; thanks toast; thumbs toggle.
+- Empty state: four starter prompts (including the recursion overflow example) and "Continue learning: <concept>" from `GET /tutor/suggestions` (temporary syllabus rule, replaced in Phase 9; see Known Limitations LIM-024).
+- Errors: quota / rate / global cap card with reset time and links to Review and Quizzes (no AI needed), model-down and network cards with Try again (regenerate or resend, replacing an unanswered saved question), cold-start banner (existing), thread load error state.
+- Admin/reviewer "Compare with plain RAG" toggle → `POST /tutor/compare`, side-by-side answers and traces, concepts only GraphRAG brought in highlighted (not saved to the chat).
+- Accessibility: aria-live on the latest answer and a status region, aria-busy while streaming, labelled controls, keyboard shortcuts (Enter, Shift+Enter, Esc), focus returns to the composer on thread switch, character counter against the student's real input limit.
+- Backend additions: `POST /tutor/messages/{id}/feedback` (one row per user and message; a report invalidates the cached answer via `trace.cache_key`), `POST /tutor/messages/{id}/edit` (edit-and-resend; the old turn is superseded), `GET /tutor/suggestions`, `GET /tutor/chunks`, feedback state on `GET /tutor/threads/{id}`, edges between matched concepts recorded in traces, `InMemoryGraph.list_edges` / `topological_order` (parity-tested with Neo4j).
+- `useMe` reports pending until hydration has finished (BUG-026, `lib/use-hydrated.ts`).
+**Files touched:** `apps/web/src/components/tutor/*` (new), `apps/web/src/lib/tutor/*` (new), `src/lib/api.ts`, `src/lib/use-hydrated.ts`, `src/components/app/{app-shell,me-provider}.tsx`, `src/app/app/tutor/page.tsx`, `src/app/globals.css`, `src/test/contrast.test.ts`, `apps/web/e2e/{tutor,screenshots}.spec.ts`, `apps/web/package.json` + lock, `apps/api/app/api/tutor.py`, `app/tutor/{repository,service,pipeline,trace,traverse,suggest}.py`, `app/graph/memory.py`, `apps/api/tests/test_tutor_{api,graph,pipeline}.py`, `docs/screenshots/phase7/`, `progressfile.md`.
+**Commands run & results:** backend ruff ✅ · ruff format ✅ · mypy ✅ · pytest ✅ 294 passed (6 new: feedback, edit-and-resend, suggestions, chunks, syllabus parity, matched edges) · web lint ✅ · typecheck ✅ · vitest ✅ 167 (30 new: SSE parser, citations, trailer, thread grouping, Markdown safety, trace strip, message actions, quick check, hydration) · build ✅ · Playwright ✅ 26/26 (5 new tutor specs) on the second full run; the first full run had 2 auth-spec failures at 0 ms while the backend suite was running in parallel on this laptop (all 10 auth specs pass alone and in the rerun).
+**Manual verification:** screenshots `docs/screenshots/phase7/` (Neon Noir and Titanium Light): empty state with starters and Continue learning, answer with trace strip and Why panel, quick check, quick check continued, admin compare (GraphRAG brought `call_stack` into context, plain RAG did not). Checked by eye; the mini graph was redesigned twice after looking at it.
+**Bugs found this session:** BUG-026 (pre-existing), BUG-027
+**Decisions:** DEC-036 to DEC-039
+**What we learned:**
+- A hydration mismatch can come from data that arrives between the first paint and a later boundary's hydration; shared, early-fetched queries must render the server's state until hydration is over.
+- URL-as-state lags behind clicks: `router.replace` commits later, so the source of truth for "which chat is open" has to be component state, with the URL as a mirror.
+- Streaming UIs need run ids: a turn that finishes after the user moved on must not overwrite the newer turn.
+- Screenshot runs double as exploratory tests: two real bugs (BUG-027 and the busy-across-threads case) were found by the screenshot script, not the specs.
+**Next step:** Phase 8: quiz engine, auto-grading, mastery model.
+
 ## 7. Bug Log
 
 ### 7.1 Bug index
@@ -532,6 +572,8 @@ Severity: **S1** critical (data loss, security, app down) · **S2** major (featu
 | BUG-023 | 2026-11-20 | 6 | S3 | backend (fake mode) | Fake classifier added `call_stack` to "Why does my recursive function crash?" because of the single shared word "function", hiding the diagnostic path | Fixed | `feat(phase-06)` | `tests/test_tutor_api.py::test_diagnostic_question_then_reply_continues_turn` |
 | BUG-024 | 2026-11-20 | 6 | S3 | backend (fake mode) | Fake classifier declined "...segfaults for very large n" as off-topic: no alias phrase matched, so the hybrid fallback never ran | Fixed | `feat(phase-06)` | `tests/test_tutor_pipeline.py::test_fake_classifier_unsure_goes_to_fallback_not_decline` |
 | BUG-025 | 2026-11-20 | 6 | S3 | scripts / CI | `phase6_smoke.py --out <temp path>` crashed after writing the report (`relative_to` on a path outside the repo); the new CI step would have failed | Fixed | `feat(phase-06)` | the CI step itself (`--offline --out $RUNNER_TEMP/...`), run locally with a temp path |
+| BUG-026 | 2026-11-20 | 7 (pre-existing since 4) | S3 | frontend | Dev server logged "Hydration failed" on /app/settings: server HTML had the skeleton, the client's first render had the profile | Fixed | `feat(phase-07)` | `src/components/app/me-provider.test.tsx` (hydrates server HTML with /me cached; fails without the fix) |
+| BUG-027 | 2026-11-20 | 7 | S2 | frontend | "New chat" then an immediate question posted it into the previous thread; with a turn still settling, the new chat's composer was also blocked | Fixed | `feat(phase-07)` | `e2e/tutor.spec.ts` "New chat followed by an immediate question starts a new thread (BUG-027)" |
 | BUG-018 | 2026-11-20 | 4 | S2 | ci / tests | GitHub Actions backend job failed at pytest after the Phase 4 push (run 44593254858); everything passed locally | Fixed | `fix(ci)` after `fbbdc49` | CI-identical local run: empty Neo4j container, fresh database, no Supabase env (161 passed) |
 
 ### 7.2 Bug details
@@ -831,6 +873,28 @@ Severity: **S1** critical (data loss, security, app down) · **S2** major (featu
 - **Commit:** `feat(phase-06)`
 - **Lesson / pattern to avoid:** run a new CI command locally exactly as CI will, including its arguments.
 
+#### BUG-026 — Hydration mismatch on pages that read /me
+- **Found:** 2026-11-20, Phase 7, Playwright web-server log while running the existing auth / AI-usage specs
+- **Severity / Area:** S3 / frontend (pre-existing since Phase 4)
+- **Symptom:** "Hydration failed because the server rendered HTML didn't match the client" for `SettingsPage`; React re-rendered the tree on the client.
+- **Root cause:** the app shell fetches `/me` early. React hydrates the page segment later (selective hydration); if `/me` arrived in between, the page's first client render showed the profile while the server HTML had the skeleton (React Query returns the same snapshot for server and client).
+- **Fix:** `useMe` reports "pending" until hydration has finished (`useHydrated`, a `useSyncExternalStore` with a false server snapshot), so the first client render matches the server; the data shows immediately afterwards.
+- **Files changed:** `apps/web/src/components/app/me-provider.tsx`, `apps/web/src/lib/use-hydrated.ts`
+- **Regression test:** `src/components/app/me-provider.test.tsx` (renders to a string, hydrates with /me already cached, asserts no recoverable error; fails without the fix)
+- **Commit:** `feat(phase-07)`
+- **Lesson / pattern to avoid:** a query that can be in the cache before a component hydrates must not change the first render.
+
+#### BUG-027 — New chat followed quickly by a question used the old thread
+- **Found:** 2026-11-20, Phase 7, the screenshot script (the question appeared in the first chat; the view stayed on "New chat")
+- **Severity / Area:** S2 / frontend
+- **Symptom:** after clicking New chat and sending straight away, the question was added to the previously open thread. A second form: while the previous turn was still refetching, the new chat's composer was disabled, so the question was not sent at all.
+- **Root cause:** the workspace read the active thread from the URL, and `router.replace` commits later, so `send` still saw the old id; the first fix attempt also "adopted" the stale URL back. The chat hook had one global busy flag and unguarded state updates, so a finishing turn could block or overwrite another thread.
+- **Fix:** the active thread lives in component state (URL mirrored, back/forward adopted only when the URL actually changes); turns carry a run id and a thread id; busy is scoped to the open thread.
+- **Files changed:** `apps/web/src/components/tutor/tutor-workspace.tsx`, `apps/web/src/lib/tutor/use-tutor.ts`
+- **Regression test:** `e2e/tutor.spec.ts` "New chat followed by an immediate question starts a new thread (BUG-027)"
+- **Commit:** `feat(phase-07)`
+- **Lesson / pattern to avoid:** never derive "what the user just chose" from the URL right after navigating.
+
 ---
 
 ## 8. Decisions Log (lightweight ADRs)
@@ -871,6 +935,10 @@ Severity: **S1** critical (data loss, security, app down) · **S2** major (featu
 | DEC-033 | 2026-11-20 | Errors that can be HTTP errors (quota, 404, validation, mode permission) are raised in `prepare` before the SSE stream; failures during the stream become an `error` event | Everything inside the stream | Clients get a normal 429/404 with the error envelope; the stream only carries model/runtime failures | Two-step service API (`prepare`, `stream`) |
 | DEC-034 | 2026-11-20 | The fake controller asks a diagnostic only for debug questions with a prerequisite practised and scored below 0.6 | Ask whenever a prerequisite was never practised | Every prerequisite of a new student is "never practised"; quizzing on every question would be noise | Local mode shows the diagnostic path only with real mastery data (Phase 8) or a test row |
 | DEC-035 | 2026-11-20 | Token estimate = ceil(chars / 4) for the context budget | A tokenizer library per provider | No dependency, provider-neutral, deterministic in tests; the budget is a soft limit | Real token counts may differ by 10-20%; provider usage is still metered exactly |
+| DEC-036 | 2026-11-20 | The Why-panel mini graph is an SVG with the existing layered layout (`lib/graph-layout.ts`), drawn top-to-bottom; Cytoscape.js stays planned for the 69-node interactive knowledge map (Phase 10) | Cytoscape in the panel | At most ~12 nodes; no extra ~400 KB bundle in the chat route; colours straight from theme variables; same layout code as the public graph | The prompt's "mini Cytoscape graph" is met in function, not library |
+| DEC-037 | 2026-11-20 | Tutor routing: one page `/app/tutor` with `?thread=`; the active thread is component state mirrored to the URL | Nested route `/app/tutor/[id]` | The streaming turn and panels must survive the switch from "new" to a created thread without remounting; state avoids the URL lag (BUG-027) | Deep links still work via the query parameter |
+| DEC-038 | 2026-11-20 | `GET /tutor/chunks?ids=` returns note text for the Why panel instead of storing chunk text in each trace | Store chunk text in `retrieval_trace` | Traces stay small (ids, kinds, tokens); the text is public course material | One extra request when a student expands a chunk |
+| DEC-039 | 2026-11-20 | Thread delete waits for the 5 s undo window before calling DELETE | Soft delete column | No schema change; undo is instant and reliable | Closing the tab within 5 s cancels the delete (acceptable) |
 | DEC-022 | 2026-11-19 | Content code samples are C++14 (not 17) and Python 3.12; every snippet is a complete program that asserts its own claims and is compiled/run by the test suite | C++17 | The only local compiler is MinGW GCC 6.3 (no `-std=c++17`); C++14 also works on every CI compiler | Notes avoid C++17 features (structured bindings, `std::optional`) |
 
 ---
@@ -901,6 +969,9 @@ Severity: **S1** critical (data loss, security, app down) · **S2** major (featu
 | LIM-020 | When the client disconnects mid-answer, the tokens of the unfinished answer call are not metered (no final usage record); finished calls (classifier, controller) are | Small under-count of tokens for abandoned answers | Acceptable; the request itself still counts against the quota |
 | LIM-021 | The context budget uses an estimate of 4 chars per token (DEC-035) | The real prompt can be somewhat larger than 3000 tokens | Keep the budget conservative; revisit if a provider context limit is ever hit |
 | LIM-022 | Fake-mode classification is keyword-based, and local answers are assembled from the first paragraph of each chunk | Local answer quality is far below a real model; only retrieval is meaningful offline | Real-model smoke run (Human Action 15) and Phase 12 evaluation |
+| LIM-023 | Only one streaming answer can be stopped at a time; switching to another chat while an answer streams lets it finish in the background (saved normally) | Rare: a student who switches mid-answer cannot stop the old one | Acceptable; the answer is saved and visible when they return |
+| LIM-024 | "Continue learning" on the tutor's empty state uses a temporary syllabus rule (first unmastered concept whose prerequisites are mastered, `app/tutor/suggest.py`) | Not adaptive yet | **TODO Phase 9:** replace `next_concept` with the rule-based recommender (R1–R5) and log recommendations |
+| LIM-025 | Stop-generating is unit/integration tested on the server (partial answer saved) but not covered by an e2e spec, because the fake provider answers too fast to press Stop | A UI regression in Stop could slip through | Covered manually in Human Action 16 with a real model; Phase 13 can add a slow fake mode for e2e |
 
 ---
 
@@ -1071,6 +1142,9 @@ Run ID / date / models used: _TBD_
 | Shielded cancellation | A client disconnect cancels the request task; `anyio.CancelScope(shield=True)` lets cleanup writes finish | service.py `stream` (finally block) |
 | Bounded agent | An LLM picks the next action from a fixed list with a hard step limit, so it can never loop | controller.py (max 2 steps) |
 | Database templates | `CREATE DATABASE x TEMPLATE y` copies a prepared database in about a second | tests/test_tutor_api.py |
+| Selective hydration | React hydrates Suspense boundaries one by one; data that lands in between must not change a boundary's first render | `useHydrated` in `useMe` (BUG-026) |
+| SSE over fetch | `EventSource` cannot POST or send headers, so the stream is read from `fetch().body` and parsed by hand | `lib/tutor/sse.ts` |
+| Run ids for async UI | Tag each in-flight operation; late results from an older one are ignored | `lib/tutor/use-tutor.ts` |
 | DAG / topological order | Directed graph without cycles; an order where every prerequisite comes first | validate_graph.py, recommender R4/R5 |
 | Server-Sent Events | One-way streaming over HTTP for token-by-token answers | /tutor/.../messages |
 | Row Level Security | Postgres policies that restrict rows per user | supabase/migrations |

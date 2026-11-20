@@ -299,7 +299,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <UserMenu />
             </div>
           </header>
-          <main id="main" className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6">
+          <main
+            id="main"
+            className={cn(
+              "w-full flex-1",
+              // The tutor is a full-height workspace with its own panels.
+              pathname.startsWith("/app/tutor")
+                ? "min-h-0 overflow-hidden"
+                : "mx-auto max-w-6xl px-4 py-6 sm:px-6",
+            )}
+          >
             {error && !(error instanceof ApiError && error.status === 401) ? (
               <ErrorState
                 title="Couldn't load your account"

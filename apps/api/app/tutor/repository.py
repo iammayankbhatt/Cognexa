@@ -10,9 +10,10 @@ import uuid
 from typing import Any
 
 from sqlalchemy import and_, delete, func, insert, select, update
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.tables import chat_messages, chat_threads, mastery
+from app.db.tables import chat_messages, chat_threads, mastery, message_feedback
 from app.llm.types import Message
 
 
@@ -193,6 +194,63 @@ class ChatRepository:
             )
         ).first()
         return dict(row._mapping) if row else None
+
+    async def supersede_turn(self, user_message_id: uuid.UUID) -> None:
+        """Hide a user message and every answer to it (edit-and-resend)."""
+        await self.session.execute(
+            update(chat_messages)
+            .where(
+                (chat_messages.c.id == user_message_id)
+                | (chat_messages.c.reply_to == user_message_id),
+                chat_messages.c.superseded_at.is_(None),
+            )
+            .values(superseded_at=_now())
+        )
+
+    async def last_user_message(self, thread_id: uuid.UUID) -> dict[str, Any] | None:
+        row = (
+            await self.session.execute(
+                select(chat_messages)
+                .where(
+                    chat_messages.c.thread_id == thread_id,
+                    chat_messages.c.superseded_at.is_(None),
+                    chat_messages.c.role == "user",
+                )
+                .order_by(chat_messages.c.created_at.desc(), chat_messages.c.id.desc())
+                .limit(1)
+            )
+        ).first()
+        return dict(row._mapping) if row else None
+
+    # ---------------------------------------------------------------- feedback
+    async def upsert_feedback(
+        self, message_id: uuid.UUID, user_id: uuid.UUID, values: dict[str, Any]
+    ) -> dict[str, Any]:
+        """One feedback row per (message, user); only the given fields change."""
+        base = pg_insert(message_feedback).values(message_id=message_id, user_id=user_id, **values)
+        stmt = base.on_conflict_do_update(
+            index_elements=[message_feedback.c.message_id, message_feedback.c.user_id],
+            set_={**values, "updated_at": func.now()},
+        ).returning(message_feedback)
+        row = (await self.session.execute(stmt)).one()
+        return dict(row._mapping)
+
+    async def feedback_for_thread(
+        self, user_id: uuid.UUID, thread_id: uuid.UUID
+    ) -> dict[uuid.UUID, dict[str, Any]]:
+        rows = await self.session.execute(
+            select(
+                message_feedback.c.message_id,
+                message_feedback.c.rating,
+                message_feedback.c.report_reason,
+            )
+            .join(chat_messages, chat_messages.c.id == message_feedback.c.message_id)
+            .where(message_feedback.c.user_id == user_id, chat_messages.c.thread_id == thread_id)
+        )
+        return {
+            r.message_id: {"rating": r.rating, "reported": r.report_reason is not None}
+            for r in rows
+        }
 
     # ---------------------------------------------------------------- mastery
     async def mastery_map(self, user_id: uuid.UUID, subject_id: str) -> dict[str, float]:

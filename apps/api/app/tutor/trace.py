@@ -84,6 +84,7 @@ class RetrievalTrace(BaseModel):
     truncated: bool = False
     citations: list[str] = Field(default_factory=list)
     followups: list[str] = Field(default_factory=list)
+    cache_key: str | None = None  # response-cache entry this answer came from or went into
 
     def summary(self) -> str:
         """Human-readable one-liner, e.g. 'Recursion ← Call Stack (weak)'."""
