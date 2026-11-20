@@ -166,13 +166,21 @@ jobs:
           cache-dependency-glob: apps/api/uv.lock
       - name: Start the Supabase local stack (auth, database, mail)
         run: |
-          # throwaway ES256 key for this run (the real one is gitignored)
-          echo "[$(npx --yes supabase@3.2.0 gen signing-key --algorithm ES256 2>/dev/null)]" > supabase/signing_keys.json
+          # The local ES256 signing key is gitignored. A freshly generated key left PostgREST
+          # unable to verify the service key in CI (BUG-046), so CI uses the stack's default
+          # HS256 secret for every service; the API verifies it with SUPABASE_JWT_SECRET.
+          sed -i '/^signing_keys_path/d' supabase/config.toml
           npx --yes supabase@3.2.0 start -x realtime,storage-api,imgproxy,studio,edge-runtime,logflare,vector,supavisor,postgres-meta
           npx --yes supabase@3.2.0 status -o json > "$RUNNER_TEMP/supabase.json"
-          anon=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['ANON_KEY'])" "$RUNNER_TEMP/supabase.json")
-          echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$anon" >> "$GITHUB_ENV"
+          get() { python3 -c "import json,sys; print(json.load(open(sys.argv[1]))[sys.argv[2]])" "$RUNNER_TEMP/supabase.json" "$1"; }
+          echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$(get ANON_KEY)" >> "$GITHUB_ENV"
+          echo "SUPABASE_JWT_SECRET=$(get JWT_SECRET)" >> "$GITHUB_ENV"
           { echo "E2E_SUPABASE_STATUS<<STATUS_EOF"; cat "$RUNNER_TEMP/supabase.json"; echo "STATUS_EOF"; } >> "$GITHUB_ENV"
+          # fail fast if the database REST API does not accept the service key
+          service=$(get SERVICE_ROLE_KEY)
+          code=$(curl -s -o /dev/null -w '%{http_code}' -H "apikey: $service" -H "Authorization: Bearer $service" "http://127.0.0.1:54321/rest/v1/profiles?select=id&limit=1")
+          echo "PostgREST with the service key: HTTP $code"
+          test "$code" = "200"
       - name: Install the API and seed the databases
         working-directory: apps/api
         run: |

@@ -841,6 +841,7 @@ Severity: **S1** critical (data loss, security, app down) · **S2** major (featu
 | BUG-042 | 2026-11-20 | 13 (since 2) | S3 | graph / validator | Five concept pairs had both a prerequisite and a related edge (written on different concepts); the validator only checked one concept's own lists | Fixed | `feat(phase-13)` | `tests/test_graph_validation.py::test_related_link_on_the_other_side_of_a_prerequisite_is_rejected` |
 | BUG-043 | 2026-11-20 | 13 (since 4-11) | S3 | frontend / a11y | axe: unlabelled file input, nested interactive listbox, destructive button text 3.7:1, Titanium Light tabs 4.4:1, colour-only links on auth pages | Fixed | `feat(phase-13)` | `e2e/a11y.spec.ts` (all themes) |
 | BUG-044 | 2026-11-20 | 13 (since 4) | S4 | frontend | Unknown URLs showed Next.js's unstyled default 404 and there was no error boundary | Fixed | `feat(phase-13)` | `e2e/security.spec.ts` (404 page and status) |
+| BUG-046 | 2026-11-20 | 13 | S3 | ci | First run of the new CI e2e job: 28 specs failed with PostgREST 401 "No suitable key was found to decode the JWT" (run 44763408537) | Fixed | `fix(ci)` after `761421f` | CI step asserts PostgREST accepts the service key before Playwright |
 | BUG-045 | 2026-11-20 | 13 (since 6) | S3 | backend / tutor cache | A learner owed a quick check (weak, practised prerequisite) could get another learner's cached answer and skip it | Fixed | `feat(phase-13)` | `tests/test_tutor_pipeline.py::test_cache_bucket_separates_practised_from_new_weak_prerequisites`; `e2e/tutor.spec.ts` quick check after `security.spec.ts` |
 | BUG-037 | 2026-11-20 | 11 | S2 | backend / ingestion | A 6-page lecture-notes PDF became one section (and one proposal tagged to a single concept) | Fixed | `feat(phase-11)` | `tests/test_ingest_split.py` (6-page PDF → 6 titled sections; no false titles) |
 | BUG-038 | 2026-11-20 | 11 | S3 | frontend | Web typecheck failed: the proposals page passed `content` to the Markdown renderer, whose prop is `text` | Fixed | `feat(phase-11)` | `npm run typecheck` in CI |
@@ -1360,6 +1361,17 @@ Severity: **S1** critical (data loss, security, app down) · **S2** major (featu
 - **Regression test:** `tests/test_tutor_pipeline.py::test_cache_bucket_separates_practised_from_new_weak_prerequisites`; the e2e order security → tutor passes.
 - **Commit:** `feat(phase-13)`
 - **Lesson / pattern to avoid:** a cache key must include every input that changes the behaviour, not only the output's main inputs; new tests in the same run can expose hidden coupling.
+
+#### BUG-046 — CI e2e: PostgREST rejected the service key
+- **Found:** 2026-11-20, by the first GitHub Actions run of the `e2e` job (run 44763408537; read from the Playwright check-run annotations, job logs need admin rights)
+- **Severity / Area:** S3 / CI only
+- **Symptom:** every spec that sets up a profile through the Supabase REST API failed with 401 `PGRST301 No suitable key was found to decode the JWT`; user creation through Auth with the same key worked.
+- **Root cause:** CI generated a fresh ES256 signing key before `supabase start`; Auth signed with it but PostgREST was not configured with a matching key in that run. Not reproducible next to the running local stack.
+- **Fix:** CI removes `signing_keys_path` from its copy of `config.toml`, so all local services use the stack's default HS256 secret, and passes `JWT_SECRET` to the API as `SUPABASE_JWT_SECRET` (an existing, tested verification path). The step now fails fast unless PostgREST answers 200 with the service key.
+- **Files changed:** `.github/workflows/ci.yml`
+- **Regression test:** the new fail-fast check in the CI step.
+- **Commit:** `fix(ci)` after `761421f`
+- **Lesson / pattern to avoid:** a new CI job should assert its own preconditions before running the suite, so a set-up failure reads as one clear error instead of 28 test failures.
 
 ---
 
