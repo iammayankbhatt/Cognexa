@@ -8,6 +8,7 @@ path-length bounds, because Cypher cannot parameterise `*1..N`; they are clamped
 from __future__ import annotations
 
 import heapq
+import re
 from collections.abc import Iterable
 from typing import Any
 
@@ -35,6 +36,9 @@ class PathConcept(BaseModel):
 
     concept: GraphConcept
     depth: int
+    # Concept ids along one shortest path, in edge direction (prerequisite first), e.g. walking
+    # prerequisites of recursion: ["functions", "call_stack", "recursion"].
+    path_ids: list[str] = []
 
 
 class ChunkRecord(BaseModel):
@@ -46,6 +50,18 @@ class ChunkRecord(BaseModel):
     text: str
     order: int = 0
     reviewed: bool = False
+
+
+_LUCENE_WORD = re.compile(r"[a-z0-9]+")
+# Common English words carry no topic signal and would match many concepts in fulltext search.
+STOPWORDS = frozenset(
+    "the and for are but not you your with what why how does did can could would should when "  # noqa: SIM905
+    "where which who whom this that these those there their them they then than its it's "
+    "into from about over under have has had was were been being will just like get got make "
+    "made use using used best good bad very much many more most some any all one two way "
+    "thing things want need help please tell explain show give know think mean means work "
+    "works ".split()
+)
 
 
 def _depth(value: int) -> int:
@@ -139,11 +155,18 @@ class GraphRepository:
         rows = await self._read(
             f"MATCH path = {pattern} "
             "WHERE ALL(r IN relationships(path) WHERE r.status = 'approved') "
-            "WITH o, min(length(path)) AS depth "
-            "RETURN o AS concept, depth ORDER BY depth, o.order_index",
+            "WITH o, path ORDER BY length(path) "
+            "WITH o, collect(path)[0] AS p "
+            "RETURN o AS concept, length(p) AS depth, [n IN nodes(p) | n.id] AS ids "
+            "ORDER BY depth, o.order_index",
             id=concept_id,
         )
-        return [PathConcept(concept=_concept(dict(r["concept"])), depth=r["depth"]) for r in rows]
+        return [
+            PathConcept(
+                concept=_concept(dict(r["concept"])), depth=r["depth"], path_ids=list(r["ids"])
+            )
+            for r in rows
+        ]
 
     async def get_prerequisites(self, concept_id: str, depth: int = 2) -> list[PathConcept]:
         """Concepts that must be learned before `concept_id`, nearest first, up to `depth` hops."""
@@ -232,6 +255,26 @@ class GraphRepository:
             )
             for r in rows
         ]
+
+    async def search_concepts(
+        self, subject_id: str, text: str, limit: int = 10
+    ) -> list[tuple[str, float]]:
+        """Fulltext search over concept name, aliases and keywords. Returns (id, score), best
+        first. User text is reduced to plain words, so Lucene syntax cannot be injected."""
+        words = [
+            w for w in _LUCENE_WORD.findall(text.lower()) if len(w) > 2 and w not in STOPWORDS
+        ][:30]
+        if not words:
+            return []
+        rows = await self._read(
+            "CALL db.index.fulltext.queryNodes('concept_text', $q) YIELD node, score "
+            "WHERE node.subject_id = $sid AND coalesce(node.status, 'approved') = 'approved' "
+            "RETURN node.id AS id, score ORDER BY score DESC LIMIT $limit",
+            q=" OR ".join(words),
+            sid=subject_id,
+            limit=max(1, min(int(limit), 50)),
+        )
+        return [(r["id"], float(r["score"])) for r in rows]
 
     async def get_chunks(
         self, concept_ids: Iterable[str], kinds: Iterable[str] | None = None, limit: int = 50

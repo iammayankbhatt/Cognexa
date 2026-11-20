@@ -257,6 +257,9 @@ chat_messages = Table(
     Column("tokens_out", Integer),
     Column("latency_ms", Integer),
     Column("cached", Boolean, nullable=False, server_default="false"),
+    Column("truncated", Boolean, nullable=False, server_default="false"),
+    Column("superseded_at", DateTime(timezone=True)),
+    Column("reply_to", UUID(as_uuid=True), ForeignKey("chat_messages.id")),
     _now(),
 )
 

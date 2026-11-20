@@ -63,6 +63,8 @@ jobs:
         run: uv run python ../../scripts/validate_content.py --strict
       - name: Pytest (includes live Neo4j / Postgres integration tests)
         run: uv run pytest -q
+      - name: Tutor pipeline smoke run (offline, fake providers)
+        run: uv run python ../../scripts/phase6_smoke.py --offline --out "$RUNNER_TEMP/phase6_smoke.md"
       - name: Migrate and seed smoke test
         run: |
           uv run python ../../scripts/migrate.py

@@ -13,7 +13,7 @@
 **Mode:** autopilot, main only, no tags. One commit per phase (`feat(phase-NN): ...`), then `git push origin main` (explicitly authorised for autopilot; if push fails, log it under Human Action Needed and continue). No `gh` CLI and no Supabase CLI were found on this machine at start; CI runs are checked through the public GitHub API when possible.
 **Environment notes:** local `apps/api/.env` and `apps/web/.env.local` exist (created from the examples; fake LLM/embedding providers, `REPLACE_ME` for cloud values). Never open or print them; use `uv run --project apps/api python scripts/check_env.py`.
 **Phase order:** core 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 12 → 15 (prep only), then extras 11 → 13 → 14 → 16.
-**Current phase:** 6 — GraphRAG pipeline, plain-RAG baseline, bounded agentic step (not started). Phase 5 complete (Session 9).
+**Current phase:** 7 — Tutor chat UI (not started). Phase 6 complete (Session 10).
 
 **Phase 2 checkpoints (done)**
 - [x] 2.1 Env files, `scripts/check_env.py`, `.env.example` for all phases
@@ -55,7 +55,25 @@
 - [x] 5.8 `scripts/llm_smoke.py` (real call per provider; live run → Human Action), `seed_vectors.py` wired to the real embedding provider (fake stays default)
 - [x] 5.9 Full verification, wrap-up, commit `feat(phase-05)`, push, CI
 
-**Next action:** Phase 6 (GraphRAG pipeline, plain-RAG baseline, bounded agentic step): split it into checkpoints from docs/COGNEXA_PROMPTS.md. Use `app/llm/deps.get_llm`, `UsageGuard.request`, `guardrails.prompts.tutor_messages`, `guardrails.input.clean_user_text`, `LLMCache` and `CachedQueryEmbedder` from Phase 5.
+**Phase 6 plan (the pipeline, explained before coding):** a question goes through explicit stages in `apps/api/app/tutor/`, each writing into one `RetrievalTrace` (stored in `chat_messages.retrieval_trace`, streamed first as the SSE `trace` event).
+1. *Classify:* one JSON LLM call with the question, the last 4 turns and a compact cached concept catalogue → `{is_on_topic, concepts[≤3]{id, confidence, reason}, intent}`. If max confidence < 0.55 or the JSON is unusable: Neo4j fulltext over name/aliases/keywords + embedding similarity over concept descriptions, merged by reciprocal-rank fusion; the trace records which path won. Off-topic → polite decline, no more LLM calls.
+2. *Traverse:* approved edges only; prerequisites up to depth 2 (reversed PREREQUISITE_OF), related depth 1; the user's mastery marks weak prerequisites (score < 0.6 or never practised); order = matched → weak prerequisites (nearest first) → other prerequisites → related; exact edge paths recorded.
+3. *Agentic controller* (AGENTIC_MODE): ≤ 2 JSON steps per turn choosing answer_now | ask_diagnostic | expand_traversal (depth 3); a diagnostic question ends the turn and the student's reply resumes it with the stored trace.
+4. *Gather:* chunk kinds by intent for matched concepts, overview + pitfalls for prerequisites/related, filled in rank order under CONTEXT_TOKEN_BUDGET (3000), each labelled [concept_id/kind].
+5. *Answer:* streamed through the router with the tutor prompt (only from context, connect weak prerequisites, cite [[concept_id]], a `<followups>` JSON trailer stripped from the stream and sent as the `followups` event).
+*Baseline* plain_rag: embed the question → top-6 pgvector cosine over the same chunks → same budget and prompt without graph instructions. *API:* threads CRUD, SSE messages (trace, token, citation, followups, done, error; partial answer saved on disconnect), regenerate, compare (admin/reviewer). Every user message passes the usage guard once; each model call is logged. Fake mode: deterministic classifier/controller responders (keyword/alias matching against the catalogue) so local use needs no keys.
+
+**Phase 6 checkpoints**
+- [x] 6.1 Trace model, config (CLASSIFY_THRESHOLD, CONTEXT_TOKEN_BUDGET, PLAIN_RAG_TOP_K), concept catalogue (formatted + cached), Neo4j fulltext search, fake responders in FakeProvider
+- [x] 6.2 Stage 1 classifier + hybrid fallback (fulltext + description embeddings + RRF) + off-topic
+- [x] 6.3 Stage 2 traverse + personalisation + paths; Stage 3 gather + token budget
+- [x] 6.4 Stage 4 answer (prompt, trailer-safe stream filter, citations, follow-ups); Stage 5 controller (≤ 2 steps, diagnostic continuation)
+- [x] 6.5 plain_rag baseline (pgvector top-k)
+- [x] 6.6 Persistence + API: threads CRUD, SSE messages with disconnect handling, regenerate, compare, auto-title, usage guard + response cache
+- [x] 6.7 Tests: canonical failure case, fallback, off-topic, multi-concept, budget, personalisation, controller bound, SSE order, disconnect
+- [x] 6.8 `scripts/phase6_smoke.py` → `evaluation/reports/phase6_smoke.md` (10 testset questions, both modes; fake now, real providers = Human Action), wrap-up, commit
+
+**Next action:** Phase 7: read its prompt in docs/COGNEXA_PROMPTS.md and split it into checkpoints here. Backend contract it builds on: `POST /tutor/threads/{id}/messages` SSE (trace, token, citation, followups, done, error), threads CRUD, regenerate, compare (see Session 10).
 **Local stack:** `npx supabase start -x realtime,storage-api,imgproxy,studio,edge-runtime,logflare,vector,supavisor,postgres-meta` (mail UI http://127.0.0.1:54324); schema changes: `npx supabase migration up` (local Supabase) and `DATABASE_URL=<docker url> uv run ... scripts/migrate.py` (docker test DB)
 
 **Last cluster note:** Phase 3 content complete; 69/69 concepts
@@ -77,6 +95,7 @@
 | 11 | live checks | Lighthouse on the deployed landing page | After Phase 15: run Lighthouse (mobile) on the Vercel URL. The local lab score on this laptop was performance 74-80 (desktop 100); target 90+. If it is still below 90 on Vercel, tell Claude Code (LIM-015). |
 | 13 | live checks | Real LLM and embedding calls (Phase 5) | After adding `GROQ_API_KEY` and `GEMINI_API_KEY` and setting `LLM_PRIMARY_PROVIDER=groq`, `LLM_PRIMARY_MODEL=<current Groq model id>`, `LLM_FALLBACK_PROVIDER=gemini`, `LLM_FALLBACK_MODEL=<current Gemini model id>`, `EMBEDDING_PROVIDER=gemini`, `EMBEDDING_MODEL=<Gemini embedding model id>` (keep `EMBEDDING_DIM=768`) in `apps/api/.env`: run `uv run --project apps/api python scripts/llm_smoke.py`. Every line must say `ok`. If the Gemini `json` check fails with HTTP 400, set `GEMINI_API_VERSION=v1beta` and re-run. Then re-run `scripts/seed_vectors.py` (re-embeds with the real model, item 5) and, signed in as admin, press **Run live check** on /admin/usage. |
 | 14 | live checks | Quota message in the browser | Signed in as a student on the deployed site, set your own daily quota to 1 under Admin → Users (as admin), ask the tutor twice (Phase 7) and check the friendly "Daily AI limit reached" message with the reset time. Locally this is covered by API and unit tests. |
+| 15 | live checks | Phase 6 smoke run with real models (review together) | After item 13 (real keys): `uv run --project apps/api python scripts/phase6_smoke.py` (needs the dev Neo4j and Postgres seeded: `scripts/seed_neo4j.py`, `seed_postgres.py`, `seed_vectors.py`). It rewrites `evaluation/reports/phase6_smoke.md` with 10 test-set questions through both modes. Read each answer: right concepts matched? weak prerequisite explained? anything not in the context? Note problems in the report's review section and tell Claude Code. The committed report is the fake-mode run (retrieval only). |
 | 12 | live checks | Make yourself admin | After signing up on the cloud project: Supabase SQL editor → `update public.profiles set role = 'admin' where id = (select id from auth.users where email = '<your email>');` Wait 30 s (role cache) and reload; the Admin link appears. |
 
 ---
@@ -94,7 +113,7 @@
 | Repository | https://github.com/iammayankbhatt/Cognexa |
 | Live web app | _TBD (Vercel)_ |
 | Live API | _TBD (Render)_ |
-| Current phase | Phases 1 to 5 complete; next: Phase 6 (GraphRAG pipeline). Workflow: single developer, `main` only (DEC-013), autopilot (DEC-019) |
+| Current phase | Phases 1 to 6 complete; next: Phase 7 (Tutor chat UI). Workflow: single developer, `main` only (DEC-013), autopilot (DEC-019) |
 | Overall status | 🟡 In progress |
 
 Status legend: 🔴 Not started · 🟡 In progress · 🟢 Done + verified · ⚠️ Done with known issues · ⏸️ Blocked
@@ -114,20 +133,20 @@ Update the **Status** and **Where in code** columns as phases complete. Examiner
 | # | Report requirement (source) | Cognexa feature | Phase | Status | Where in code / evidence |
 |---|---|---|---|---|---|
 | O1 | KG of 40–80 core concepts in Neo4j with PREREQUISITE_OF and RELATED_TO (Obj. 1) | 69-concept DSA graph, validator, seed | 2 | 🟢 | `data/subjects/dsa/concepts.yaml`, `scripts/validate_graph.py`, `scripts/seed_neo4j.py`, `apps/api/app/graph/`, `tests/test_graph_*.py` |
-| O2a | Question → concept mapping by LLM, zero-shot (Obj. 2, §1.8) | Classifier + hybrid fallback | 6 | 🔴 | |
-| O2b | Graph traversal for prerequisite + related content (Obj. 2) | Cypher traversal, personalised ranking | 6 | 🔴 | |
-| O2c | LLM generates grounded answer from retrieved context (Obj. 2) | Answer stage + citations + SSE | 6, 7 | 🔴 | |
+| O2a | Question → concept mapping by LLM, zero-shot (Obj. 2, §1.8) | Classifier + hybrid fallback | 6 | 🟢 locally (real model: Human Action 15) | `app/tutor/classify.py`, `app/tutor/catalogue.py`, `GraphRepository.search_concepts`, `tests/test_tutor_pipeline.py` (fallback, invalid JSON, off-topic, multi-concept) |
+| O2b | Graph traversal for prerequisite + related content (Obj. 2) | Cypher traversal, personalised ranking | 6 | 🟢 | `app/tutor/traverse.py`, `GraphRepository._walk` (shortest paths), `app/tutor/gather.py`; canonical failure case `tests/test_tutor_pipeline.py::test_canonical_failure_case_brings_in_call_stack`; Neo4j/in-memory parity `tests/test_tutor_graph.py` |
+| O2c | LLM generates grounded answer from retrieved context (Obj. 2) | Answer stage + citations + SSE | 6, 7 | 🟡 backend done (SSE API, citations, follow-ups); UI in Phase 7 | `app/tutor/answer.py`, `app/tutor/pipeline.py`, `app/api/tutor.py`, `tests/test_tutor_api.py` |
 | O3a | Rule-based recommender: weak concepts → prerequisite to review (Obj. 3) | Rules R1–R5 | 9 | 🔴 | |
 | O3b | Uses quiz performance AND questions asked (Abstract) | Mastery + concept_interest signal | 8, 9 | 🔴 | |
 | O4 | Functional end-to-end system (Obj. 4) | Full product, deployed | 1–15 | 🔴 | |
 | O5a | User study: adaptive vs non-adaptive baseline (Obj. 5) | Study mode, groups, pre/post tests, export | 3, 9, 12 | 🟡 matched pre/post forms ready | `data/subjects/dsa/questions/_study_sets.yaml` |
-| O5b | Comparison against plain, non-graph RAG (§1.9) | plain_rag mode + compare view + eval | 3, 6, 12 | 🟡 eval set ready (85 items, 27 unnamed-prerequisite); pgvector chunks seeded (fake embeddings) | `data/subjects/dsa/eval/testset.jsonl`, `scripts/seed_vectors.py` |
+| O5b | Comparison against plain, non-graph RAG (§1.9) | plain_rag mode + compare view + eval | 3, 6, 12 | 🟡 plain_rag mode, `POST /tutor/compare` and a smoke report done; full evaluation in Phase 12 | `app/tutor/plain_rag.py`, `scripts/phase6_smoke.py`, `evaluation/reports/phase6_smoke.md`, `data/subjects/dsa/eval/testset.jsonl` |
 | O5c | RAGAs reference-free metrics (§2.2 [10]) | ragas_eval.py + admin eval page | 12 | 🔴 | |
 | G1 | LLM proposes tags, human verifies against fixed schema (Gap I, §3.4) | Proposals pipeline + review queue + PDF ingestion | 11 | 🔴 | |
-| G2 | Prerequisites retrieved via explicit Cypher traversal (Gap II) | Traversal stage + "Why this answer?" panel | 6, 7 | 🔴 | |
-| G3 | One graph powers both tutor and recommender (Gap III) | Shared GraphRepository | 6, 9 | 🔴 | |
-| T | "Agentic" (title) | Bounded agentic controller (answer / diagnostic check / expand) | 6 | 🔴 | |
-| X | Explainability: show the edge responsible for a retrieval (§2.3) | Trace + mini-graph in UI | 7 | 🔴 | |
+| G2 | Prerequisites retrieved via explicit Cypher traversal (Gap II) | Traversal stage + "Why this answer?" panel | 6, 7 | 🟡 traversal + exact edge paths in the trace; panel in Phase 7 | `app/tutor/traverse.py`, `app/tutor/trace.py` |
+| G3 | One graph powers both tutor and recommender (Gap III) | Shared GraphRepository | 6, 9 | 🟡 tutor side done; recommender in Phase 9 | `app/graph/repository.py`, `app/tutor/graph_source.py` |
+| T | "Agentic" (title) | Bounded agentic controller (answer / diagnostic check / expand) | 6 | 🟢 locally | `app/tutor/controller.py`; tests `test_controller_never_exceeds_two_steps`, `test_controller_diagnostic_ends_turn_and_reply_resumes_it`, `test_diagnostic_question_then_reply_continues_turn` |
+| X | Explainability: show the edge responsible for a retrieval (§2.3) | Trace + mini-graph in UI | 7 | 🟡 trace (matched, paths, chunks, controller, timings) stored and streamed; UI in Phase 7 | `app/tutor/trace.py`, `chat_messages.retrieval_trace` |
 | F | Future scope designed for: multi-subject, ML mastery, diagram parsing (§1.7) | subject_id everywhere, ADDING_A_SUBJECT.md | 2, 16 | 🟡 schema + seeds are subject-agnostic; guide in Phase 16 | `supabase/migrations/*`, `app/graph/loader.py` (`data/subjects/<id>/`), `scripts/seed_*.py --subject` |
 
 ### Product features (beyond the report)
@@ -140,10 +159,10 @@ Update the **Status** and **Where in code** columns as phases complete. Examiner
 | Onboarding + diagnostic quiz | 4, 8 | 🟡 onboarding flow done; the diagnostic step is a marked placeholder until Phase 8 | `src/app/app/onboarding/`, `POST /me/onboarding-complete` |
 | LLM provider layer with fallback, retries, circuit breaker | 5 | 🟢 locally (real providers: live check pending) | `apps/api/app/llm/` (router, groq, gemini, fake, registry, pricing), `scripts/llm_smoke.py`, `tests/test_llm_router.py`, `tests/test_llm_providers.py` |
 | Per-user quotas, rate limits, global cap, cost metering | 5 | 🟢 | `apps/api/app/usage/`, `llm_calls` table (migration 10), `GET /me/usage`, `/admin/usage`, `tests/test_usage_guard.py` (20 parallel requests, exact limits) |
-| Response / classification / embedding caching | 5 | 🟢 infrastructure (used by the tutor in Phase 6) | `apps/api/app/cache/`, `scripts/seed_postgres.py` invalidation, `tests/test_cache.py` |
-| Prompt-injection guardrails, off-topic handling | 5, 6, 13 | 🟡 input cleaning, delimiter-safe templates, output checks done; off-topic check comes with the Phase 6 classifier | `apps/api/app/guardrails/`, `tests/test_guardrails.py`, `tests/test_source_hygiene.py` |
-| Chat history (threads: search, rename, archive, delete) | 7 | 🔴 | |
-| Streaming answers, citations, follow-ups, regenerate | 7 | 🔴 | |
+| Response / classification / embedding caching | 5, 6 | 🟢 used by the tutor (answers to first questions, query embeddings) | `apps/api/app/cache/`, `scripts/seed_postgres.py` invalidation, `tests/test_cache.py` |
+| Prompt-injection guardrails, off-topic handling | 5, 6, 13 | 🟢 input cleaning, delimiter-safe templates, output checks, classifier off-topic decline (no further calls) | `apps/api/app/guardrails/`, `tests/test_guardrails.py`, `tests/test_source_hygiene.py` |
+| Chat history (threads: search, rename, archive, delete) | 6, 7 | 🟡 backend API done | `app/api/tutor.py`, `app/tutor/repository.py` |
+| Streaming answers, citations, follow-ups, regenerate | 6, 7 | 🟡 backend SSE API, regenerate and compare done | `app/api/tutor.py`, `app/tutor/service.py` |
 | Thumbs up/down + report bad answer → moderation | 7, 11 | 🔴 | |
 | Quiz engine (6 modes, 5 question types), auto-grading, LLM short-answer grading | 8 | 🔴 | |
 | Mastery model with decay; spaced review (SM-2 lite) | 8, 9 | 🔴 | |
@@ -208,8 +227,8 @@ Key flows (details in docs/ARCHITECTURE.md once written):
 | 2 | Databases + DSA concept graph | 🟢 | 2026-11-19 | 2026-11-19 | `0f2d90d` `feat(phase-02): databases and the DSA concept graph` | | Verified locally (79 tests) and on GitHub Actions (run 44499463362: backend + frontend jobs success). Supabase-specific behaviour (CLI `db push`, real `auth` schema) still untested (LIM-013). |
 | 3 | Content, question bank, eval test set | 🟢 | 2026-11-19 | 2026-11-19 | cluster commits (DEC-020) `67fc84b`…`0fb67d4` + `feat(phase-03)` wrap-up | | 69/69 notes, 552 questions, 138 snippets run, 69 code_output keys verified, study sets, 85-item eval set; validate_content `--strict` in CI. Content still `reviewed: false` (human review pending). |
 | 4 | Auth, roles, app shell, public pages | 🟢 | 2026-11-19 | 2026-11-20 | `fbbdc49` `feat(phase-04): auth, roles, app shell, public pages` | | Verified locally: backend 161 tests, web 103 unit + 24 e2e (live auth cycle on the Supabase local stack), build without env vars (CI parity). GitHub Actions: first run red (BUG-018, test relied on seeded local Neo4j), green after `3e5419b` (run 44596309127). Google OAuth and cloud Supabase are live checks (Human Action 2, 7-10, 12). |
-| 5 | LLM layer, quotas, cost, cache, guardrails | 🟢 | 2026-11-20 | 2026-11-20 | `feat(phase-05): LLM layer, quotas, cost, cache, guardrails` | | Verified locally: backend 240 passed (CI-identical run: empty Neo4j, fresh DB, no keys), web 119 unit + 29 e2e from a cold server, builds with and without env. Real provider calls are a live check (Human Action 13). |
-| 6 | GraphRAG + plain RAG + agentic step | 🔴 | | | | | |
+| 5 | LLM layer, quotas, cost, cache, guardrails | 🟢 | 2026-11-20 | 2026-11-20 | `5750e49` `feat(phase-05): LLM layer, quotas, cost, cache, guardrails` | | GitHub Actions green (run 44604324609). Verified locally: backend 240 passed (CI-identical run: empty Neo4j, fresh DB, no keys), web 119 unit + 29 e2e from a cold server, builds with and without env. Real provider calls are a live check (Human Action 13). |
+| 6 | GraphRAG + plain RAG + agentic step | 🟢 | 2026-11-20 | 2026-11-20 | `feat(phase-06)` (see git log) | | Verified locally: backend 288 passed (48 new tutor tests), ruff, format, mypy clean. Live API run against local Neo4j + Supabase auth. Real-model smoke run is Human Action 15. |
 | 7 | Tutor chat UI | 🔴 | | | | | |
 | 8 | Quiz engine, grading, mastery | 🔴 | | | | | |
 | 9 | Recommender, baseline, spaced review | 🔴 | | | | | |
@@ -449,6 +468,38 @@ git tag -a v0.1 -m "Phase 1: Scaffold, design system, CI" && git push --tags   #
 **Next step:** Phase 6: GraphRAG pipeline, plain-RAG baseline, bounded agentic step.
 ---
 
+### Session 10 — 2026-11-20 — Phase 6: GraphRAG pipeline, plain-RAG baseline, bounded agentic step (autopilot)
+**Goal:** The heart of the project (Objective 2, §1.8): map a question to concepts, walk the prerequisite graph, answer only from the gathered notes, with a plain-RAG baseline over the same chunks and a bounded agentic step.
+**Built:**
+- `app/tutor/` as explicit stages, each writing into one `RetrievalTrace` (stored in `chat_messages.retrieval_trace`, sent first as the SSE `trace` event):
+  - `catalogue.py`: compact concept catalogue (id | name | aliases | keywords | short description), cached per subject (5 min TTL; description embeddings kept when nothing changed).
+  - `classify.py` (Stage 1): one JSON call with the catalogue, the last 4 turns and the question → `{is_on_topic, concepts[≤3]{id, confidence, reason}, intent}`; invented ids dropped; picks far below the best dropped. Below `CLASSIFY_THRESHOLD` (0.55), on invalid JSON or on a failed call: Neo4j fulltext (`concept_text` index; user text reduced to plain words so Lucene syntax cannot be injected) + embedding similarity over concept descriptions + weak LLM picks, merged by reciprocal-rank fusion; the trace records the path. Off-topic → polite decline, no further calls.
+  - `traverse.py` (Stage 2): prerequisites to depth 2 and related at depth 1, approved edges only; weak = mastery < 0.6 or never practised; order matched → weak (nearest first, then the more specific concept) → other prerequisites → related; the exact edge path of each prerequisite (new `PathConcept.path_ids` from a shortest-path Cypher query).
+  - `gather.py` (Stage 3): chunk kinds by intent (debug → pitfalls/mechanism/prerequisites; complexity; example → example/code; explain → overview/intuition/mechanism/prerequisites; compare); overview + pitfalls for prerequisites/related; a first pass guarantees the matched concept's best chunk and the top-2 prerequisites' overviews before filling `CONTEXT_TOKEN_BUDGET` (3000, about 4 chars per token); chunks labelled `[concept_id/kind]`; long chunks cut at paragraph boundaries.
+  - `controller.py` (Stage 5, `AGENTIC_MODE`): at most 2 JSON planning calls choosing answer_now | ask_diagnostic (one "Quick check:" question about a weak prerequisite; ends the turn; the student's next message resumes it with the stored trace, without a new classification) | expand_traversal (depth 3, then decide once more). Invalid decisions and failures become answer_now.
+  - `answer.py` (Stage 4): GraphRAG and plain-RAG system prompts (same rules; the GraphRAG one adds graph notes and "connect the weak prerequisite"), `[[concept_id]]` citations limited to ids in the context, a `<followups>` JSON trailer withheld from the stream by `TrailerFilter` (also when the tag is split across tokens) and parsed into 2 follow-ups.
+  - `plain_rag.py`: `PgVectorSearch` (pgvector cosine over `content_chunks`, only vectors from the current embedding model) and `InMemoryVectorSearch` (offline eval and tests).
+  - `pipeline.py`: runs the stages and yields trace → tokens → citations → follow-ups → done; response cache for self-contained first questions (key includes the matched concepts and a hash of the weak prerequisites); every model call is collected in a caller-owned list.
+  - `repository.py`, `service.py`: thread/message/mastery queries scoped by user; `prepare` (thread check, input cleaning, plain-RAG permission, usage guard, user message, heuristic auto-title) runs before the stream so its errors are normal HTTP errors; `stream` saves the answer with trace, provider, model, tokens, latency and cached flag, meters each call, runs the output check, and on client disconnect saves the partial answer as `truncated` (writes shielded from the cancellation).
+- `app/graph/memory.py`: `InMemoryGraph` built from concepts.yaml + notes, implementing the same `TutorGraph` protocol as `GraphRepository`; a parity test proves both return the same prerequisite paths.
+- API (`app/api/tutor.py`): `POST/GET /tutor/threads` (paginated, title search, archived filter), `GET/PATCH/DELETE /tutor/threads/{id}`, `POST /tutor/threads/{id}/messages` (SSE), `POST /tutor/messages/{id}/regenerate` (latest answer only; the old one is superseded), `POST /tutor/compare` (reviewer/admin: both modes with traces).
+- Migration 11 (`chat_messages.truncated`, `superseded_at`, `reply_to`). New protected delimiter tags (`student_reply`, `catalogue`, `plan_input`, `followups`). FakeProvider: JSON responders registered per schema (keyword/alias classifier, evidence-based controller) and `[[id]]` citations + a follow-up trailer in its grounded answers.
+- `scripts/phase6_smoke.py` → `evaluation/reports/phase6_smoke.md` (10 test-set items, both modes, traces, gold coverage); the `--offline` variant runs in CI.
+**Files touched:** `apps/api/app/tutor/*` (new), `app/graph/{memory,repository}.py`, `app/api/tutor.py`, `app/main.py`, `app/core/config.py`, `app/db/tables.py`, `app/llm/fake.py`, `app/guardrails/input.py`, `supabase/migrations/20260101000011_chat_message_state.sql`, `apps/api/tests/test_tutor_{pipeline,graph,api}.py`, `apps/api/.env.example`, `scripts/phase6_smoke.py`, `evaluation/reports/phase6_smoke.md`, `.github/workflows/ci.yml`, `progressfile.md`.
+**Commands run & results:** ruff ✅ · ruff format ✅ · mypy ✅ (82 files) · pytest ✅ 288 passed (29 pipeline, 4 Neo4j tutor-graph, 15 tutor API) · `npx supabase migration up` ✅ (migration 11) · `scripts/migrate.py` on the docker dev DB ✅ · seed_neo4j / seed_postgres / seed_vectors ✅ (idempotent, nothing changed) · `scripts/phase6_smoke.py` ✅ (dev services) and `--offline` ✅. Frontend untouched this phase (last green: Phase 5).
+**Manual verification:** API started against local Neo4j + the local Supabase stack; a confirmed local user signed in through Supabase Auth; created a thread, streamed the canonical question (trace with recursion + call_stack, 156 token events, citation, follow-ups, done), listed threads (auto-title), read the thread back, got 403 for plain_rag as a student, asked "why?" (resolved from history), and saw the usage counter at 2.
+**Smoke result (fake mode, retrieval only):** gold prerequisites in context GraphRAG 4/4 vs plain RAG 2/4; gold concepts 9/11 vs 5/11.
+**Bugs found this session:** BUG-022, BUG-023, BUG-024, BUG-025
+**Decisions:** DEC-029 to DEC-035
+**Human action needed:** Autopilot State item 15 (real-model smoke run), plus earlier ones.
+**What we learned:**
+- Putting graph access behind a small protocol made the central claim testable everywhere: the canonical failure case runs on the real 69-concept graph in CI without Neo4j data, and a parity test keeps the in-memory and Neo4j versions honest.
+- A streamed answer needs its errors decided before the first byte: everything that can be a normal HTTP error (quota, 404, validation) runs before the SSE response starts.
+- Client disconnects arrive as cancellation; database writes in `finally` must be shielded (`anyio.CancelScope(shield=True)`) or they are cancelled too.
+- Fake modes need their own care: keyword matching that is too eager (one shared word) or too strict (no phrase → "off topic") gives misleading local results; the smoke report found both.
+- `CREATE DATABASE ... TEMPLATE` turns a 40 s seeded-database setup into a sub-second copy per test.
+**Next step:** Phase 7: Tutor chat UI.
+
 ## 7. Bug Log
 
 ### 7.1 Bug index
@@ -477,6 +528,10 @@ Severity: **S1** critical (data loss, security, app down) · **S2** major (featu
 | BUG-019 | 2026-11-20 | 5 | S2 | usage / db | 20 parallel AI requests for one user failed with `deadlock detected` | Fixed | `feat(phase-05)` | `tests/test_usage_guard.py::test_parallel_requests_cannot_exceed_the_daily_quota` (3 consecutive runs) |
 | BUG-020 | 2026-11-20 | 5 | S2 | security / tooling | Bidi-override and zero-width characters (U+200B..U+200F, U+202A..U+202E, U+2066..U+2069) were written literally into `guardrails/input.py` and a test instead of as escapes | Fixed | `feat(phase-05)` | `tests/test_source_hygiene.py` (fails on a planted U+202E) |
 | BUG-021 | 2026-11-20 | 5 | S4 | frontend | After an admin live check the top-bar usage meter still showed the old count | Fixed | `feat(phase-05)` | `e2e/ai-usage.spec.ts` meter assertion (fails without the fix) |
+| BUG-022 | 2026-11-20 | 6 | S4 | backend tests | A zero-width-space escape written in a test became the literal invisible character; the source-hygiene test failed | Fixed | `feat(phase-06)` | `tests/test_source_hygiene.py` (existing; caught it) |
+| BUG-023 | 2026-11-20 | 6 | S3 | backend (fake mode) | Fake classifier added `call_stack` to "Why does my recursive function crash?" because of the single shared word "function", hiding the diagnostic path | Fixed | `feat(phase-06)` | `tests/test_tutor_api.py::test_diagnostic_question_then_reply_continues_turn` |
+| BUG-024 | 2026-11-20 | 6 | S3 | backend (fake mode) | Fake classifier declined "...segfaults for very large n" as off-topic: no alias phrase matched, so the hybrid fallback never ran | Fixed | `feat(phase-06)` | `tests/test_tutor_pipeline.py::test_fake_classifier_unsure_goes_to_fallback_not_decline` |
+| BUG-025 | 2026-11-20 | 6 | S3 | scripts / CI | `phase6_smoke.py --out <temp path>` crashed after writing the report (`relative_to` on a path outside the repo); the new CI step would have failed | Fixed | `feat(phase-06)` | the CI step itself (`--offline --out $RUNNER_TEMP/...`), run locally with a temp path |
 | BUG-018 | 2026-11-20 | 4 | S2 | ci / tests | GitHub Actions backend job failed at pytest after the Phase 4 push (run 44593254858); everything passed locally | Fixed | `fix(ci)` after `fbbdc49` | CI-identical local run: empty Neo4j container, fresh database, no Supabase env (161 passed) |
 
 ### 7.2 Bug details
@@ -732,6 +787,50 @@ Severity: **S1** critical (data loss, security, app down) · **S2** major (featu
 - **Commit:** `feat(phase-05)`
 - **Lesson / pattern to avoid:** Anything that spends quota must refresh every view of that quota.
 
+#### BUG-022 — Invisible character in a test literal
+- **Found:** 2026-11-20, Phase 6, full backend run
+- **Severity / Area:** S4 / backend tests
+- **Symptom:** `test_no_invisible_or_bidi_characters_in_source` failed after adding the tutor API tests.
+- **Root cause:** a zero-width-space escape typed into a test string was written to disk as the real invisible character (the same tooling trap as BUG-020).
+- **Fix:** build the character at runtime with `chr(0x200B)`.
+- **Files changed:** `apps/api/tests/test_tutor_api.py`
+- **Regression test:** the existing source-hygiene test (it caught this one).
+- **Commit:** `feat(phase-06)`
+- **Lesson / pattern to avoid:** never write invisible characters as escapes in source; construct them with `chr()`.
+
+#### BUG-023 — Fake classifier matched concepts on one shared word
+- **Found:** 2026-11-20, Phase 6, `test_diagnostic_question_then_reply_continues_turn`
+- **Severity / Area:** S3 / backend (fake mode)
+- **Symptom:** "Why does my recursive function crash?" matched both Recursion and "Function Calls & the Call Stack", so call_stack was a matched concept instead of a weak prerequisite and the diagnostic step never triggered.
+- **Root cause:** name-word overlap (half a point per shared word) was kept next to strong whole-phrase matches.
+- **Fix:** when any whole alias/keyword phrase matches, loose name-word matches are dropped.
+- **Files changed:** `apps/api/app/tutor/classify.py`
+- **Regression test:** `tests/test_tutor_api.py::test_diagnostic_question_then_reply_continues_turn`
+- **Commit:** `feat(phase-06)`
+- **Lesson / pattern to avoid:** weak signals should only decide when there is no strong signal.
+
+#### BUG-024 — Fake classifier declined an on-topic question
+- **Found:** 2026-11-20, Phase 6, `evaluation/reports/phase6_smoke.md` (ts-024 got the off-topic message)
+- **Severity / Area:** S3 / backend (fake mode)
+- **Symptom:** "My recursive factorial in C++ works for small n but segfaults for very large n" got the polite decline.
+- **Root cause:** the fake classifier returned `is_on_topic=false` whenever no alias phrase matched, and an off-topic result skips the hybrid fallback by design. "segfaults" also did not match the keyword "segfault".
+- **Fix:** decline only when the question has no programming vocabulary; otherwise return no picks so fulltext + embeddings decide; crude plural folding in keyword matching; broader debug intent cues.
+- **Files changed:** `apps/api/app/tutor/classify.py`
+- **Regression test:** `tests/test_tutor_pipeline.py::test_fake_classifier_unsure_goes_to_fallback_not_decline`
+- **Commit:** `feat(phase-06)`
+- **Lesson / pattern to avoid:** "I don't know" and "not my topic" are different answers; a classifier (fake or real) must be able to say the first.
+
+#### BUG-025 — Smoke script crashed with an output path outside the repo
+- **Found:** 2026-11-20, Phase 6, running the new CI step locally
+- **Severity / Area:** S3 / scripts, CI
+- **Symptom:** `ValueError: ... is not in the subpath of ...` after the report was written.
+- **Root cause:** the final message printed `out.relative_to(REPO)` unconditionally.
+- **Fix:** print the relative path only when the file is inside the repo.
+- **Files changed:** `scripts/phase6_smoke.py`
+- **Regression test:** the CI step runs with `--out $RUNNER_TEMP/phase6_smoke.md`.
+- **Commit:** `feat(phase-06)`
+- **Lesson / pattern to avoid:** run a new CI command locally exactly as CI will, including its arguments.
+
 ---
 
 ## 8. Decisions Log (lightweight ADRs)
@@ -765,6 +864,13 @@ Severity: **S1** critical (data loss, security, app down) · **S2** major (featu
 | DEC-026 | 2026-11-20 | Quotas are reserved atomically in Postgres before the model call (conditional upserts, global row first) and refunded on failure; the per-minute limit stays in memory | Check-then-record; Redis | Exact limits under concurrency with the existing database; a failed call costs the student nothing | Per-minute limiting is per instance (LIM-003) |
 | DEC-027 | 2026-11-20 | One `response_cache` table with kind-prefixed keys (`resp:`, `cls:`, `emb:`); concept ids stored per entry for targeted invalidation; query embeddings also cached in an in-memory LRU | Separate tables; Redis | Uses the existing schema; invalidation by concept is one indexed array-overlap update | Embedding entries are about 15 KB each; TTL 30 days keeps the table small |
 | DEC-028 | 2026-11-20 | Per-call log table `llm_calls` (migration 10) next to the per-user daily counters | Derive stats from chat messages (Phase 7) | Admin stats by provider/model, cache hit rate and fallback rate are needed before the chat exists, and also cover non-chat calls (grading, checks) | One extra insert per AI request |
+| DEC-029 | 2026-11-20 | Graph reads behind a `TutorGraph` protocol with two implementations: Neo4j `GraphRepository` (product) and `InMemoryGraph` from the source files (offline eval, tests) | Mock Neo4j in tests; seed Neo4j in every test | CI's Neo4j starts empty (BUG-018); the canonical failure case must run on the real graph everywhere | A parity test keeps both implementations in agreement |
+| DEC-030 | 2026-11-20 | Thread titles from a heuristic (first question, trimmed, at most 60 chars) | A cheap LLM call | Saves one model call per thread on a free-tier quota; titles are editable | Titles are plainer than LLM summaries |
+| DEC-031 | 2026-11-20 | Regenerate only the latest answer; the old message is kept with `superseded_at` and hidden | Delete it; allow any message | Keeps the thread linear and keeps reported answers for moderation | Migration 11 adds `superseded_at`, `reply_to`, `truncated` |
+| DEC-032 | 2026-11-20 | Response cache only for self-contained first questions (no history, no diagnostic continuation); the key includes the matched concepts and a hash of the weak prerequisites | Cache every turn | Follow-ups depend on the conversation; personalised answers may only be shared within the same weakness bucket | Lower hit rate, no wrong answers from the cache |
+| DEC-033 | 2026-11-20 | Errors that can be HTTP errors (quota, 404, validation, mode permission) are raised in `prepare` before the SSE stream; failures during the stream become an `error` event | Everything inside the stream | Clients get a normal 429/404 with the error envelope; the stream only carries model/runtime failures | Two-step service API (`prepare`, `stream`) |
+| DEC-034 | 2026-11-20 | The fake controller asks a diagnostic only for debug questions with a prerequisite practised and scored below 0.6 | Ask whenever a prerequisite was never practised | Every prerequisite of a new student is "never practised"; quizzing on every question would be noise | Local mode shows the diagnostic path only with real mastery data (Phase 8) or a test row |
+| DEC-035 | 2026-11-20 | Token estimate = ceil(chars / 4) for the context budget | A tokenizer library per provider | No dependency, provider-neutral, deterministic in tests; the budget is a soft limit | Real token counts may differ by 10-20%; provider usage is still metered exactly |
 | DEC-022 | 2026-11-19 | Content code samples are C++14 (not 17) and Python 3.12; every snippet is a complete program that asserts its own claims and is compiled/run by the test suite | C++17 | The only local compiler is MinGW GCC 6.3 (no `-std=c++17`); C++14 also works on every CI compiler | Notes avoid C++17 features (structured bindings, `std::optional`) |
 
 ---
@@ -791,6 +897,10 @@ Severity: **S1** critical (data loss, security, app down) · **S2** major (featu
 | LIM-017 | Real Groq/Gemini calls are tested only against mocked HTTP with the documented wire format (request shapes verified against google-genai 3.6.1); no real key was available | A provider-side difference (e.g. JSON schema support in the default Gemini API version) could surface | `scripts/llm_smoke.py` live run (Human Action 13); `GEMINI_API_VERSION` override |
 | LIM-018 | Harmful-output and injection checks are small pattern lists | Clever phrasing passes the regexes | The prompt rules do most of the work; Phase 13 hardening reviews them with the eval set's injection items |
 | LIM-016 | Role changes take up to 30 s to apply (profile cache, DEC-023) | A demoted admin keeps access for up to 30 s | Acceptable for this app; revisit if roles ever guard sensitive data |
+| LIM-019 | Output checks (system-prompt leak, harmful content) run after the answer has streamed; a bad answer is replaced in the saved message and in the `done` event (`moderated: true`), but the student has already seen the tokens | Brief exposure of a leaked/harmful answer | Phase 7 UI replaces the text on `moderated`; Phase 13 can add incremental canary checks during the stream |
+| LIM-020 | When the client disconnects mid-answer, the tokens of the unfinished answer call are not metered (no final usage record); finished calls (classifier, controller) are | Small under-count of tokens for abandoned answers | Acceptable; the request itself still counts against the quota |
+| LIM-021 | The context budget uses an estimate of 4 chars per token (DEC-035) | The real prompt can be somewhat larger than 3000 tokens | Keep the budget conservative; revisit if a provider context limit is ever hit |
+| LIM-022 | Fake-mode classification is keyword-based, and local answers are assembled from the first paragraph of each chunk | Local answer quality is far below a real model; only retrieval is meaningful offline | Real-model smoke run (Human Action 15) and Phase 12 evaluation |
 
 ---
 
@@ -827,6 +937,7 @@ Severity: **S1** critical (data loss, security, app down) · **S2** major (featu
 | `EMBEDDING_PROVIDER`, `EMBEDDING_MODEL`, `EMBEDDING_DIM` | api | Embeddings |
 | `GROQ_API_KEY`, `GEMINI_API_KEY` | api | Provider keys |
 | `AGENTIC_MODE`, `STUDY_MODE` | api | Feature flags (defaults; admin can override) |
+| `CLASSIFY_THRESHOLD`, `CONTEXT_TOKEN_BUDGET`, `PLAIN_RAG_TOP_K`, `TUTOR_HISTORY_TURNS` | api | Tutor pipeline tuning (optional; defaults 0.55 / 3000 / 6 / 4) |
 | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | web | Supabase client (public) |
 | `NEXT_PUBLIC_API_URL` | web | Backend base URL |
 | `SENTRY_DSN` (optional) | api, web | Error tracking |
@@ -955,6 +1066,11 @@ Run ID / date / models used: _TBD_
 |---|---|---|
 | GraphRAG | Retrieval guided by relationships in a knowledge graph, not just text similarity | app/tutor |
 | Cypher variable-length path | `-[:PREREQUISITE_OF*1..2]->` matches chains of 1–2 edges | GraphRepository.get_prerequisites |
+| Reciprocal-rank fusion (RRF) | Merge several ranked lists by adding 1/(60 + rank) per list; works without comparable scores | classify.py hybrid fallback |
+| Server-Sent Events | One long HTTP response carrying `event:` / `data:` lines; simpler than WebSockets for one-way streaming | `POST /tutor/threads/{id}/messages` |
+| Shielded cancellation | A client disconnect cancels the request task; `anyio.CancelScope(shield=True)` lets cleanup writes finish | service.py `stream` (finally block) |
+| Bounded agent | An LLM picks the next action from a fixed list with a hard step limit, so it can never loop | controller.py (max 2 steps) |
+| Database templates | `CREATE DATABASE x TEMPLATE y` copies a prepared database in about a second | tests/test_tutor_api.py |
 | DAG / topological order | Directed graph without cycles; an order where every prerequisite comes first | validate_graph.py, recommender R4/R5 |
 | Server-Sent Events | One-way streaming over HTTP for token-by-token answers | /tutor/.../messages |
 | Row Level Security | Postgres policies that restrict rows per user | supabase/migrations |

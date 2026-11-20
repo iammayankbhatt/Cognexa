@@ -65,6 +65,12 @@ class Settings(BaseSettings):
     llm_breaker_threshold: int = 3  # consecutive failed calls before a provider is skipped
     llm_breaker_cooldown_s: float = 60.0
 
+    # Tutor pipeline (Phase 6).
+    classify_threshold: float = 0.55  # below this the hybrid fallback also runs
+    context_token_budget: int = 3000
+    plain_rag_top_k: int = 6
+    tutor_history_turns: int = 4
+
     # Feature flags (defaults; admins can override them in app_settings at runtime).
     agentic_mode: bool = True
     study_mode: bool = False

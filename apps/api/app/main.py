@@ -1,20 +1,27 @@
+import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import admin_ai, admin_users, concepts, graph, health, me
+from app.api import admin_ai, admin_users, concepts, graph, health, me, tutor
 from app.auth.deps import ProfileCache
 from app.auth.jwks import JwksCache
+from app.cache.service import CachedQueryEmbedder, LLMCache
 from app.core.config import Settings, get_settings
 from app.core.errors import register_error_handlers
 from app.core.logging import configure_logging
 from app.core.middleware import RequestIdMiddleware
 from app.db.session import Database
 from app.graph.provider import GraphProvider
+from app.llm.embeddings import EmbeddingProviderUnavailableError, get_embedding_provider
 from app.llm.registry import build_judge_router, build_router
+from app.tutor.catalogue import CatalogueCache
+from app.tutor.service import TutorDeps
 from app.usage.guard import UsageGuard
+
+logger = logging.getLogger(__name__)
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -44,6 +51,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.llm = llm
     app.state.judge_llm = judge
     app.state.usage_guard = UsageGuard(db)
+    try:
+        embedder = CachedQueryEmbedder(get_embedding_provider(settings), LLMCache(db))
+    except EmbeddingProviderUnavailableError:
+        logger.warning("embedding provider unavailable: hybrid fallback and plain_rag degraded")
+        embedder = None
+    app.state.tutor = TutorDeps(
+        llm=llm, embedder=embedder, catalogues=CatalogueCache(), cache=LLMCache(db)
+    )
     register_error_handlers(app)
 
     app.add_middleware(
@@ -63,6 +78,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(graph.router)
     app.include_router(admin_users.router)
     app.include_router(admin_ai.router)
+    app.include_router(tutor.router)
     return app
 
 

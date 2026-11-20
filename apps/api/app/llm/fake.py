@@ -4,13 +4,16 @@ Behaviour, in order:
 1. If a script was given, the next script item decides the reply: a string (reply text), an
    exception (raised), a `FailMidStream` (streams some text, then raises) or a callable taking
    (messages, options) and returning one of those.
-2. Otherwise a deterministic default: with a JSON schema, a minimal valid instance of the schema;
-   without one, an answer assembled from the `<context>` block of the prompt (so local mode gives
-   sensible, grounded answers without any API key), or a short notice when there is no context.
+2. Otherwise a deterministic default. With a JSON schema: a registered responder for that schema
+   (see `register_fake_responder`), else a minimal valid instance of the schema. Without one: an
+   answer assembled from the `<context>` block of the prompt (so local mode gives sensible,
+   grounded answers without any API key), or a short notice when there is no context.
 """
 
 from __future__ import annotations
 
+import asyncio
+import json
 import re
 import time
 from collections.abc import AsyncIterator, Callable, Iterable, Sequence
@@ -30,7 +33,11 @@ from app.llm.types import (
 
 _CONTEXT = re.compile(r"<context>(.*?)</context>", re.DOTALL | re.IGNORECASE)
 _QUESTION = re.compile(r"<student_question>(.*?)</student_question>", re.DOTALL | re.IGNORECASE)
+_CHUNK = re.compile(
+    r"<chunk\s+[^>]*concept=\"([^\"]+)\"[^>]*>(.*?)</chunk>", re.DOTALL | re.IGNORECASE
+)
 _TAG = re.compile(r"</?[a-zA-Z_][^>]*>")
+_PARA_SPLIT = re.compile(r"\n\s*\n")
 _MAX_ANSWER_CHARS = 1500
 
 
@@ -43,6 +50,16 @@ class FailMidStream:
 
 
 ScriptItem = str | Exception | FailMidStream | Callable[[Sequence[Message], CallOptions], Any]
+
+# Deterministic JSON answers for known schemas (by JSON Schema "title", i.e. the Pydantic class
+# name). Feature modules register theirs, e.g. the tutor's classifier matches the question against
+# the concept catalogue in the prompt. Unknown schemas get a minimal valid instance.
+FakeResponder = Callable[[Sequence[Message], dict[str, Any]], Any]
+FAKE_RESPONDERS: dict[str, FakeResponder] = {}
+
+
+def register_fake_responder(title: str, responder: FakeResponder) -> None:
+    FAKE_RESPONDERS[title] = responder
 
 
 def example_from_schema(schema: dict[str, Any], defs: dict[str, Any] | None = None) -> Any:
@@ -79,33 +96,64 @@ def example_from_schema(schema: dict[str, Any], defs: dict[str, Any] | None = No
     return None
 
 
+def _paragraphs(text: str) -> list[str]:
+    out = []
+    for para in _PARA_SPLIT.split(_TAG.sub("", text)):
+        line = " ".join(para.split())
+        if line and not line.startswith("#") and not line.startswith("[["):
+            out.append(line)
+    return out
+
+
 def grounded_answer(messages: Sequence[Message]) -> str:
-    """Deterministic answer built only from the prompt's <context> block."""
+    """Deterministic answer built only from the prompt's <context> block.
+
+    With <chunk concept="..."> blocks it cites each concept as [[id]] (the tutor's format); when
+    the instructions ask for a <followups> trailer it appends one with two follow-up questions.
+    """
     # Search message by message: instructions often *mention* the tags ("answer from <context>"),
     # and a regex over the joined prompt would pair that mention with the real closing tag.
     contexts = [c for m in messages for c in _CONTEXT.findall(m.content)]
     questions = [q for m in messages for q in _QUESTION.findall(m.content)]
     question = questions[-1].strip() if questions else ""
+    wants_followups = any("<followups>" in m.content for m in messages if m.role == "system")
     if not contexts:
         about = f' about "{question[:120]}"' if question else ""
         return (
             f"I can only answer from the course notes, and none were provided for this question"
             f"{about}. Try asking about a Data Structures & Algorithms topic."
         )
-    paragraphs: list[str] = []
+    pieces: list[tuple[str | None, str]] = []  # (concept id or None, paragraph)
     for block in contexts:
-        for para in re.split(r"\n\s*\n", _TAG.sub("", block)):
-            line = " ".join(para.split())
-            if line and not line.startswith("#"):
-                paragraphs.append(line)
-    body = ""
-    for para in paragraphs:
-        if len(body) + len(para) > _MAX_ANSWER_CHARS:
+        chunks = _CHUNK.findall(block)
+        if chunks:
+            for concept_id, body in chunks:
+                pieces.extend((concept_id, p) for p in _paragraphs(body)[:1])
+        else:
+            pieces.extend((None, p) for p in _paragraphs(block))
+    lines: list[str] = []
+    cited: list[str] = []
+    size = 0
+    for concept_id, para in pieces:
+        line = para + (f" [[{concept_id}]]" if concept_id else "")
+        if lines and size + len(line) > _MAX_ANSWER_CHARS:
             break
-        body += para + "\n\n"
+        lines.append(line)
+        size += len(line)
+        if concept_id and concept_id not in cited:
+            cited.append(concept_id)
     intro = "Here is what the course notes say"
     intro += f' about "{question[:120]}":' if question else ":"
-    return f"{intro}\n\n{body.strip() or paragraphs[0][:_MAX_ANSWER_CHARS]}"
+    answer = intro + "\n\n" + "\n\n".join(lines)
+    if wants_followups:
+        topic = cited[0].replace("_", " ") if cited else "this topic"
+        extra = cited[1].replace("_", " ") if len(cited) > 1 else topic
+        followups = [
+            f"Can you show a worked example of {topic}?",
+            f"How does {extra} relate to it?",
+        ]
+        answer += f"\n\n<followups>{json.dumps(followups)}</followups>"
+    return answer
 
 
 class FakeProvider(LLMProvider):
@@ -136,8 +184,9 @@ class FakeProvider(LLMProvider):
 
     def _default(self, messages: Sequence[Message], options: CallOptions) -> str:
         if options.json_schema is not None:
-            import json
-
+            responder = FAKE_RESPONDERS.get(str(options.json_schema.get("title", "")))
+            if responder is not None:
+                return json.dumps(responder(messages, options.json_schema))
             return json.dumps(example_from_schema(options.json_schema))
         return grounded_answer(messages)
 
@@ -155,8 +204,6 @@ class FakeProvider(LLMProvider):
     async def complete(self, messages: Sequence[Message], options: CallOptions) -> LLMResult:
         started = time.monotonic()
         if self._latency_s:
-            import asyncio
-
             await asyncio.sleep(self._latency_s)
         item = self._next(messages, options)
         if isinstance(item, Exception):
@@ -174,6 +221,8 @@ class FakeProvider(LLMProvider):
             raise item
         text = item.text if isinstance(item, FailMidStream) else str(item)
         for piece in re.findall(r"\S+\s*|\s+", text):
+            if self._latency_s:
+                await asyncio.sleep(self._latency_s)
             yield TextDelta(piece)
         if isinstance(item, FailMidStream):
             raise item.error

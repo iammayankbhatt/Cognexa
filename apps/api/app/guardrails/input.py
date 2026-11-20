@@ -16,7 +16,18 @@ import unicodedata
 
 from app.core.errors import AppError
 
-PROTECTED_TAGS = ("student_question", "context", "chunk", "system", "instructions", "history")
+PROTECTED_TAGS = (
+    "student_question",
+    "student_reply",
+    "context",
+    "chunk",
+    "system",
+    "instructions",
+    "history",
+    "catalogue",
+    "plan_input",
+    "followups",
+)
 _CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f\u200b-\u200f\u202a-\u202e\u2066-\u2069]")
 _BLANKS = re.compile(r"\n{3,}")
 _TAGS = re.compile(r"<\s*(/?)\s*(" + "|".join(PROTECTED_TAGS) + r")\b[^>]*>", re.IGNORECASE)
