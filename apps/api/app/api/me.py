@@ -13,6 +13,7 @@ from app.auth.admin import AuthAdminError, admin_api_configured, delete_auth_use
 from app.auth.deps import CurrentUser, ProfileCache, get_current_user
 from app.core.config import Settings, get_settings
 from app.core.errors import AppError
+from app.core.ratelimit import limit_by_user
 from app.db.profiles import ProfileRepository
 from app.db.repositories import AppSettingsRepository
 from app.db.session import get_session
@@ -175,7 +176,7 @@ async def complete_onboarding(
     return await build_me(session, user, profile)
 
 
-@router.get("/me/export")
+@router.get("/me/export", dependencies=[Depends(limit_by_user("me_export"))])
 async def export_me(
     user: Annotated[CurrentUser, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_session)],

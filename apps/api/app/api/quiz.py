@@ -13,9 +13,10 @@ from app.auth.deps import CurrentUser, get_current_user
 from app.core.config import Settings, get_settings
 from app.core.errors import AppError
 from app.core.flags import get_flags
+from app.core.ratelimit import limit_by_user
 from app.db.session import Database, get_database
 from app.db.tables import profiles
-from app.graph.provider import GraphProvider
+from app.graph.provider import GraphProvider, syllabus_of
 from app.llm.deps import get_judge_llm, get_usage_guard
 from app.llm.router import LLMRouter
 from app.quiz.service import QuizService
@@ -43,7 +44,7 @@ def get_quiz_service(
         judge=judge,
         guard=guard,
         cache=deps.cache,
-        graph=provider.repository() if provider.configured else None,
+        graph=syllabus_of(provider) if provider.configured else None,
     )
 
 
@@ -75,7 +76,7 @@ class SubmitIn(BaseModel):
     responses: dict[str, str | bool | list[str] | None] = Field(default_factory=dict, max_length=20)
 
 
-@router.post("/sessions", status_code=201)
+@router.post("/sessions", status_code=201, dependencies=[Depends(limit_by_user("quiz_create"))])
 async def create_session(
     body: SessionIn,
     user: User,

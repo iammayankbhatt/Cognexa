@@ -50,7 +50,6 @@ def test_development_is_never_audited() -> None:
         ({"embedding_provider": "fake"}, "EMBEDDING_PROVIDER"),
         ({"groq_api_key": "REPLACE_ME"}, "GROQ_API_KEY"),
         ({"gemini_api_key": None}, "GEMINI_API_KEY"),
-        ({"allowed_origins": ["*"]}, "'*'"),
         ({"allowed_origins": ["https://a.app", "http://localhost:3000"]}, "localhost"),
         ({"allowed_origins": ["http://cognexa.example.org"]}, "non-HTTPS"),
         ({"allowed_origins": []}, "empty"),

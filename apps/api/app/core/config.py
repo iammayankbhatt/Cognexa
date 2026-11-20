@@ -128,7 +128,10 @@ class Settings(BaseSettings):
     @classmethod
     def _split_origins(cls, v: object) -> object:
         if isinstance(v, str):
-            return [o.strip() for o in v.split(",") if o.strip()]
+            v = [o.strip() for o in v.split(",") if o.strip()]
+        # CORS runs with credentials, so a wildcard would let any site call the API as the user.
+        if isinstance(v, list) and "*" in v:
+            raise ValueError("ALLOWED_ORIGINS must list exact origins; '*' is not allowed")
         return v
 
 

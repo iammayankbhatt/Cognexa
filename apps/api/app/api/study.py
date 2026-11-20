@@ -17,6 +17,7 @@ from app.auth.deps import CurrentUser, ProfileCache, get_current_user, require_r
 from app.core.config import Settings, get_settings
 from app.core.errors import AppError
 from app.core.flags import get_flags
+from app.core.ratelimit import limit_by_user
 from app.db.repositories import AppSettingsRepository
 from app.db.session import Database, get_database
 from app.db.tables import audit_log, profiles, study_settings
@@ -145,7 +146,7 @@ async def update_study(
         return await _admin_view(session, settings)
 
 
-@router.get("/admin/study/export.csv")
+@router.get("/admin/study/export.csv", dependencies=[Depends(limit_by_user("admin_export"))])
 async def export_csv(_: Admin, db: DB) -> Response:
     """Anonymised participant table: salted hash ids, no names or emails."""
     async with db.sessions()() as session:

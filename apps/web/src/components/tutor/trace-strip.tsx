@@ -96,6 +96,16 @@ export function TraceStrip({ trace, onOpen }: { trace: RetrievalTrace; onOpen?: 
   }
   return (
     <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-muted">
+      {trace.degraded === "graph_unavailable" && (
+        <p
+          role="status"
+          className="mb-1 flex w-full items-start gap-1.5 rounded-lg border border-warning/50 bg-warning/10 px-2.5 py-1.5 text-text"
+        >
+          <TriangleAlert aria-hidden className="mt-px size-3.5 shrink-0 text-warning" />
+          The knowledge graph is unavailable right now, so this answer comes from a plain search of
+          the notes, without prerequisite links.
+        </p>
+      )}
       <span className="sr-only">Retrieval: </span>
       {body}
       {trace.cached && (

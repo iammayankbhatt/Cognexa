@@ -13,7 +13,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "e2e": "playwright test",
-    "screenshots": "playwright test --project=screenshots"
+    "screenshots": "playwright test --project=screenshots",
+    "check:bundle": "node scripts/check-bundle-secrets.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
@@ -44,6 +45,7 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.14.0",
     "@playwright/test": "^1.65.1",
     "@tailwindcss/turbopack": "4.3.3",
     "@testing-library/jest-dom": "^8.0.0",
@@ -62,5 +64,11 @@
     "tailwindcss": "4.3.3",
     "typescript": "^5",
     "vitest": "^5.1.1"
+  },
+  "overrides": {
+    "katex": "$katex",
+    "@ts-morph/common": {
+      "minimatch": "^11.0.1"
+    }
   }
 }

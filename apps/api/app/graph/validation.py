@@ -139,6 +139,17 @@ def validate_concept_file(doc: ConceptFile) -> ValidationReport:
         for ref in sorted(overlap):
             errors.append(f"{c.id}: '{ref}' is both a prerequisite and related")
 
+    # One relation per pair, whichever side lists it (BUG-042): a related link written on the
+    # other concept still duplicates a prerequisite edge once both are in the graph.
+    prereq_pairs = {frozenset((c.id, p)) for c in concepts for p in c.prerequisites}
+    for c in concepts:
+        for ref in sorted(set(c.related) - set(c.prerequisites)):
+            if frozenset((c.id, ref)) in prereq_pairs:
+                errors.append(
+                    f"{c.id}: related to '{ref}', but one is already a prerequisite of the other "
+                    "(keep only the prerequisite)"
+                )
+
     # unknown roots
     for r in doc.roots:
         if r not in known:

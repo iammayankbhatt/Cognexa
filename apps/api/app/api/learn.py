@@ -12,7 +12,7 @@ from app.core.config import Settings, get_settings
 from app.core.errors import AppError
 from app.db.session import Database, get_database
 from app.db.tables import content_chunks, questions
-from app.graph.provider import GraphProvider
+from app.graph.provider import GraphProvider, syllabus_of
 from app.mastery.model import MasteryParams
 from app.mastery.repository import MasteryRepository
 
@@ -48,7 +48,7 @@ async def concept_page(
     concept_id: Annotated[str, Path(pattern=ID_PATTERN)],
 ) -> dict[str, Any]:
     provider: GraphProvider = request.app.state.graph
-    graph = provider.repository()
+    graph = syllabus_of(provider)
     concept = await graph.get_concept(concept_id)
     if concept is None or concept.status != "approved":
         raise AppError("not_found", "Concept not found.", 404)

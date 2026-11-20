@@ -59,4 +59,5 @@ export function FormMessage({
   );
 }
 
-export const linkClass = "text-accent underline-offset-4 hover:underline";
+// Always underlined: links inside a sentence must not rely on colour alone (WCAG 1.4.1).
+export const linkClass = "text-accent underline underline-offset-4 hover:decoration-2";

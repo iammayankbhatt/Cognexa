@@ -1,14 +1,44 @@
 "use client";
 
-import "katex/dist/katex.min.css";
-
 import { Check, Copy } from "lucide-react";
-import { memo, useState, type ComponentPropsWithoutRef, type ReactNode } from "react";
+import { memo, useEffect, useState, type ComponentPropsWithoutRef, type ReactNode } from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
-import rehypeKatex from "rehype-katex";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
+
+// KaTeX (about 270 KB plus its stylesheet) is loaded the first time some text contains math,
+// not with every page that renders Markdown (Phase 13 performance).
+type KatexPlugin = typeof import("rehype-katex").default;
+let katexPlugin: KatexPlugin | null = null;
+let katexLoading: Promise<KatexPlugin> | null = null;
+
+export function loadKatex(): Promise<KatexPlugin> {
+  katexLoading ??= Promise.all([import("rehype-katex"), import("katex/dist/katex.min.css")]).then(
+    ([m]) => (katexPlugin = m.default),
+  );
+  return katexLoading;
+}
+
+/** Inline $…$, display $$…$$ or \( … \) / \[ … \] math. */
+export function hasMath(text: string): boolean {
+  return /\$\$[\s\S]+?\$\$|\$[^$\n]+\$|\\\(|\\\[/.test(text);
+}
+
+function useKatex(needed: boolean): KatexPlugin | null {
+  const [plugin, setPlugin] = useState<KatexPlugin | null>(katexPlugin);
+  useEffect(() => {
+    if (!needed || plugin) return;
+    let live = true;
+    void loadKatex().then((p) => {
+      if (live) setPlugin(() => p);
+    });
+    return () => {
+      live = false;
+    };
+  }, [needed, plugin]);
+  return needed ? plugin : null;
+}
 
 import { ConceptChip } from "@/components/shared/concept-chip";
 import { conceptIdFromHref, linkCitations } from "@/lib/tutor/text";
@@ -139,11 +169,15 @@ export const Markdown = memo(function Markdown({
   conceptNames = {},
   className,
 }: MarkdownProps) {
+  const katex = useKatex(hasMath(text));
   return (
     <div className={cn("min-w-0 text-sm text-text [&>*:first-child]:mt-0", className)}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkMath]}
-        rehypePlugins={[[rehypeHighlight, { detect: false, ignoreMissing: true }], rehypeKatex]}
+        rehypePlugins={[
+          [rehypeHighlight, { detect: false, ignoreMissing: true }],
+          ...(katex ? [katex] : []),
+        ]}
         components={makeComponents(conceptNames)}
       >
         {linkCitations(text)}

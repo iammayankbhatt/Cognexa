@@ -9,6 +9,7 @@ from starlette.datastructures import Headers, MutableHeaders
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from app.core.logging import request_id_ctx
+from app.db.repositories import close_settings_snapshot, open_settings_snapshot
 
 logger = logging.getLogger("app.access")
 _VALID_ID = re.compile(r"^[A-Za-z0-9._-]{8,64}$")
@@ -26,6 +27,7 @@ class RequestIdMiddleware:
         incoming = Headers(scope=scope).get("x-request-id", "")
         rid = incoming if _VALID_ID.match(incoming) else uuid.uuid4().hex
         token = request_id_ctx.set(rid)
+        settings_token = open_settings_snapshot()
         start = time.perf_counter()
         status = 500
 
@@ -48,4 +50,5 @@ class RequestIdMiddleware:
                     "duration_ms": round((time.perf_counter() - start) * 1000, 1),
                 },
             )
+            close_settings_snapshot(settings_token)
             request_id_ctx.reset(token)

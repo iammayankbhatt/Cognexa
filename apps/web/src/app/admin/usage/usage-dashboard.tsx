@@ -7,7 +7,7 @@ import { toast } from "sonner";
 
 import { ME_KEY } from "@/components/app/me-provider";
 import { USAGE_KEY } from "@/components/app/usage-card";
-import { UsageChart } from "@/components/app/usage-chart";
+import { UsageChart } from "@/components/dashboard/lazy-charts";
 import { EmptyState } from "@/components/shared/empty-state";
 import { ErrorState } from "@/components/shared/error-state";
 import { PageHeader } from "@/components/shared/page-header";

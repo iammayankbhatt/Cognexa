@@ -108,6 +108,7 @@ function UploadCard({ onShow }: { onShow: (documentId: string) => void }) {
           accept=".pdf,.md,.markdown,.txt"
           className="sr-only"
           id="ingest-file"
+          aria-label="Lecture notes file (PDF, Markdown or text)"
           onChange={(e) => {
             const f = e.target.files?.[0];
             if (f) void upload(f);

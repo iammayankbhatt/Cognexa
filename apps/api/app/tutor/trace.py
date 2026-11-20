@@ -85,6 +85,9 @@ class RetrievalTrace(BaseModel):
     citations: list[str] = Field(default_factory=list)
     followups: list[str] = Field(default_factory=list)
     cache_key: str | None = None  # response-cache entry this answer came from or went into
+    # Set when the requested mode could not run, e.g. "graph_unavailable": the knowledge graph
+    # was unreachable and this answer came from plain RAG instead (shown to the student).
+    degraded: str | None = None
 
     def summary(self) -> str:
         """Human-readable one-liner, e.g. 'Recursion ← Call Stack (weak)'."""

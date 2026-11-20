@@ -98,6 +98,8 @@ jobs:
         run: npm run test
       - name: Build
         run: npm run build
+      - name: No secrets in the client bundle
+        run: npm run check:bundle
 
   container:
     name: API container (build, boot, /health)
@@ -119,3 +121,86 @@ jobs:
       - name: Production config audit is logged
         if: always()
         run: docker logs api 2>&1 | grep -q "production config:"
+
+  e2e:
+    name: End-to-end (Playwright on local Supabase + Neo4j, fake AI)
+    runs-on: ubuntu-latest
+    needs: [backend, frontend]
+    timeout-minutes: 45
+    services:
+      neo4j:
+        image: neo4j:5
+        env:
+          NEO4J_AUTH: neo4j/cognexa_ci_password
+        ports: ["7687:7687"]
+        options: >-
+          --health-cmd "cypher-shell -u neo4j -p cognexa_ci_password 'RETURN 1'"
+          --health-interval 10s --health-timeout 10s --health-retries 12 --health-start-period 30s
+    env:
+      # API: the Supabase local stack's database and auth, Neo4j service, fake AI providers
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+      SUPABASE_URL: http://127.0.0.1:54321
+      NEO4J_URI: bolt://localhost:7687
+      NEO4J_USER: neo4j
+      NEO4J_PASSWORD: cognexa_ci_password
+      LLM_PRIMARY_PROVIDER: fake
+      LLM_FALLBACK_PROVIDER: fake
+      LLM_JUDGE_PROVIDER: fake
+      EMBEDDING_PROVIDER: fake
+      ALLOWED_ORIGINS: http://localhost:3000
+      # web
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+      NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+      # a missing stack fails the run instead of skipping specs
+      E2E_REQUIRE_STACK: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: apps/api/uv.lock
+      - name: Start the Supabase local stack (auth, database, mail)
+        run: |
+          # throwaway ES256 key for this run (the real one is gitignored)
+          echo "[$(npx --yes supabase@3.2.0 gen signing-key --algorithm ES256 2>/dev/null)]" > supabase/signing_keys.json
+          npx --yes supabase@3.2.0 start -x realtime,storage-api,imgproxy,studio,edge-runtime,logflare,vector,supavisor,postgres-meta
+          npx --yes supabase@3.2.0 status -o json > "$RUNNER_TEMP/supabase.json"
+          anon=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['ANON_KEY'])" "$RUNNER_TEMP/supabase.json")
+          echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$anon" >> "$GITHUB_ENV"
+          { echo "E2E_SUPABASE_STATUS<<STATUS_EOF"; cat "$RUNNER_TEMP/supabase.json"; echo "STATUS_EOF"; } >> "$GITHUB_ENV"
+      - name: Install the API and seed the databases
+        working-directory: apps/api
+        run: |
+          uv sync --frozen
+          uv run python ../../scripts/seed_postgres.py
+          uv run python ../../scripts/seed_neo4j.py
+          uv run python ../../scripts/seed_vectors.py
+      - name: Start the API
+        working-directory: apps/api
+        run: |
+          nohup uv run uvicorn app.main:app --port 8000 > "$RUNNER_TEMP/api.log" 2>&1 &
+          for i in $(seq 1 60); do curl -sf http://localhost:8000/health/deep | grep -q '"status":"ok"' && exit 0; sleep 2; done
+          echo "API did not become healthy"; tail -50 "$RUNNER_TEMP/api.log"; exit 1
+      - name: Install the web app and Chromium
+        working-directory: apps/web
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+      - name: Playwright (all specs)
+        working-directory: apps/web
+        run: npx playwright test --project=chromium
+      - name: Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report
+          retention-days: 7
+      - name: API log
+        if: failure()
+        run: tail -200 "$RUNNER_TEMP/api.log"

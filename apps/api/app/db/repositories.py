@@ -3,6 +3,7 @@ phases add one repository per domain (quizzes, chat, usage, ...) in this same st
 
 from __future__ import annotations
 
+from contextvars import ContextVar, Token
 from typing import Any
 
 from sqlalchemy import case, delete, func, select, update
@@ -141,11 +142,20 @@ class AppSettingsRepository:
         return inserted
 
     async def get(self, key: str) -> dict[str, Any] | None:
-        result = await self._s.execute(
-            select(app_settings.c.value).where(app_settings.c.key == key)
-        )
-        row = result.first()
-        return dict(row[0]) if row else None
+        snapshot = _request_settings.get()
+        if snapshot is None:  # outside an HTTP request (scripts, tests): read directly
+            result = await self._s.execute(
+                select(app_settings.c.value).where(app_settings.c.key == key)
+            )
+            row = result.first()
+            return dict(row[0]) if row else None
+        if _LOADED not in snapshot:
+            # One query for the whole (small) table instead of one per key and caller.
+            rows = await self._s.execute(select(app_settings.c.key, app_settings.c.value))
+            snapshot.update({r.key: dict(r.value) for r in rows})
+            snapshot[_LOADED] = {}
+        value = snapshot.get(key)
+        return dict(value) if value is not None else None
 
     async def set(self, key: str, value: dict[str, Any]) -> None:
         stmt = insert(app_settings).values(key=key, value=value)
@@ -155,6 +165,26 @@ class AppSettingsRepository:
                 set_={"value": stmt.excluded.value, "updated_at": func.now()},
             )
         )
+        snapshot = _request_settings.get()
+        if snapshot is not None:
+            snapshot[key] = dict(value)
+
+
+# Per-request snapshot of app_settings (Phase 13 performance): a request reads the table once,
+# however many limits and flags it checks. Opened by RequestIdMiddleware for every HTTP request;
+# None elsewhere, so scripts and direct test calls always read fresh values.
+_request_settings: ContextVar[dict[str, dict[str, Any]] | None] = ContextVar(
+    "request_settings", default=None
+)
+_LOADED = "\x00loaded"
+
+
+def open_settings_snapshot() -> Token[dict[str, dict[str, Any]] | None]:
+    return _request_settings.set({})
+
+
+def close_settings_snapshot(token: Token[dict[str, dict[str, Any]] | None]) -> None:
+    _request_settings.reset(token)
 
 
 class ContentRepository:

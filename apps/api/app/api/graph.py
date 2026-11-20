@@ -14,7 +14,8 @@ from pydantic import BaseModel
 
 from app.core.config import Settings, get_settings
 from app.core.errors import AppError
-from app.graph.provider import GraphProvider
+from app.core.ratelimit import limit_by_ip
+from app.graph.provider import GraphProvider, syllabus_of
 
 router = APIRouter(tags=["graph"])
 CACHE_TTL_S = 300.0
@@ -39,7 +40,7 @@ class GraphOut(BaseModel):
     edges: list[EdgeOut]
 
 
-@router.get("/graph", response_model=GraphOut)
+@router.get("/graph", response_model=GraphOut, dependencies=[Depends(limit_by_ip("public_graph"))])
 async def public_graph(
     request: Request,
     settings: Annotated[Settings, Depends(get_settings)],
@@ -51,7 +52,7 @@ async def public_graph(
     if hit and time.monotonic() - hit[0] < CACHE_TTL_S:
         return hit[1]
     provider: GraphProvider = request.app.state.graph
-    repo = provider.repository()
+    repo = syllabus_of(provider)
     try:
         concepts = await repo.list_concepts(sid)
         edges = await repo.list_edges(sid)

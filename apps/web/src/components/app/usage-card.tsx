@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 
-import { UsageChart } from "@/components/app/usage-chart";
+import { UsageChart } from "@/components/dashboard/lazy-charts";
 import { ErrorState } from "@/components/shared/error-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { api, ApiError, type UsageSummary } from "@/lib/api";

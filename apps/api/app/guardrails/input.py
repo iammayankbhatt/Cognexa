@@ -16,6 +16,9 @@ import unicodedata
 
 from app.core.errors import AppError
 
+# Marker in every system prompt; seeing it in a reply means the prompt leaked (guardrails.output).
+CANARY = "CGX-7f3a-SYS"
+
 PROTECTED_TAGS = (
     "student_question",
     "student_reply",
@@ -30,6 +33,7 @@ PROTECTED_TAGS = (
     "question",
     "rubric",
     "reference_answer",
+    "section",
 )
 _CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f\u200b-\u200f\u202a-\u202e\u2066-\u2069]")
 _BLANKS = re.compile(r"\n{3,}")
@@ -44,6 +48,7 @@ _INJECTION = [
         r"\byou are now\b|\bact as\b.{0,30}\b(dan|developer mode|jailbreak)",
         r"\bnew instructions?\b\s*:",
         r"</?\s*(system|student_question|context)\s*>",
+        re.escape(CANARY),  # asking the model to repeat the hidden marker
     )
 ]
 
@@ -72,5 +77,9 @@ def clean_user_text(text: str, max_chars: int) -> str:
 
 
 def injection_signals(text: str) -> list[str]:
-    """Which injection patterns matched (empty list when none). For logs/metrics only."""
-    return [p.pattern for p in _INJECTION if p.search(text)]
+    """Which injection patterns matched (empty list when none). For logs/metrics only.
+
+    Matched on the normalised text (NFKC, invisible characters removed), so look-alike tags such
+    as fullwidth brackets or tags split by zero-width spaces are flagged too."""
+    t = _CONTROL.sub("", unicodedata.normalize("NFKC", text))
+    return [p.pattern for p in _INJECTION if p.search(t)]

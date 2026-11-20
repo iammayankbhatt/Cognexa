@@ -17,6 +17,7 @@ from pydantic import BaseModel, Field
 
 from app.cache.keys import cache_key
 from app.cache.service import LLMCache
+from app.guardrails.input import clean_text
 from app.guardrails.prompts import GUARD_RULES
 from app.llm.fake import register_fake_responder
 from app.llm.router import LLMRouter
@@ -51,7 +52,8 @@ def judge_messages(q: QuestionData, answer: str) -> list[Message]:
         f"<question>\n{q.prompt}\n</question>\n\n"
         f"<rubric>\n{lines}\n</rubric>\n\n"
         f"<reference_answer>\n{q.answer}\n</reference_answer>\n\n"
-        f"<student_reply>\n{answer}\n</student_reply>"
+        # cleaned so a reply cannot close its tag and pose as rubric or grader text (BUG-041)
+        f"<student_reply>\n{clean_text(answer)}\n</student_reply>"
     )
     return [Message("system", JUDGE_SYSTEM.replace("{partial}", partial)), Message("user", user)]
 

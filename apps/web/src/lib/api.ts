@@ -62,10 +62,17 @@ async function accessToken(forceRefresh = false): Promise<string | null> {
   return data.session?.access_token ?? null;
 }
 
+/** 32 hex characters, accepted by the API's request-id check ([A-Za-z0-9._-]{8,64}). */
+export function newRequestId(): string {
+  return crypto.randomUUID().replaceAll("-", "");
+}
+
 async function send(path: string, init: RequestInit, token: string | null): Promise<Response> {
   const headers = new Headers(init.headers);
   if (token) headers.set("Authorization", `Bearer ${token}`);
   if (init.body && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
+  // The API logs and echoes this id, so a browser error and the server log line match up.
+  if (!headers.has("X-Request-ID")) headers.set("X-Request-ID", newRequestId());
   return fetch(`${API_URL}${path}`, { ...init, headers });
 }
 

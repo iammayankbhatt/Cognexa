@@ -10,12 +10,14 @@ the caller can meter it. Persistence and quotas live in the service layer (app.t
 from __future__ import annotations
 
 import hashlib
+import logging
 import time
 from collections.abc import AsyncIterator, Mapping, Sequence
 from dataclasses import dataclass, field
 
 from app.cache.keys import cache_key
 from app.cache.service import LLMCache
+from app.graph.repository import GRAPH_UNAVAILABLE
 from app.llm.embeddings import EmbeddingProvider
 from app.llm.router import LLMRouter
 from app.llm.types import LLMResult, Message, StreamDone, TextDelta
@@ -36,6 +38,8 @@ from app.tutor.graph_source import TutorGraph
 from app.tutor.plain_rag import VectorSearch
 from app.tutor.trace import Mode, RetrievalTrace
 from app.tutor.traverse import traverse
+
+log = logging.getLogger(__name__)
 
 DEFAULT_DEPTH = 2
 ANSWER_MAX_TOKENS = 900
@@ -104,7 +108,14 @@ def _ms(start: float) -> int:
 
 
 def personal_bucket(trace: RetrievalTrace) -> str:
-    weak = sorted(c.id for c in trace.concepts if c.role == "prerequisite" and c.weak)
+    """Learners share a cached answer only if the same prerequisites are weak AND each was
+    practised (or not) in the same way: a practised weak prerequisite makes the controller ask a
+    quick check first, which a cached answer would skip (BUG-045)."""
+    weak = sorted(
+        f"{c.id}:{'practised' if c.mastery is not None else 'new'}"
+        for c in trace.concepts
+        if c.role == "prerequisite" and c.weak
+    )
     return hashlib.sha256(",".join(weak).encode()).hexdigest()[:16] if weak else ""
 
 
@@ -137,8 +148,20 @@ class TutorPipeline:
         if turn.mode == "plain_rag":
             async for e in self._plain(turn):
                 yield e
-        else:
+            return
+        started = False
+        try:
             async for e in self._graphrag(turn):
+                started = True
+                yield e
+        except GRAPH_UNAVAILABLE as exc:
+            # Classification, traversal and gathering all happen before the first event, so if
+            # the graph is down nothing has been sent yet: answer from plain RAG instead, say so
+            # in the trace (the UI shows a notice) and log it.
+            if started or self.embedder is None or self.vectors is None or turn.continuation:
+                raise
+            log.warning("graph unavailable, answering with plain RAG: %s", type(exc).__name__)
+            async for e in self._plain(turn, degraded="graph_unavailable"):
                 yield e
 
     # ------------------------------------------------------------------ graphrag
@@ -252,7 +275,7 @@ class TutorPipeline:
             yield e
 
     # ------------------------------------------------------------------ plain rag
-    async def _plain(self, turn: TurnInput) -> AsyncIterator[Event]:
+    async def _plain(self, turn: TurnInput, degraded: str | None = None) -> AsyncIterator[Event]:
         calls = turn.calls
         trace = RetrievalTrace(
             mode="plain_rag",
@@ -260,6 +283,7 @@ class TutorPipeline:
             budget_tokens=self.context_budget,
             classification_path="none",
             depth=0,
+            degraded=degraded,
         )
         t0 = time.monotonic()
         if self.embedder is None or self.vectors is None:

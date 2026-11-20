@@ -49,6 +49,17 @@ describe("api()", () => {
     expect(new Headers(init.headers).get("Content-Type")).toBe("application/json");
   });
 
+  it("sends a fresh request id the API accepts on every call", async () => {
+    fetchMock.mockImplementation(async () => json(200, {}));
+    await api("/me");
+    await api("/me");
+    const ids = [0, 1].map((i) =>
+      new Headers(fetchMock.mock.calls[i][1].headers).get("X-Request-ID"),
+    );
+    for (const id of ids) expect(id).toMatch(/^[A-Za-z0-9._-]{8,64}$/);
+    expect(ids[0]).not.toBe(ids[1]);
+  });
+
   it("does not send a token for anonymous requests", async () => {
     fetchMock.mockResolvedValueOnce(json(200, {}));
     await api("/health", { anonymous: true });

@@ -156,16 +156,16 @@ export function QuizHome() {
               />
             ) : (
               <ul
-                role="listbox"
                 aria-label="Concepts"
                 className="grid max-h-64 gap-1 overflow-y-auto pr-1 sm:grid-cols-2"
               >
                 {filtered.map((c) => {
                   const m = masteryBy.get(c.id);
                   return (
-                    <li key={c.id} role="option" aria-selected={conceptId === c.id}>
+                    <li key={c.id}>
                       <button
                         type="button"
+                        aria-pressed={conceptId === c.id}
                         onClick={() => setConceptId(c.id)}
                         className={cn(
                           "flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring",

@@ -55,8 +55,7 @@ def production_problems(settings: Settings) -> list[str]:
     origins = settings.allowed_origins
     if not origins:
         problems.append("ALLOWED_ORIGINS is empty: the web app cannot call the API")
-    if "*" in origins:
-        problems.append("ALLOWED_ORIGINS contains '*'")
+    # '*' never gets here: Settings refuses it (CORS runs with credentials)
     if any(_host(o) in _LOCAL_HOSTS for o in origins):
         problems.append("ALLOWED_ORIGINS includes localhost (remove it in production)")
     if any(o.startswith("http://") and _host(o) not in _LOCAL_HOSTS for o in origins):

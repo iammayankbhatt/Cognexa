@@ -15,7 +15,7 @@ from app.core.config import Settings, get_settings
 from app.core.errors import AppError
 from app.db.session import Database, get_database
 from app.db.tables import concepts, questions, quiz_answers
-from app.graph.provider import GraphProvider
+from app.graph.provider import GraphProvider, syllabus_of
 from app.mastery.model import MasteryParams
 from app.mastery.repository import MasteryRepository
 from app.recommender.service import RecommenderService
@@ -32,7 +32,7 @@ def get_recommender(
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> RecommenderService:
     provider: GraphProvider = request.app.state.graph
-    return RecommenderService(db, settings, provider.repository())
+    return RecommenderService(db, settings, syllabus_of(provider))
 
 
 Recommender = Annotated[RecommenderService, Depends(get_recommender)]

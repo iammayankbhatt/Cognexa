@@ -108,3 +108,27 @@ async def test_access_log_line_emitted(
         async with client as c:
             await c.get("/health")
     assert any(r.getMessage() == "request" and r.__dict__["status"] == 200 for r in caplog.records)
+
+
+def test_wildcard_cors_origin_is_refused() -> None:
+    import pytest
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError, match="not allowed"):
+        Settings(_env_file=None, allowed_origins="https://ok.example, *")
+
+
+async def test_large_json_is_gzipped_but_small_replies_are_not() -> None:
+    from fastapi.responses import JSONResponse
+
+    app = create_app(Settings(_env_file=None))
+
+    @app.get("/big")
+    async def big() -> JSONResponse:
+        return JSONResponse({"items": ["concept"] * 500})
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+        r = await c.get("/big", headers={"Accept-Encoding": "gzip"})
+        assert r.headers.get("content-encoding") == "gzip" and len(r.json()["items"]) == 500
+        small = await c.get("/health", headers={"Accept-Encoding": "gzip"})
+        assert "content-encoding" not in small.headers

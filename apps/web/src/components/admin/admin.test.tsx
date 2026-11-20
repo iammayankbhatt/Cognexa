@@ -212,7 +212,8 @@ describe("ContentEditor", () => {
     );
 
     await user.clear(prompt);
-    await user.type(prompt, "Which stack operation removes the top element?");
+    await user.click(prompt);
+    await user.paste("Which stack operation removes the top element?"); // fast under load
     await user.click(screen.getByRole("button", { name: "Save question" }));
     await waitFor(() =>
       expect(apiMock).toHaveBeenCalledWith(

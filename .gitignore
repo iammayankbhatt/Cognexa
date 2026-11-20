@@ -47,3 +47,6 @@ apps/api/tests/content_snippets/
 
 # Evaluation raw outputs are large (MBs); reports, summaries and charts are committed.
 evaluation/reports/*/raw.jsonl
+
+# manual backups (scripts/backup.py): data, never commit
+backups/

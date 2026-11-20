@@ -131,7 +131,7 @@ concepts:
     aliases: [recursive function, recursive calls, base case, recursive thinking]
     keywords: [base case missing, infinite recursion, stack overflow in recursion, recursive call, recursion depth, why does my recursive function crash, self call, recurse]
     prerequisites: [call_stack]
-    related: [backtracking, divide_and_conquer]
+    related: []
 
   # ------------------------------------------------------------------ complexity
   - id: time_complexity
@@ -265,7 +265,7 @@ concepts:
     aliases: [priority queue, PQ, min priority queue, max priority queue, heapq, PriorityQueue]
     keywords: [highest priority first, extract min, extract max, top k elements, scheduler with priorities, insert with priority]
     prerequisites: [queue]
-    related: [binary_heap]
+    related: []
 
   - id: expression_evaluation
     name: "Expression Evaluation (infix/postfix)"
@@ -310,7 +310,7 @@ concepts:
     aliases: [binary search, bisect, half interval search, logarithmic search]
     keywords: [sorted array search, mid calculation, infinite loop in binary search, off by one low high, bisect_left, lower bound, search in O(log n), mid overflow]
     prerequisites: [arrays, time_complexity]
-    related: [bst]
+    related: []
 
   - id: two_pointers
     name: "Two Pointers"
@@ -676,7 +676,7 @@ concepts:
     aliases: [dijkstra, dijkstra's algorithm, single source shortest path, SSSP, shortest path weighted]
     keywords: [shortest path with weights, priority queue of distances, relaxation, negative edge weights fail, minimum cost route, network delay time, GPS routing]
     prerequisites: [bfs, binary_heap, greedy]
-    related: [bellman_ford]
+    related: []
 
   - id: bellman_ford
     name: "Bellman-Ford"

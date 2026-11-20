@@ -296,13 +296,17 @@ async def test_seed_rejects_invalid_graph_and_writes_nothing(
 async def test_real_dsa_graph_seeds_and_traverses(graph_repo: GraphRepository) -> None:
     doc = load_subject("dsa")
     result = await seed_subject(graph_repo, doc)
-    assert (result.concepts, result.prerequisite_edges, result.related_edges) == (69, 111, 20)
+    assert (result.concepts, result.prerequisite_edges, result.related_edges) == (
+        69,
+        111,
+        15,
+    )  # 15 since BUG-042
     again = await seed_subject(graph_repo, doc)
     assert again == result
     assert len(await graph_repo.list_concepts("dsa")) == 69
     edges = await graph_repo.list_edges("dsa")
     assert sum(e.type == PREREQUISITE for e in edges) == 111
-    assert sum(e.type == RELATED for e in edges) == 20
+    assert sum(e.type == RELATED for e in edges) == 15  # BUG-042
 
     # the canonical demo chain: functions -> call_stack -> recursion -> dfs_tree_traversals
     deps = {p.concept.id: p.depth for p in await graph_repo.get_dependents("call_stack", depth=3)}

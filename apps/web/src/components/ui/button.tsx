@@ -15,7 +15,9 @@ const buttonVariants = cva(
         ghost:
           "hover:bg-surface-2 hover:text-foreground aria-expanded:bg-surface-2 aria-expanded:text-foreground dark:hover:bg-surface-2/50",
         destructive:
-          "bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
+          // label in the normal text colour (red-on-red-tint text was 3.7:1); the red border and
+          // tint still mark the action as destructive
+          "border-destructive/70 bg-destructive/10 text-foreground hover:bg-destructive/20 focus-visible:border-destructive focus-visible:ring-destructive/30 dark:bg-destructive/15 dark:hover:bg-destructive/25",
         link: "text-accent underline-offset-4 hover:underline",
       },
       size: {

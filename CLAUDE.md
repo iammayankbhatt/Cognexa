@@ -83,7 +83,7 @@ cd apps/api && uv run pytest -q
 cd apps/api && uv run ruff check . && uv run ruff format --check . && uv run mypy app
 # frontend
 cd apps/web && npm install && npm run dev
-cd apps/web && npm run lint && npm run typecheck && npm run test && npm run build
+cd apps/web && npm run lint && npm run typecheck && npm run test && npm run build && npm run check:bundle
 # data (graph + databases)
 uv run --project apps/api python scripts/check_env.py            # which env vars are SET/MISSING/PLACEHOLDER (never prints values)
 uv run --project apps/api python scripts/validate_graph.py
@@ -96,6 +96,7 @@ cd apps/web && npx playwright test
 docker build -f apps/api/Dockerfile -t cognexa-api:local .       # API image (context = repo root)
 uv run --project apps/api python scripts/promote_admin.py <email> [--allow-remote]
 uv run --project apps/api python scripts/prod_smoke.py --api <api-url> --web <web-url>
+uv run --project apps/api python scripts/backup.py create [--allow-remote]   # manual backup (pg_dump + graph), docs/DEPLOYMENT.md §10
 ```
 
 ## 6. Design system: "presentable" is a requirement

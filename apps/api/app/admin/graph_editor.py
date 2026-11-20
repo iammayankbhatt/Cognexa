@@ -68,6 +68,9 @@ class GraphEditor:
             state = self.request.app.state
             state.tutor.catalogues.invalidate(subject_id)
             state.graph_cache.pop(subject_id, None)
+            invalidate = getattr(state.graph, "invalidate", None)
+            if callable(invalidate):
+                invalidate(subject_id)
         if self.cache is not None and concept_ids:
             await self.cache.invalidate_concepts(concept_ids)
 

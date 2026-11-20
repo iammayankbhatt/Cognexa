@@ -1,8 +1,8 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
-import { Markdown } from "@/components/tutor/markdown";
+import { hasMath, Markdown } from "@/components/tutor/markdown";
 import { AssistantMessage } from "@/components/tutor/message-item";
 import { QuickCheck } from "@/components/tutor/quick-check";
 import { traceSubgraph } from "@/components/tutor/trace-graph";
@@ -106,9 +106,13 @@ describe("Markdown", () => {
     expect(screen.getByRole("button", { name: "Copy code" })).toBeInTheDocument();
   });
 
-  it("renders math with KaTeX", () => {
+  it("renders math with KaTeX, loaded only when the text has math", async () => {
+    expect(hasMath("Cost is $O(n \\log n)$.")).toBe(true);
+    expect(hasMath("Display $$\\sum_i i$$ math")).toBe(true);
+    expect(hasMath("A stack costs 5 dollars, not $5 or 6")).toBe(false);
+    expect(hasMath("Plain text with `code`")).toBe(false);
     const { container } = render(<Markdown text="Cost is $O(n \\log n)$." />);
-    expect(container.querySelector(".katex")).not.toBeNull();
+    await waitFor(() => expect(container.querySelector(".katex")).not.toBeNull());
   });
 });
 
@@ -128,6 +132,14 @@ describe("TraceStrip", () => {
     expect(screen.getByText(/Plain RAG: 1 chunks/)).toBeInTheDocument();
     rerender(<TraceStrip trace={{ ...trace, is_on_topic: false }} />);
     expect(screen.getByText("Not a DSA question")).toBeInTheDocument();
+  });
+
+  it("tells the student when the graph was down and plain RAG answered", () => {
+    const { rerender } = render(<TraceStrip trace={trace} />);
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    rerender(<TraceStrip trace={{ ...trace, mode: "plain_rag", degraded: "graph_unavailable" }} />);
+    expect(screen.getByRole("status")).toHaveTextContent(/knowledge graph is unavailable/);
+    expect(screen.getByText(/Plain RAG: 1 chunks/)).toBeInTheDocument();
   });
 });
 

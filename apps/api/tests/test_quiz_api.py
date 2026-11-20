@@ -304,6 +304,13 @@ async def test_quiz_validation_and_isolation(tenv: TEnv) -> None:
     assert (await tenv.client.get(f"/quiz/sessions/{s['id']}", headers=bob)).status_code == 404
     r = await tenv.client.post(f"/quiz/sessions/{s['id']}/submit", headers=bob, json={})
     assert r.status_code == 404
+    first_q = s["questions"][0]["id"]
+    r = await tenv.client.post(f"/quiz/sessions/{s['id']}/answers", headers=bob,
+                               json={"question_id": first_q, "response": "a"})  # fmt: skip
+    assert r.status_code == 404
+    r = await tenv.client.post(f"/quiz/sessions/{s['id']}/regrade", headers=bob, json={})
+    assert r.status_code == 404
+    assert (await tenv.client.get("/quiz/history", headers=bob)).json()["items"] == []
     assert (await tenv.client.get("/quiz/history")).status_code == 401
 
 
@@ -316,8 +323,12 @@ async def test_concept_page_and_interest_logging(tenv: TEnv) -> None:
     kinds = [s["kind"] for s in page["sections"]]
     assert kinds[0] == "overview" and "code" in kinds and len(kinds) == 10
     assert [p["id"] for p in page["prerequisites"]] == ["call_stack"]
-    assert {"backtracking", "divide_and_conquer"} <= {c["id"] for c in page["related"]}
-    assert page["leads_to"] and page["question_count"] >= 8 and page["mastery"] is None
+    # one relation per pair (BUG-042): concepts that build on recursion are "leads to", not
+    # also "related"
+    leads_to = {c["id"] for c in page["leads_to"]}
+    assert {"backtracking", "divide_and_conquer"} <= leads_to
+    assert not leads_to & {c["id"] for c in page["related"]}
+    assert page["question_count"] >= 8 and page["mastery"] is None
     assert (await tenv.client.get("/concepts/nope_nope", headers=h)).status_code == 404
     assert (await tenv.client.get("/concepts/Bad-Id", headers=h)).status_code == 422
 

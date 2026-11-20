@@ -293,3 +293,29 @@ curl localhost:8010/health/deep
 
 CI (`container` job) builds the same image on every push and checks that it boots on a custom
 `$PORT`, answers `/health`, runs as a non-root user and contains `data/subjects`.
+
+## 10. Backups (free tiers have none)
+
+Supabase Free and Neo4j Aura Free keep no backups you can restore, so take one manually before
+risky work (migrations, a re-seed, the end of the user study) and about weekly while students use
+the app. Backups contain student data: keep them out of git (`backups/` is ignored) and in a
+private place.
+
+```bash
+# production (reads only; needs pg_dump 17+ on PATH for a pg_dump file, else JSONL is written)
+export COGNEXA_ENV_FILE=apps/api/.env.production
+uv run --project apps/api python scripts/backup.py create --out backups --allow-remote
+```
+
+One folder per run, `backups/cognexa-<UTC time>/`:
+
+| File | What it is | How to restore |
+|---|---|---|
+| `postgres.dump` | `pg_dump --format=custom` of the `public` schema (all app tables) | `pg_restore --no-owner --data-only --dbname "<url>" postgres.dump` into a database that already has the migrations (`supabase db push`), or `--clean` into an empty project |
+| `postgres/<table>.jsonl` | written instead of the dump when `pg_dump` is missing or older than the server; one JSON object per row | read-only archive (import by hand if ever needed) |
+| `concepts-<subject>.yaml` | the live graph, including edits made in the admin editor | copy over `data/subjects/<subject>/concepts.yaml`, run `scripts/validate_graph.py`, then `scripts/seed_neo4j.py --allow-remote` |
+| `chunks-<subject>.json` | every Neo4j chunk, including approved LLM chunks and admin edits | `uv run --project apps/api python scripts/backup.py restore-graph backups/cognexa-<time> --allow-remote` |
+| `manifest.json` | counts, tool versions, graph validation result (no credentials) | — |
+
+Credentials are passed to `pg_dump` through `PG*` environment variables, never on the command
+line. Test a restore once on the dev project so you know it works before you need it.

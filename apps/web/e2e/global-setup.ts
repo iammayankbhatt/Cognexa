@@ -7,6 +7,7 @@ import { execSync } from "node:child_process";
  * Nothing is printed; when the local stack is not running the variable stays unset.
  */
 export default function globalSetup() {
+  if (process.env.E2E_SUPABASE_STATUS) return; // CI hands it over from its own `supabase start`
   try {
     process.env.E2E_SUPABASE_STATUS = execSync("npx supabase status -o json", {
       cwd: "../..",

@@ -69,8 +69,12 @@ async def learner_state(
     subject_id: str,
     params: MasteryParams,
     now: dt.datetime,
+    view: list[dict[str, Any]] | None = None,
 ) -> LearnerState:
-    view = await MasteryRepository(session, params).view(user_id, subject_id, now)
+    """Everything the engine needs about one learner. Pass `view` when the caller already loaded
+    the mastery view, so it is not read twice."""
+    if view is None:
+        view = await MasteryRepository(session, params).view(user_id, subject_id, now)
     practised = [m for m in view if m["attempts"] > 0]
     due = sorted(
         (m for m in view if m["next_review_at"] is not None and m["next_review_at"] <= now),
@@ -151,14 +155,24 @@ class RecommenderService:
         self._names: dict[str, str] = {}
 
     async def compute(
-        self, user: CurrentUser, subject_id: str, limit: int = 3, now: dt.datetime | None = None
+        self,
+        user: CurrentUser,
+        subject_id: str,
+        limit: int = 3,
+        now: dt.datetime | None = None,
+        *,
+        graph: Graph | None = None,
+        state: LearnerState | None = None,
     ) -> tuple[str, str, list[Recommendation]]:
+        """`graph` / `state` may be passed by a caller that already built them (the dashboard)."""
         now = now or _now()
-        graph = await build_graph(self.graph, subject_id)
+        if graph is None:
+            graph = await build_graph(self.graph, subject_id)
         self._names = {cid: c.name for cid, c in graph.concepts.items()}
         async with self.db.sessions()() as session:
             flags = await get_flags(session, self.settings)
-            state = await learner_state(session, user.id, subject_id, self.params, now)
+            if state is None:
+                state = await learner_state(session, user.id, subject_id, self.params, now)
         group, engine = group_for(user, flags)
         recs = (
             baseline(graph, state, limit)
@@ -175,9 +189,13 @@ class RecommenderService:
         surface: str = "dashboard",
         limit: int = 3,
         log: bool = True,
+        graph: Graph | None = None,
+        state: LearnerState | None = None,
     ) -> dict[str, Any]:
         now = _now()
-        group, engine, recs = await self.compute(user, subject_id, limit, now)
+        group, engine, recs = await self.compute(
+            user, subject_id, limit, now, graph=graph, state=state
+        )
         ids: list[uuid.UUID | None] = [None] * len(recs)
         if log and recs:
             async with self.db.sessions()() as session, session.begin():

@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.gzip import GZipMiddleware
 
 from app.api import (
     admin_ai,
@@ -84,6 +85,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     register_error_handlers(app)
 
+    # Compress JSON over ~1 KB (graph, dashboard, history). Starlette skips text/event-stream,
+    # so tutor answers still stream token by token.
+    app.add_middleware(GZipMiddleware, minimum_size=1000)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.allowed_origins,

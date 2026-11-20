@@ -15,7 +15,7 @@ import {
 import Link from "next/link";
 
 import { useMe } from "@/components/app/me-provider";
-import { AccuracyTrend, ClusterBars } from "@/components/dashboard/charts";
+import { AccuracyTrend, ClusterBars } from "@/components/dashboard/lazy-charts";
 import { NextStepCard } from "@/components/recommend/next-step-card";
 import { StudyBanner } from "@/components/study/study-page";
 import { EmptyState } from "@/components/shared/empty-state";

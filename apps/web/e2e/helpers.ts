@@ -42,10 +42,20 @@ export async function localStack(): Promise<LocalStack | null> {
         () => false,
       ),
     ]);
-    return auth && api ? stack : null;
-  } catch {
-    return null;
+    if (!(auth && api)) return required("the local Supabase stack or the API is not reachable");
+    return stack;
+  } catch (err) {
+    if (err instanceof RequiredStackError) throw err;
+    return required("`npx supabase status` could not be read");
   }
+}
+
+class RequiredStackError extends Error {}
+
+/** Locally a missing stack skips the specs that need it; in CI (E2E_REQUIRE_STACK=1) it fails. */
+function required(reason: string): null {
+  if (process.env.E2E_REQUIRE_STACK === "1") throw new RequiredStackError(reason);
+  return null;
 }
 
 export async function createUser(stack: LocalStack, name = "E2E Student") {

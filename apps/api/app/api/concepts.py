@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.deps import CurrentUser, get_current_user
 from app.core.config import Settings, get_settings
+from app.core.ratelimit import limit_by_user
 from app.db.session import get_session
 from app.db.tables import concepts
 
@@ -25,7 +26,11 @@ class ConceptOut(BaseModel):
     order_index: int
 
 
-@router.get("/concepts", response_model=list[ConceptOut])
+@router.get(
+    "/concepts",
+    response_model=list[ConceptOut],
+    dependencies=[Depends(limit_by_user("concept_search"))],
+)
 async def list_concepts(
     _: Annotated[CurrentUser, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_session)],

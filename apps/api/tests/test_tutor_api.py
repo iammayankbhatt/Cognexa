@@ -218,6 +218,11 @@ async def test_thread_crud_pagination_and_isolation(tenv: TEnv) -> None:
         r = await tenv.client.request(method, f"/tutor/threads/{ids[0]}", headers=bob,
                                       json={"title": "x"} if method == "PATCH" else None)  # fmt: skip
         assert r.status_code == 404, method
+    # ...and you cannot post into it (no answer is generated, no quota is used)
+    r = await tenv.client.post(
+        f"/tutor/threads/{ids[0]}/messages", headers=bob, json={"content": "hi there"}
+    )
+    assert r.status_code == 404
     r = await tenv.client.patch(
         f"/tutor/threads/{ids[0]}",
         headers=ada,
@@ -397,6 +402,10 @@ async def test_regenerate_supersedes_latest_answer_only(tenv: TEnv) -> None:
     assert old is not None
     _, bob = await tenv.env.user("bob@example.com")
     r = await tenv.client.post(f"/tutor/messages/{regen['message_id']}/regenerate", headers=bob)
+    assert r.status_code == 404
+    r = await tenv.client.post(
+        f"/tutor/messages/{view['messages'][2]['id']}/edit", headers=bob, json={"content": "mine"}
+    )
     assert r.status_code == 404
     user_msg = view["messages"][2]["id"]
     r = await tenv.client.post(f"/tutor/messages/{user_msg}/regenerate", headers=h)

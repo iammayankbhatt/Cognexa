@@ -64,6 +64,8 @@ export interface RetrievalTrace {
   citations: string[];
   followups: string[];
   summary?: string;
+  /** e.g. "graph_unavailable": the graph was down and plain RAG answered instead. */
+  degraded?: string | null;
 }
 
 export interface Thread {

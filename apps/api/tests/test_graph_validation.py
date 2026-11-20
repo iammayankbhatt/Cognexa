@@ -149,6 +149,14 @@ def test_prerequisite_and_related_overlap_rejected() -> None:
     assert "both a prerequisite and related" in errors(d)
 
 
+def test_related_link_on_the_other_side_of_a_prerequisite_is_rejected() -> None:
+    """BUG-042: b needs a, and a lists b as related; the pair would get two edges."""
+    d = doc(mk("a", related=["b"], oi=0), mk("b", ["a"], oi=1), roots=["a"])
+    assert "a: related to 'b', but one is already a prerequisite of the other" in errors(d)
+    ok = doc(mk("a", oi=0), mk("b", ["a"], oi=1), mk("c", ["a"], ["b"], oi=2), roots=["a"])
+    assert errors(ok) == ""
+
+
 def test_multiple_problems_are_all_reported() -> None:
     d = doc(mk("a", oi=0), mk("a", oi=1), mk("b", ["ghost"], oi=2), roots=["a"])
     assert len(validate_concept_file(d).errors) >= 2

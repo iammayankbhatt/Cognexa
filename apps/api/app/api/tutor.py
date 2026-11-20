@@ -22,7 +22,7 @@ from app.core.config import Settings, get_settings
 from app.core.errors import AppError
 from app.db.session import Database, get_database
 from app.db.tables import content_chunks
-from app.graph.provider import GraphProvider
+from app.graph.provider import GraphProvider, syllabus_of
 from app.llm.deps import get_usage_guard
 from app.recommender.service import RecommenderService
 from app.tutor.plain_rag import PgVectorSearch
@@ -345,7 +345,7 @@ async def suggestions(
 ) -> dict[str, Any]:
     """Starter prompts and the next best step (the recommender, routed by study group)."""
     graph: GraphProvider = request.app.state.graph
-    recs = await RecommenderService(db, settings, graph.repository()).for_user(
+    recs = await RecommenderService(db, settings, syllabus_of(graph)).for_user(
         user, subject_id, surface="tutor", limit=1
     )
     top = recs["items"][0] if recs["items"] else None

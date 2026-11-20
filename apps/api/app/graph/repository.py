@@ -13,12 +13,23 @@ from collections.abc import Iterable
 from typing import Any
 
 from neo4j import AsyncDriver, AsyncManagedTransaction
+from neo4j import exceptions as neo4j_exceptions
 from pydantic import BaseModel
 
 from app.graph.models import ConceptDef, GraphConcept, GraphEdge, Subgraph
 
 PREREQUISITE = "PREREQUISITE_OF"
 RELATED = "RELATED_TO"
+
+# Errors that mean "the graph database cannot be reached right now" (paused Aura instance, network
+# failure, expired session), as opposed to a bug in a query. Callers may degrade on these.
+GRAPH_UNAVAILABLE: tuple[type[BaseException], ...] = (
+    neo4j_exceptions.ServiceUnavailable,
+    neo4j_exceptions.SessionExpired,
+    neo4j_exceptions.DatabaseUnavailable,
+    ConnectionError,
+    TimeoutError,
+)
 MAX_DEPTH = 10
 MAX_CYCLE_SEARCH = 100
 

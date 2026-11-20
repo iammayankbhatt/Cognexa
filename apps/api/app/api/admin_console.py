@@ -19,6 +19,7 @@ from sqlalchemy.orm import aliased
 from app.auth.deps import CurrentUser, require_role
 from app.cache.service import LLMCache
 from app.core.errors import AppError
+from app.core.ratelimit import limit_by_user
 from app.db.profiles import ProfileRepository, auth_users
 from app.db.repositories import DEFAULT_APP_SETTINGS, AppSettingsRepository
 from app.db.session import Database, get_database, get_session
@@ -367,7 +368,7 @@ async def user_usage(
     }
 
 
-@router.get("/usage/export.csv")
+@router.get("/usage/export.csv", dependencies=[Depends(limit_by_user("admin_export"))])
 async def usage_csv(
     _: AdminUser,
     session: Session,

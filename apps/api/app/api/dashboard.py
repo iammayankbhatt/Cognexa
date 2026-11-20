@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import asyncio
 import datetime as dt
+import time
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Query, Request
@@ -11,9 +13,10 @@ from sqlalchemy import func, select
 from app.api.recommendations import streak_days
 from app.auth.deps import CurrentUser, get_current_user
 from app.core.config import Settings, get_settings
+from app.core.ratelimit import limit_by_user
 from app.db.session import Database, get_database
 from app.db.tables import chat_messages, chat_threads, notes, questions, quiz_answers, quiz_sessions
-from app.graph.provider import GraphProvider
+from app.graph.provider import GraphProvider, syllabus_of
 from app.llm.deps import get_usage_guard
 from app.mastery.model import MasteryParams, band
 from app.mastery.repository import MasteryRepository
@@ -33,7 +36,30 @@ def _iso_day(d: dt.date) -> str:
     return d.isoformat()
 
 
-@router.get("/dashboard")
+QUESTION_COUNTS_TTL_S = 120.0
+
+
+async def question_counts(request: Request, db: Database, subject_id: str) -> dict[str, int]:
+    """Active questions per concept. The same for every learner, so cached per process."""
+    state = request.app.state
+    if not hasattr(state, "question_counts"):
+        state.question_counts = {}
+    cache: dict[str, tuple[float, dict[str, int]]] = state.question_counts
+    hit = cache.get(subject_id)
+    if hit is not None and time.monotonic() - hit[0] < QUESTION_COUNTS_TTL_S:
+        return hit[1]
+    async with db.sessions()() as session:
+        rows = await session.execute(
+            select(questions.c.concept_id, func.count())
+            .where(questions.c.subject_id == subject_id, questions.c.status == "active")
+            .group_by(questions.c.concept_id)
+        )
+        counts = {str(cid): int(n) for cid, n in rows.all()}
+    cache[subject_id] = (time.monotonic(), counts)
+    return counts
+
+
+@router.get("/dashboard", dependencies=[Depends(limit_by_user("dashboard"))])
 async def dashboard(
     request: Request,
     user: User,
@@ -46,119 +72,145 @@ async def dashboard(
     week_ago = now - dt.timedelta(days=7)
     params = MasteryParams.from_settings(settings)
     provider: GraphProvider = request.app.state.graph
-    graph_source = provider.repository()
+    graph_source = syllabus_of(provider)
     graph = await build_graph(graph_source, subject_id)
     concepts = {
         c.id: c for c in await graph_source.list_concepts(subject_id) if c.status == "approved"
     }
 
-    async with db.sessions()() as session:
-        view = await MasteryRepository(session, params).view(user.id, subject_id, now)
-        state = await learner_state(session, user.id, subject_id, params, now)
-        quiz_week = (
-            await session.execute(
-                select(func.count())
-                .select_from(quiz_sessions)
-                .where(
-                    quiz_sessions.c.user_id == user.id,
-                    quiz_sessions.c.submitted_at >= week_ago,
-                )
-            )
-        ).scalar_one()
-        quiz_ms = (
-            await session.execute(
-                select(func.coalesce(func.sum(quiz_answers.c.time_ms), 0)).where(
-                    quiz_answers.c.user_id == user.id, quiz_answers.c.created_at >= week_ago
-                )
-            )
-        ).scalar_one()
-        tutor_week = (
-            await session.execute(
-                select(func.count())
-                .select_from(chat_messages)
-                .where(
-                    chat_messages.c.user_id == user.id,
-                    chat_messages.c.role == "user",
-                    chat_messages.c.created_at >= week_ago,
-                )
-            )
-        ).scalar_one()
-        trend_rows = (
-            await session.execute(
-                select(
-                    func.date(quiz_answers.c.created_at).label("day"),
-                    func.avg(quiz_answers.c.score),
-                    func.count(),
-                )
-                .where(
-                    quiz_answers.c.user_id == user.id,
-                    quiz_answers.c.score.is_not(None),
-                    quiz_answers.c.created_at >= now - dt.timedelta(days=TREND_DAYS),
-                )
-                .group_by("day")
-                .order_by("day")
-            )
-        ).all()
-        active_days = {
-            r[0]
-            for r in await session.execute(
-                select(func.date(quiz_answers.c.created_at))
-                .where(
-                    quiz_answers.c.user_id == user.id,
-                    quiz_answers.c.created_at >= now - dt.timedelta(days=400),
-                )
-                .distinct()
-            )
-        }
-        recent_quizzes = (
-            await session.execute(
-                select(
-                    quiz_sessions.c.id,
-                    quiz_sessions.c.mode,
-                    quiz_sessions.c.concept_id,
-                    quiz_sessions.c.score,
-                    quiz_sessions.c.max_score,
-                    quiz_sessions.c.submitted_at,
-                )
-                .where(
-                    quiz_sessions.c.user_id == user.id, quiz_sessions.c.submitted_at.is_not(None)
-                )
-                .order_by(quiz_sessions.c.submitted_at.desc())
-                .limit(FEED_ITEMS)
-            )
-        ).all()
-        recent_questions = (
-            await session.execute(
-                select(chat_messages.c.content, chat_messages.c.created_at, chat_threads.c.id)
-                .select_from(
-                    chat_messages.join(chat_threads, chat_threads.c.id == chat_messages.c.thread_id)
-                )
-                .where(
-                    chat_messages.c.user_id == user.id,
-                    chat_messages.c.role == "user",
-                    chat_messages.c.superseded_at.is_(None),
-                )
-                .order_by(chat_messages.c.created_at.desc())
-                .limit(FEED_ITEMS)
-            )
-        ).all()
-        recent_notes = (
-            await session.execute(
-                select(notes.c.concept_id, notes.c.updated_at, notes.c.bookmarked)
-                .where(notes.c.user_id == user.id)
-                .order_by(notes.c.updated_at.desc())
-                .limit(5)
-            )
-        ).all()
-        n_questions: dict[str, int] = dict(
-            (
+    # Independent reads run in parallel on separate pooled connections (Phase 13): the page cost
+    # is then the slowest group, not the sum of ~17 round trips.
+    async def learner() -> tuple[list[dict[str, Any]], Any]:
+        async with db.sessions()() as session:
+            view = await MasteryRepository(session, params).view(user.id, subject_id, now)
+            state = await learner_state(session, user.id, subject_id, params, now, view=view)
+        return view, state
+
+    async def week_counts() -> tuple[int, int, int]:
+        async with db.sessions()() as session:
+            quiz_week = (
                 await session.execute(
-                    select(questions.c.concept_id, func.count())
-                    .where(questions.c.subject_id == subject_id, questions.c.status == "active")
-                    .group_by(questions.c.concept_id)
+                    select(func.count())
+                    .select_from(quiz_sessions)
+                    .where(
+                        quiz_sessions.c.user_id == user.id,
+                        quiz_sessions.c.submitted_at >= week_ago,
+                    )
+                )
+            ).scalar_one()
+            quiz_ms = (
+                await session.execute(
+                    select(func.coalesce(func.sum(quiz_answers.c.time_ms), 0)).where(
+                        quiz_answers.c.user_id == user.id, quiz_answers.c.created_at >= week_ago
+                    )
+                )
+            ).scalar_one()
+            tutor_week = (
+                await session.execute(
+                    select(func.count())
+                    .select_from(chat_messages)
+                    .where(
+                        chat_messages.c.user_id == user.id,
+                        chat_messages.c.role == "user",
+                        chat_messages.c.created_at >= week_ago,
+                    )
+                )
+            ).scalar_one()
+        return int(quiz_week), int(quiz_ms), int(tutor_week)
+
+    async def answers_by_day() -> tuple[list[Any], set[Any]]:
+        async with db.sessions()() as session:
+            trend_rows = (
+                await session.execute(
+                    select(
+                        func.date(quiz_answers.c.created_at).label("day"),
+                        func.avg(quiz_answers.c.score),
+                        func.count(),
+                    )
+                    .where(
+                        quiz_answers.c.user_id == user.id,
+                        quiz_answers.c.score.is_not(None),
+                        quiz_answers.c.created_at >= now - dt.timedelta(days=TREND_DAYS),
+                    )
+                    .group_by("day")
+                    .order_by("day")
                 )
             ).all()
-        )
+            active_days = {
+                r[0]
+                for r in await session.execute(
+                    select(func.date(quiz_answers.c.created_at))
+                    .where(
+                        quiz_answers.c.user_id == user.id,
+                        quiz_answers.c.created_at >= now - dt.timedelta(days=400),
+                    )
+                    .distinct()
+                )
+            }
+        return list(trend_rows), active_days
+
+    async def activity() -> tuple[list[Any], list[Any], list[Any]]:
+        async with db.sessions()() as session:
+            recent_quizzes = (
+                await session.execute(
+                    select(
+                        quiz_sessions.c.id,
+                        quiz_sessions.c.mode,
+                        quiz_sessions.c.concept_id,
+                        quiz_sessions.c.score,
+                        quiz_sessions.c.max_score,
+                        quiz_sessions.c.submitted_at,
+                    )
+                    .where(
+                        quiz_sessions.c.user_id == user.id,
+                        quiz_sessions.c.submitted_at.is_not(None),
+                    )
+                    .order_by(quiz_sessions.c.submitted_at.desc())
+                    .limit(FEED_ITEMS)
+                )
+            ).all()
+            recent_questions = (
+                await session.execute(
+                    select(chat_messages.c.content, chat_messages.c.created_at, chat_threads.c.id)
+                    .select_from(
+                        chat_messages.join(
+                            chat_threads, chat_threads.c.id == chat_messages.c.thread_id
+                        )
+                    )
+                    .where(
+                        chat_messages.c.user_id == user.id,
+                        chat_messages.c.role == "user",
+                        chat_messages.c.superseded_at.is_(None),
+                    )
+                    .order_by(chat_messages.c.created_at.desc())
+                    .limit(FEED_ITEMS)
+                )
+            ).all()
+            recent_notes = (
+                await session.execute(
+                    select(notes.c.concept_id, notes.c.updated_at, notes.c.bookmarked)
+                    .where(notes.c.user_id == user.id)
+                    .order_by(notes.c.updated_at.desc())
+                    .limit(5)
+                )
+            ).all()
+        return list(recent_quizzes), list(recent_questions), list(recent_notes)
+
+    (
+        (view, state),
+        (quiz_week, quiz_ms, tutor_week),
+        (trend_rows, active_days),
+        (recent_quizzes, recent_questions, recent_notes),
+        n_questions,
+        usage,
+    ) = await asyncio.gather(
+        learner(),
+        week_counts(),
+        answers_by_day(),
+        activity(),
+        question_counts(request, db, subject_id),
+        guard.usage_summary(user, days=1),
+    )
 
     practised = {m["concept_id"]: m for m in view if m["attempts"] > 0}
     eff = {cid: practised[cid]["effective"] if cid in practised else 0.0 for cid in concepts}
@@ -248,9 +300,8 @@ async def dashboard(
         )
 
     recs = await RecommenderService(db, settings, graph_source).for_user(
-        user, subject_id, surface="dashboard"
+        user, subject_id, surface="dashboard", graph=graph, state=state
     )
-    usage = await guard.usage_summary(user, days=1)
     return {
         "subject_id": subject_id,
         "overall_mastery": round(sum(eff.values()) / len(concepts), 3) if concepts else 0.0,
@@ -287,7 +338,7 @@ async def graph_mastery(
 ) -> dict[str, Any]:
     """Every approved concept with the learner's effective mastery, plus approved edges."""
     provider: GraphProvider = request.app.state.graph
-    repo = provider.repository()
+    repo = syllabus_of(provider)
     params = MasteryParams.from_settings(settings)
     async with db.sessions()() as session:
         rows = {

@@ -20,7 +20,7 @@ from app.core.config import Settings, get_settings
 from app.core.errors import AppError
 from app.db.session import Database, get_database
 from app.db.tables import revision_sheets
-from app.graph.provider import GraphProvider
+from app.graph.provider import GraphProvider, syllabus_of
 from app.guardrails.output import check_output
 from app.guardrails.prompts import GUARD_RULES, ContextBlock, render_context
 from app.llm.deps import get_llm, get_usage_guard
@@ -83,7 +83,7 @@ async def create_sheet(
     guard: Annotated[UsageGuard, Depends(get_usage_guard)],
 ) -> dict[str, Any]:
     provider: GraphProvider = request.app.state.graph
-    repo = provider.repository()
+    repo = syllabus_of(provider)
     graph = await build_graph(repo, body.subject_id)
     params = MasteryParams.from_settings(settings)
     async with db.sessions()() as session:

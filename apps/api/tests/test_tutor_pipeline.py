@@ -235,10 +235,13 @@ async def test_personalisation_ranks_weak_prerequisites_first(dsa: InMemoryGraph
     fresh_pre = [c for c in fresh if c.role == "prerequisite"]
     assert all(c.weak for c in fresh_pre) and fresh_pre[0].id == "call_stack"
     assert [c.depth for c in fresh_pre] == sorted(c.depth for c in fresh_pre)
-    # related concepts come last
-    roles = [c.role for c in fresh]
+    # related concepts come last (recursion has none since BUG-042: its "related" concepts were
+    # really dependents; call_stack is related to stack)
+    cs = [ConceptMatch(id="call_stack", name="Call Stack", confidence=0.9)]
+    walked = await traverse(dsa, cs, {}, depth=2)
+    roles = [c.role for c in walked]
     assert roles[0] == "matched" and roles[-1] == "related"
-    assert "backtracking" in [c.id for c in fresh if c.role == "related"]
+    assert "stack" in [c.id for c in walked if c.role == "related"]
 
 
 async def test_traversal_paths_are_exact_edges(dsa: InMemoryGraph) -> None:
@@ -454,3 +457,62 @@ async def test_edges_between_matched_concepts_are_recorded(dsa: InMemoryGraph) -
     assert call_stack.role == "matched"
     assert [(e.source, e.target) for e in call_stack.path] == [("call_stack", "recursion")]
     assert [c.id for c in concepts].count("call_stack") == 1
+
+
+class DownGraph:
+    """A graph whose database is unreachable: every call raises like the Neo4j driver does."""
+
+    def __init__(self, inner: InMemoryGraph) -> None:
+        self._inner = inner
+
+    def __getattr__(self, name: str) -> Any:
+        attr = getattr(self._inner, name)
+        if not callable(attr):
+            return attr
+
+        async def fail(*_a: Any, **_k: Any) -> Any:
+            from neo4j.exceptions import ServiceUnavailable
+
+            raise ServiceUnavailable("Couldn't connect to localhost:7687")
+
+        return fail
+
+
+async def test_graph_outage_degrades_to_plain_rag_with_a_notice(dsa: InMemoryGraph) -> None:
+    pipeline, _ = make_pipeline(dsa)
+    pipeline.graph = DownGraph(dsa)  # type: ignore[assignment]
+    events = await run(pipeline, TurnInput(question=CANONICAL, agentic=False))
+    trace = done(events).trace
+    assert trace.mode == "plain_rag" and trace.degraded == "graph_unavailable"
+    assert trace.chunks, "plain RAG still found context"
+    assert isinstance(events[0], TraceEvent) and events[0].trace.degraded == "graph_unavailable"
+    assert any(isinstance(e, TokenEvent) for e in events)
+
+
+async def test_graph_outage_without_a_vector_index_is_reported(dsa: InMemoryGraph) -> None:
+    from neo4j.exceptions import ServiceUnavailable
+
+    pipeline, _ = make_pipeline(dsa)
+    pipeline.graph = DownGraph(dsa)  # type: ignore[assignment]
+    pipeline.vectors = None
+    with pytest.raises(ServiceUnavailable):
+        await run(pipeline, TurnInput(question=CANONICAL, agentic=False))
+
+
+async def test_cache_bucket_separates_practised_from_new_weak_prerequisites(
+    dsa: InMemoryGraph,
+) -> None:
+    """BUG-045: a learner who practised call_stack and is weak in it must not get the cached
+    answer of a learner who never practised it (the first one is owed a quick check)."""
+    from app.tutor.pipeline import personal_bucket
+    from app.tutor.trace import RetrievalTrace
+
+    matched = [ConceptMatch(id="recursion", name="Recursion", confidence=0.9)]
+    fresh = RetrievalTrace(concepts=await traverse(dsa, matched, {}, depth=2))
+    practised = RetrievalTrace(concepts=await traverse(dsa, matched, {"call_stack": 0.3}, depth=2))
+    same_again = RetrievalTrace(concepts=await traverse(dsa, matched, {"call_stack": 0.2}, depth=2))
+    assert {c.id for c in fresh.concepts if c.weak} == {c.id for c in practised.concepts if c.weak}
+    assert personal_bucket(fresh) != personal_bucket(practised)
+    assert personal_bucket(practised) == personal_bucket(same_again)  # still shareable
+    strong = {c.id: 0.95 for c in fresh.concepts}
+    assert personal_bucket(RetrievalTrace(concepts=await traverse(dsa, matched, strong))) == ""
