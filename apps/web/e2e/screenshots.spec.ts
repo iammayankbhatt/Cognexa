@@ -2,7 +2,7 @@ import path from "node:path";
 
 import { test, type Page } from "@playwright/test";
 
-import { createUser, deleteUser, localStack, setProfile } from "./helpers";
+import { accessTokenFor, API, createUser, deleteUser, localStack, setProfile } from "./helpers";
 
 const THEMES = ["neon-noir", "titanium-dark", "titanium-light"] as const;
 const SHOTS = path.resolve(__dirname, "../../../docs/screenshots");
@@ -153,7 +153,7 @@ test.describe("phase 7 tutor (needs local Supabase + API in fake mode)", () => {
         await page.getByRole("img", { name: /Traversed graph/ }).waitFor();
         await shot("2-answer-why-panel");
 
-        await page.getByRole("button", { name: "New chat" }).click();
+        await page.getByRole("button", { name: "New chat" }).first().click();
         await ask("Why does my recursive function crash?");
         await page.getByRole("group", { name: "Quick check" }).waitFor({ timeout: 30_000 });
         await shot("3-quick-check");
@@ -165,7 +165,7 @@ test.describe("phase 7 tutor (needs local Supabase + API in fake mode)", () => {
         await page.getByLabel("Suggested follow-up questions").waitFor({ timeout: 30_000 });
         await shot("4-quick-check-continued");
 
-        await page.getByRole("button", { name: "New chat" }).click();
+        await page.getByRole("button", { name: "New chat" }).first().click();
         await page.getByRole("button", { name: "Compare with plain RAG" }).click();
         await ask(
           "Why does my recursive DFS on a 1000 x 1000 grid in Python crash before visiting all the cells?",
@@ -245,6 +245,80 @@ test.describe("phase 8 quizzes and learn (needs local Supabase + API)", () => {
           .getByRole("cell", { name: /Concept quiz: Recursion/ })
           .waitFor({ timeout: 30_000 });
         await shot("6-quizzes-home");
+      } finally {
+        await deleteUser(stack!, u.id);
+      }
+    });
+  }
+});
+
+test.describe("phase 10 dashboard and knowledge map (needs local Supabase + API)", () => {
+  for (const theme of THEMES) {
+    test(`phase 10: ${theme}`, async ({ page }) => {
+      const stack = await localStack();
+      test.skip(!stack, "local Supabase / API are not running");
+      test.setTimeout(240_000);
+      const out = path.join(SHOTS, "phase10");
+      const u = await createUser(stack!, "Dana Dash");
+      try {
+        await setProfile(stack!, u.id, { onboarding_completed: true, theme });
+        // seeded activity: a few quizzes (some right, some wrong) through the API
+        const token = await accessTokenFor(stack!, u.email);
+        const h = { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
+        for (const concept of [
+          "variables_memory",
+          "control_flow",
+          "functions",
+          "stack",
+          "stack",
+          "queue",
+        ]) {
+          const s = (await (
+            await fetch(`${API}/quiz/sessions`, {
+              method: "POST",
+              headers: h,
+              body: JSON.stringify({
+                mode: "concept",
+                concept_id: concept,
+                count: 5,
+                feedback_mode: "exam",
+              }),
+            })
+          ).json()) as {
+            id: string;
+            questions: { id: string; options: { id: string }[] | null }[];
+          };
+          const responses: Record<string, string> = {};
+          if (!concept.startsWith("stack")) {
+            for (const q of s.questions) if (q.options?.length) responses[q.id] = q.options[0].id;
+          }
+          await fetch(`${API}/quiz/sessions/${s.id}/submit`, {
+            method: "POST",
+            headers: h,
+            body: JSON.stringify({ responses }),
+          });
+        }
+        await page.addInitScript((t) => localStorage.setItem("cognexa-theme", t), theme);
+        await page.emulateMedia({ reducedMotion: "reduce" });
+        await page.goto("/login");
+        await page.getByLabel("Email").fill(u.email);
+        await page.getByLabel("Password").fill(u.password);
+        await page.getByRole("button", { name: "Sign in" }).click();
+        await page.waitForURL(/\/app$/, { timeout: 60_000 });
+        await page.getByText("Overall mastery").waitFor({ timeout: 60_000 });
+        await settle(page);
+        await page.screenshot({ path: path.join(out, `dashboard-${theme}.png`), fullPage: true });
+        await page.goto("/app/graph");
+        await page.locator('canvas[data-id="layer2-node"]').waitFor({ timeout: 60_000 });
+        await page.waitForTimeout(1200); // layout + fit
+        await page.screenshot({ path: path.join(out, `knowledge-map-${theme}.png`) });
+        await page.getByText("List view").click();
+        await page
+          .getByRole("button", { name: "Stack (ADT & implementations)", exact: true })
+          .click();
+        await page.getByRole("button", { name: "Show my path" }).click();
+        await page.waitForTimeout(600);
+        await page.screenshot({ path: path.join(out, `knowledge-map-drawer-${theme}.png`) });
       } finally {
         await deleteUser(stack!, u.id);
       }

@@ -9,6 +9,7 @@ from app.api import (
     admin_ai,
     admin_users,
     concepts,
+    dashboard,
     graph,
     health,
     learn,
@@ -16,6 +17,7 @@ from app.api import (
     notes,
     quiz,
     recommendations,
+    revision_sheets,
     tutor,
 )
 from app.auth.deps import ProfileCache
@@ -95,6 +97,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(learn.router)
     app.include_router(notes.router)
     app.include_router(recommendations.router)
+    app.include_router(dashboard.router)
+    app.include_router(revision_sheets.router)
     return app
 
 

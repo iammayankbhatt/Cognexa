@@ -13,7 +13,7 @@
 **Mode:** autopilot, main only, no tags. One commit per phase (`feat(phase-NN): ...`), then `git push origin main` (explicitly authorised for autopilot; if push fails, log it under Human Action Needed and continue). No `gh` CLI and no Supabase CLI were found on this machine at start; CI runs are checked through the public GitHub API when possible.
 **Environment notes:** local `apps/api/.env` and `apps/web/.env.local` exist (created from the examples; fake LLM/embedding providers, `REPLACE_ME` for cloud values). Never open or print them; use `uv run --project apps/api python scripts/check_env.py`.
 **Phase order:** core 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 12 → 15 (prep only), then extras 11 → 13 → 14 → 16.
-**Current phase:** 10 — Progress dashboard, knowledge map, notes & revision sheets (not started). Phase 9 complete (Session 13).
+**Current phase:** 12 — Evaluation: RAGAs harness and user-study mode (not started). Phase 10 complete (Session 14). Core order continues 12 → 15 (prep), then 11 → 13 → 14 → 16.
 
 **Phase 2 checkpoints (done)**
 - [x] 2.1 Env files, `scripts/check_env.py`, `.env.example` for all phases
@@ -101,7 +101,16 @@
 - [x] 9.5 Web: Next best step card (reason + mini path graph) on dashboard, tutor empty state, quiz results; /app/review page with due items and streak
 - [x] 9.6 Tests (engine, baseline, logging, review), verify two users per group, wrap-up
 
-**Next action:** Phase 10: read its prompt in docs/COGNEXA_PROMPTS.md and split it into checkpoints here. Building blocks ready: `/me/mastery`, `/review/due` (streak), `/recommendations`, `/quiz/history`, `/notes/{concept_id}`, the dashboard page (Next best step + first stats), Cytoscape planned for the knowledge map (DEC-036).
+**Phase 10 checkpoints (done)**
+- [x] 10.1 Backend: `GET /dashboard` (one call: overall mastery, bands, streak, time on task, quizzes this week, 30-day accuracy trend, per-cluster mastery, activity feed, top weak concepts with suggested prerequisite, recommendations, review due, today's AI usage) and `GET /graph/mastery`
+- [x] 10.2 Notes: `GET /notes` (search, cluster, bookmarked), `DELETE /notes/{id}`; /app/notes with Markdown editor + preview; RLS ownership test
+- [x] 10.3 Revision sheets: `POST /revision-sheets` (weak concepts by default, chunks + weak prerequisites, usage guard, citations), list / view / delete; view page with Markdown export and print stylesheet
+- [x] 10.4 Dashboard page: next best step, stat cards, accuracy trend line, per-cluster bars (Recharts, themed), weak concepts with "fix the root cause", activity timeline, review widget, usage
+- [x] 10.5 Knowledge Map /app/graph: Cytoscape + dagre DAG, mastery colours, size by difficulty, cluster filter, tooltip, drawer with actions, "Show my path", legend, PNG export
+- [x] 10.6 Empty states for new users; tests (aggregation, graph shape, notes CRUD + RLS, revision sheet with FakeProvider; e2e dashboard + map drawer); screenshots in 3 themes
+- [x] 10.7 Full verification, wrap-up, commit
+
+**Next action:** Phase 12: read its prompt in docs/COGNEXA_PROMPTS.md and split it into checkpoints here. Ready for it: plain_rag + graphrag pipelines (`TutorPipeline`, `InMemoryGraph` for offline runs), 85-item test set, study forms, baseline engine and `recommendations_log`, `study_settings` / `eval_runs` / `eval_results` tables.
 **Local stack:** `npx supabase start -x realtime,storage-api,imgproxy,studio,edge-runtime,logflare,vector,supavisor,postgres-meta` (mail UI http://127.0.0.1:54324); schema changes: `npx supabase migration up` (local Supabase) and `DATABASE_URL=<docker url> uv run ... scripts/migrate.py` (docker test DB)
 
 **Last cluster note:** Phase 3 content complete; 69/69 concepts
@@ -143,7 +152,7 @@
 | Repository | https://github.com/iammayankbhatt/Cognexa |
 | Live web app | _TBD (Vercel)_ |
 | Live API | _TBD (Render)_ |
-| Current phase | Phases 1 to 9 complete; next: Phase 10 (Dashboard, knowledge map, notes). Workflow: single developer, `main` only (DEC-013), autopilot (DEC-019) |
+| Current phase | Phases 1 to 10 complete; next: Phase 12 (Evaluation + user study). Workflow: single developer, `main` only (DEC-013), autopilot (DEC-019) |
 | Overall status | 🟡 In progress |
 
 Status legend: 🔴 Not started · 🟡 In progress · 🟢 Done + verified · ⚠️ Done with known issues · ⏸️ Blocked
@@ -197,8 +206,8 @@ Update the **Status** and **Where in code** columns as phases complete. Examiner
 | Quiz engine (6 modes, 5 question types), auto-grading, LLM short-answer grading | 8 | 🟢 locally (real judge: Human Action 17) | `app/quiz/`, `app/api/quiz.py`, `apps/web/src/components/quiz/`, `tests/test_quiz_{logic,api}.py` |
 | Mastery model with decay; spaced review (SM-2 lite) | 8, 9 | 🟢 ladder 1→3→7→14→30, `/review/due`, /app/review | `app/mastery/`, `docs/ARCHITECTURE.md` |
 | Concept library + concept pages | 8 | 🟢 | `apps/web/src/components/learn/`, `GET /concepts/{id}`, `/notes/{concept_id}` |
-| Progress dashboard + Knowledge Map (mastery-coloured DAG) | 10 | 🔴 | |
-| Notes, bookmarks, personalised revision sheets (MD/PDF export) | 10 | 🔴 | |
+| Progress dashboard + Knowledge Map (mastery-coloured DAG) | 10 | 🟢 | `GET /dashboard`, `GET /graph/mastery`, `src/app/app/page.tsx`, `src/components/graph/knowledge-map.tsx`, `docs/screenshots/phase10/` |
+| Notes, bookmarks, personalised revision sheets (MD/PDF export) | 10 | 🟢 locally (real model: Human Action 13) | `app/api/{notes,revision_sheets}.py`, `src/components/notes/` |
 | Admin: graph editor, content/question editor, moderation, users, usage, settings | 4, 11 | 🟡 users page (role, study group, quota override, audit log) done in Phase 4 | `app/api/admin_users.py`, `src/app/admin/users/` |
 | Data export + account deletion | 4 | 🟢 | `GET /me/export`, `DELETE /me` (`app/api/me.py`, `app/auth/admin.py`), settings page, `tests/test_auth_api.py` |
 | Security hardening, a11y, performance, observability, backups | 13 | 🔴 | |
@@ -261,8 +270,8 @@ Key flows (details in docs/ARCHITECTURE.md once written):
 | 6 | GraphRAG + plain RAG + agentic step | 🟢 | 2026-11-20 | 2026-11-20 | `f888d3a` `feat(phase-06)` | | GitHub Actions green (run 44656821252). Verified locally: backend 288 passed (48 new tutor tests), ruff, format, mypy clean. Live API run against local Neo4j + Supabase auth. Real-model smoke run is Human Action 15. |
 | 7 | Tutor chat UI | 🟢 | 2026-11-20 | 2026-11-20 | `b0a1d16` `feat(phase-07)` | | GitHub Actions green (run 44664169211). Verified locally: backend 294 passed; web 167 unit + 26 e2e; screenshots in docs/screenshots/phase7. Real-model run is Human Action 16. |
 | 8 | Quiz engine, grading, mastery | 🟢 | 2026-11-20 | 2026-11-20 | `3583df7` `feat(phase-08)` | | GitHub Actions green (run 44669379523). Verified locally: backend 353 passed; web 177 unit, Playwright 27 passed + 1 skipped by a stack-lookup timeout (passes on rerun, LIM-028); screenshots in docs/screenshots/phase8. Real judge model is Human Action 17. |
-| 9 | Recommender, baseline, spaced review | 🟢 | 2026-11-20 | 2026-11-20 | `feat(phase-09)` (see git log) | | Verified locally: backend 382 passed (after BUG-031); Playwright 29/29; web 181 unit; live two-group check on the local stack. |
-| 10 | Dashboard, knowledge map, notes | 🔴 | | | | | |
+| 9 | Recommender, baseline, spaced review | 🟢 | 2026-11-20 | 2026-11-20 | `df5115d` `feat(phase-09)` | | GitHub Actions green (run 44674166034). Verified locally: backend 382 passed (after BUG-031); Playwright 29/29; web 181 unit; live two-group check on the local stack. |
+| 10 | Dashboard, knowledge map, notes | 🟢 | 2026-11-20 | 2026-11-20 | `feat(phase-10)` (see git log) | | Verified locally: backend 387 passed; Playwright 32 (31 + the tutor spec rerun after a locator fix); web 186 unit; screenshots in docs/screenshots/phase10 (3 themes). |
 | 11 | Admin console + LLM proposals | 🔴 | | | | | |
 | 12 | Evaluation + user study | 🔴 | | | | | |
 | 13 | Hardening | 🔴 | | | | | |
@@ -599,6 +608,24 @@ git tag -a v0.1 -m "Phase 1: Scaffold, design system, CI" && git push --tags   #
 - Logging what a student was shown needs de-duplication, or page reloads become fake data points for the study analysis.
 **Next step:** Phase 10: progress dashboard, knowledge map, notes and revision sheets.
 
+### Session 14 — 2026-11-20 — Phase 10: progress dashboard, knowledge map, notes & revision sheets (autopilot)
+**Goal:** The learner-facing presentation screens: a dashboard, the mastery-coloured knowledge map, notes and graph-grounded revision sheets.
+**Built:**
+- `GET /dashboard` (one call): overall mastery across the syllabus (unpractised = 0), concepts by band, streak, time-on-task estimate (quiz answer time + 90 s per tutor question, 7 days), quizzes and tutor questions this week, 30-day daily accuracy, per-cluster mastery, a merged activity feed (quizzes, tutor questions, notes), top 3 weak concepts with their root-cause fix (frontier gap), recommendations, review due count, today's AI usage. `GET /graph/mastery`: all approved concepts with effective mastery, band, attempts, dates, plus approved edges.
+- Notes: `GET /notes` (search over body and concept name with literal LIKE escaping, cluster and bookmarked filters), `DELETE /notes/{concept_id}`; RLS checked at the database role level.
+- Revision sheets: `POST /revision-sheets` (weak concepts by default, else lowest-mastery practised; or up to 5 chosen), chunks of the concepts plus overviews of their weak prerequisites under a 3500-token budget, usage guard (`purpose = revision`), output check, citations; list / get / delete.
+- Web: dashboard rebuilt (next best step, four stat cards, accuracy line chart, cluster bars coloured by band, both with table views, weak spots with "Fix the root cause", recent activity, usage line, new-learner empty state pointing to the diagnostic); `/app/graph` Knowledge Map (Cytoscape 3.35.0 + cytoscape-dagre 4.1.0, top-to-bottom dagre layout, colours read from the theme's CSS variables and refreshed on theme change, size by difficulty, cluster filter, related-links toggle, hover tooltip, click drawer with Learn / Practise / Ask the tutor, "Show my path" highlighting and fitting the recommendation path, legend with counts, PNG export, list view for keyboard and screen-reader use); `/app/notes` (notes and bookmarks with write/preview tabs, search, filters, delete; revision sheets from weak spots or chosen concepts); `/app/notes/sheets/[id]` (rendered sheet, Markdown download, print/PDF with a print stylesheet). Nav gained "Knowledge map".
+**Files touched:** `apps/api/app/api/{dashboard,revision_sheets}.py` (new), `app/api/notes.py`, `app/main.py`, `apps/api/tests/test_dashboard_api.py` (new), `apps/web/src/components/{dashboard,graph,notes}/*` (new), `src/lib/{dashboard,notes}.ts` (new), `src/app/app/{page,graph/page,notes/page,notes/sheets/[sheetId]/page}.tsx`, `src/app/globals.css` (print), `src/components/app/nav.ts`, `src/lib/quiz/use-quiz.ts`, `apps/web/e2e/{progress,screenshots}.spec.ts`, `apps/web/package.json` + lock, `docs/screenshots/phase10/`, `progressfile.md`.
+**Commands run & results:** backend ruff ✅ · ruff format ✅ · mypy ✅ (102 files) · pytest ✅ 387 passed (5 new) · web lint ✅ · typecheck ✅ · vitest ✅ 186 (5 new) · build ✅ · Playwright: 31 passed, 1 failed on an ambiguous locator (a fresh thread briefly listed as "New chat" matched the New chat button; the test now targets the first button) — tutor spec then 5/5; 3 new specs in `e2e/progress.spec.ts`.
+**Manual verification:** screenshots of the dashboard, the knowledge map and the map with drawer + path in Neon Noir, Titanium Dark and Titanium Light (`docs/screenshots/phase10/`), checked by eye; two polish passes after looking (not-started node outlines were invisible on dark backgrounds; the cluster chart skipped labels).
+**Bugs found this session:** BUG-032
+**Decisions:** DEC-048, DEC-049
+**What we learned:**
+- Canvas libraries cannot read CSS variables: resolve them with `getComputedStyle` and re-apply the stylesheet when the theme attribute changes.
+- Libraries that manage their container may override its positioning; give such containers an explicit size rather than relying on absolute insets (BUG-032).
+- An aggregated "one call" endpoint keeps the dashboard fast and consistent, and its numbers are easy to test with seeded quizzes.
+**Next step:** Phase 12: evaluation harness and user-study mode.
+
 ## 7. Bug Log
 
 ### 7.1 Bug index
@@ -637,6 +664,7 @@ Severity: **S1** critical (data loss, security, app down) · **S2** major (featu
 | BUG-029 | 2026-11-20 | 8 | S2 | frontend | Next.js dev server errored on `/app/learn/[conceptId]` and `/app/quizzes/[sessionId]`: request data (pathname, params) read outside Suspense with cacheComponents | Fixed | `feat(phase-08)` | `e2e/quiz.spec.ts` runs both routes; build shows them as partial prerenders |
 | BUG-030 | 2026-11-20 | 8 (pre-existing since 1) | S4 | frontend | A mastery of exactly 0.75 showed as "Strong" in the UI but "developing" in the backend bands | Fixed | `feat(phase-08)` | `src/components/shared/shared.test.tsx` boundary cases 0.75 / 0.76 |
 | BUG-031 | 2026-11-20 | 9 | S2 | backend | `GET /tutor/chunks` returned 404: replacing the `/tutor/suggestions` handler by text slice also deleted the endpoint that followed it | Fixed | `feat(phase-09)` | `tests/test_tutor_api.py::test_chunks_endpoint_returns_note_text_in_order` (existing; caught it) |
+| BUG-032 | 2026-11-20 | 10 | S2 | frontend | The knowledge map drew nothing: Cytoscape's canvases had height 0 | Fixed | `feat(phase-10)` | `e2e/progress.spec.ts` waits for the visible node canvas |
 | BUG-018 | 2026-11-20 | 4 | S2 | ci / tests | GitHub Actions backend job failed at pytest after the Phase 4 push (run 44593254858); everything passed locally | Fixed | `fix(ci)` after `fbbdc49` | CI-identical local run: empty Neo4j container, fresh database, no Supabase env (161 passed) |
 
 ### 7.2 Bug details
@@ -1002,6 +1030,17 @@ Severity: **S1** critical (data loss, security, app down) · **S2** major (featu
 - **Commit:** `feat(phase-09)`
 - **Lesson / pattern to avoid:** replace a function by its own boundaries, never "from here to the next landmark"; run the whole suite before committing (it caught this).
 
+#### BUG-032 — Knowledge map rendered at zero height
+- **Found:** 2026-11-20, Phase 10, first run of `e2e/progress.spec.ts` (the canvas existed but had height 0)
+- **Severity / Area:** S2 / frontend (never committed)
+- **Symptom:** an empty map area; Playwright reported the node canvas as hidden.
+- **Root cause:** the Cytoscape container was sized with `absolute inset-0`; Cytoscape sets its own `position` on the container, so the insets no longer applied and the element collapsed to 0 px.
+- **Fix:** explicit `h-full w-full` inside the fixed-height wrapper.
+- **Files changed:** `apps/web/src/components/graph/knowledge-map.tsx`
+- **Regression test:** `e2e/progress.spec.ts` "the knowledge map opens a concept drawer" waits for the visible node layer
+- **Commit:** `feat(phase-10)`
+- **Lesson / pattern to avoid:** give containers managed by third-party renderers an intrinsic size.
+
 ---
 
 ## 8. Decisions Log (lightweight ADRs)
@@ -1054,6 +1093,8 @@ Severity: **S1** critical (data loss, security, app down) · **S2** major (featu
 | DEC-045 | 2026-11-20 | R1 tie-break among several frontier gaps: most practised-but-weak concepts on the path, then nearest, then syllabus order | Deepest gap only; nearest only | The spec asks for "the deepest real gap"; evidence of weakness is what makes a gap real, distance and order keep it deterministic | Learners without earlier practice are sent to the syllabus root (LIM-029) |
 | DEC-046 | 2026-11-20 | Recommendations are logged per surface and reused for 12 hours while open | Log every render; log only clicks | The study analysis needs exposure counts that mean "shown", not "page reloaded" | Shown counts are per surface per half-day |
 | DEC-047 | 2026-11-20 | Spaced review is scheduled after every quiz mode except pretest/posttest (not only concept quizzes) | Concept quizzes only (prompt wording) | Smart, review and diagnostic quizzes are practice too; study tests must not change the schedule | Diagnostic seeds review dates for its 10 concepts |
+| DEC-048 | 2026-11-20 | Dashboard "overall mastery" averages effective mastery over all approved concepts, counting unpractised ones as 0 | Average over practised concepts only | A syllabus-wide number shows progress honestly; the practised count is shown next to it | New learners start at 0 % |
+| DEC-049 | 2026-11-20 | Revision sheets use the regular answer model through the usage guard (1 request) and the GraphRAG context rules, not a separate summariser | A dedicated summarisation pipeline | Same grounding, citations and quotas as the tutor; fake mode works offline | Sheet length is bounded by the 3500-token context and 1500 output tokens |
 | DEC-022 | 2026-11-19 | Content code samples are C++14 (not 17) and Python 3.12; every snippet is a complete program that asserts its own claims and is compiled/run by the test suite | C++17 | The only local compiler is MinGW GCC 6.3 (no `-std=c++17`); C++14 also works on every CI compiler | Notes avoid C++17 features (structured bindings, `std::optional`) |
 
 ---
@@ -1091,6 +1132,8 @@ Severity: **S1** critical (data loss, security, app down) · **S2** major (featu
 | LIM-027 | The judge model's grades are not yet calibrated against human grading | Short-answer scores may be too strict or lenient | Human Action 17 spot check; Phase 12 can compare judge vs reviewer grades on a sample |
 | LIM-028 | ~~Local e2e specs skip themselves when `npx supabase status` cannot be read in time;~~ **CLOSED 2026-11-20 (Session 13): `e2e/global-setup.ts` reads it once per run and passes it to workers; 29/29 with no skips.** under heavy load one worker's lookup can time out, turning a test into a silent skip | A regression could hide behind a skip in a local run | Check the "skipped" count after each full run (done in Session 12); CI does not run these specs; Phase 13 can raise the lookup timeout or share one lookup per run |
 | LIM-029 | R1 counts never-practised prerequisites as gaps (spec), so a learner who fails a mid-syllabus quiz without earlier practice is sent to the syllabus root | Can feel like a step back for students who know the basics but never took a quiz on them | The onboarding diagnostic seeds mastery across clusters; Phase 12 can tune (e.g. count only gaps with evidence) using study data |
+| LIM-030 | Time on task is an estimate (quiz answer time + 90 s per tutor question) | Not a measured reading time | Label says "~"; Phase 12 can log page time if the study needs it |
+| LIM-031 | The full 69-node knowledge map is wide at "fit" zoom; labels are small until the student zooms in | Overview labels are hard to read on small screens | Cluster filter, path fit and the list view mitigate; Phase 13 can add compound cluster nodes |
 
 ---
 
@@ -1270,6 +1313,8 @@ Run ID / date / models used: _TBD_
 | Frontier gap | Walk prerequisites backward from a weak concept and stop at the first unmastered concept whose own prerequisites are mastered: the real starting point | `frontier_gap` |
 | Spaced repetition (SM-2 lite) | Review intervals grow after each success and reset after a failure, so time goes to what is being forgotten | `review_interval`, `/review/due` |
 | Exposure logging | Record what each learner was shown (and clicked, and completed) so two groups can be compared fairly | `recommendations_log` |
+| CSS variables in canvas libraries | Canvas drawing cannot use `var(--x)`; read the computed value and re-style when the theme changes | `mapStyle(cssVar)` in the knowledge map |
+| Dagre layered layout | Places a DAG in ranks so every edge points the same way (prerequisites above dependents) | Knowledge map, `rankDir: "TB"` |
 | DAG / topological order | Directed graph without cycles; an order where every prerequisite comes first | validate_graph.py, recommender R4/R5 |
 | Server-Sent Events | One-way streaming over HTTP for token-by-token answers | /tutor/.../messages |
 | Row Level Security | Postgres policies that restrict rows per user | supabase/migrations |

@@ -188,7 +188,7 @@ test("New chat followed by an immediate question starts a new thread (BUG-027)",
   await expect(chat.getByLabel("Suggested follow-up questions")).toBeVisible({
     timeout: NAV_TIMEOUT,
   });
-  await page.getByRole("button", { name: "New chat" }).click();
+  await page.getByRole("button", { name: "New chat" }).first().click();
   await ask(page, "What is a stack?"); // no wait in between
   await expect(page).not.toHaveURL(new RegExp(`thread=${first}`), { timeout: NAV_TIMEOUT });
   await expect(page).toHaveURL(/thread=/);

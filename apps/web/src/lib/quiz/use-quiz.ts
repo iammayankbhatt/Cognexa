@@ -65,6 +65,8 @@ function useRefreshLearning() {
     void qc.invalidateQueries({ queryKey: ["tutor", "suggestions"] });
     void qc.invalidateQueries({ queryKey: ["recommendations"] });
     void qc.invalidateQueries({ queryKey: ["review"] });
+    void qc.invalidateQueries({ queryKey: ["dashboard"] });
+    void qc.invalidateQueries({ queryKey: ["graph", "mastery"] });
   };
 }
 

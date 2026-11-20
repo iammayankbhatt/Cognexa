@@ -251,3 +251,26 @@
 .hljs-deletion {
   color: var(--danger);
 }
+
+/* ------------------------------------------------------------------ */
+/* Print: revision sheets print alone, dark-on-white, without app chrome. */
+/* ------------------------------------------------------------------ */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .print-sheet,
+  .print-sheet * {
+    visibility: visible;
+    color: #000 !important;
+    background: #fff !important;
+    border-color: #999 !important;
+  }
+  .print-sheet {
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 100%;
+    border: none !important;
+    padding: 0 !important;
+  }
+}
