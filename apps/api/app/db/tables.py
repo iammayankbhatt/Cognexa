@@ -153,6 +153,8 @@ quiz_sessions = Table(
     Column("score", Numeric(8, 3)),
     Column("max_score", Numeric(8, 3)),
     Column("time_limit_s", Integer),
+    Column("question_ids", ARRAY(Text), nullable=False, server_default="{}"),
+    Column("feedback_mode", Text, nullable=False, server_default="immediate"),
     _now(),
     _updated(),
 )
@@ -170,7 +172,20 @@ quiz_answers = Table(
     Column("feedback", Text),
     Column("graded_by", grader, nullable=False, server_default="auto"),
     Column("time_ms", Integer),
+    Column("pending", Boolean, nullable=False, server_default="false"),
+    Column("details", JSONB),
     _now(),
+)
+
+concept_interest = Table(
+    "concept_interest",
+    metadata,
+    Column("id", BigInteger, primary_key=True, autoincrement=True),
+    Column("user_id", UUID(as_uuid=True), ForeignKey("profiles.id"), nullable=False),
+    Column("concept_id", Text, ForeignKey("concepts.id"), nullable=False),
+    Column("subject_id", Text, ForeignKey("subjects.id"), nullable=False),
+    Column("source", Text, nullable=False, server_default="tutor"),
+    Column("asked_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
 )
 
 mastery = Table(

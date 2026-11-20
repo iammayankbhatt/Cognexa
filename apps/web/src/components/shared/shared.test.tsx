@@ -17,7 +17,8 @@ describe("masteryLevel", () => {
     [0.39, "low"],
     [0.4, "mid"],
     [0.74, "mid"],
-    [0.75, "high"],
+    [0.75, "mid"], // BUG-030: the backend calls exactly 0.75 "developing"
+    [0.76, "high"],
     [1, "high"],
   ])("maps %s to %s", (value, level) => {
     expect(masteryLevel(value)).toBe(level);

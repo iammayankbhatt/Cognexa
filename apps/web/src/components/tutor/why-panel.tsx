@@ -147,7 +147,7 @@ function WhyBody({ message, trace }: { message: ChatMessage; trace: RetrievalTra
               <ul className="space-y-1.5">
                 {trace.matched.map((m) => (
                   <li key={m.id} className="flex items-center gap-2 text-sm">
-                    <ConceptChip name={m.name} href={`/app/learn?concept=${m.id}`} />
+                    <ConceptChip name={m.name} href={`/app/learn/${m.id}`} />
                     <span className="text-xs text-muted">{m.confidence.toFixed(2)}</span>
                     {m.reason && (
                       <span className="truncate text-xs text-muted" title={m.reason}>

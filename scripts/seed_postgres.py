@@ -57,7 +57,7 @@ async def run(args: argparse.Namespace) -> int:
             n_chunks = await content.upsert_chunks(chunks)
             # Cached answers/classifications built from old content must not be served again.
             n_invalidated = await CacheRepository(session).invalidate_concepts(
-                changed, ("resp", "cls")
+                changed, ("resp", "cls", "grade")
             )
             n_questions = await content.upsert_questions(
                 [(doc.subject.id, cid, q) for cid, q in load_questions(args.subject)]

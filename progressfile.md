@@ -13,7 +13,7 @@
 **Mode:** autopilot, main only, no tags. One commit per phase (`feat(phase-NN): ...`), then `git push origin main` (explicitly authorised for autopilot; if push fails, log it under Human Action Needed and continue). No `gh` CLI and no Supabase CLI were found on this machine at start; CI runs are checked through the public GitHub API when possible.
 **Environment notes:** local `apps/api/.env` and `apps/web/.env.local` exist (created from the examples; fake LLM/embedding providers, `REPLACE_ME` for cloud values). Never open or print them; use `uv run --project apps/api python scripts/check_env.py`.
 **Phase order:** core 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 12 → 15 (prep only), then extras 11 → 13 → 14 → 16.
-**Current phase:** 8 — Quiz engine, auto-grading, mastery model (not started). Phase 7 complete (Session 11).
+**Current phase:** 9 — Adaptive recommender, non-adaptive baseline, spaced review (not started). Phase 8 complete (Session 12).
 
 **Phase 2 checkpoints (done)**
 - [x] 2.1 Env files, `scripts/check_env.py`, `.env.example` for all phases
@@ -83,7 +83,17 @@
 - [x] 7.7 Admin/reviewer compare view
 - [x] 7.8 Tests (vitest, 5 Playwright specs), screenshots, BUG-026/027, wrap-up
 
-**Next action:** Phase 8: read its prompt in docs/COGNEXA_PROMPTS.md and split it into checkpoints here. The onboarding diagnostic placeholder (Phase 4) and the tutor's mastery-based personalisation both start using real data once mastery is written.
+**Phase 8 checkpoints (done)**
+- [x] 8.1 Quiz selection: question repository, modes (concept, adaptive, diagnostic, review, pretest/posttest), 7-day no-repeat, sessions without answers
+- [x] 8.2 Grading: mcq / true_false / multi_select (partial credit) / code_output (normalised) + short-answer LLM judge (schema, usage guard, cache, pending + retry); feedback with misconception and diagnosed prerequisite
+- [x] 8.3 Mastery: update rule, prerequisite penalty, read-time decay, bands (constants in config); concept_interest logging from the tutor (migration)
+- [x] 8.4 API: sessions create/get, answer (immediate), submit (exam), history, regrade pending, server timing; mastery + concept detail endpoints for Learn
+- [x] 8.5 Web: /app/quizzes (start cards, history), quiz player (keyboard, timer, flag, modes), results screen
+- [x] 8.6 Web: real onboarding diagnostic; /app/learn library + /app/learn/[conceptId] concept page
+- [x] 8.7 Tests (grading table, mastery math, judge pending/retry, e2e concept quiz → mastery on concept page), docs/ARCHITECTURE.md mastery section
+- [x] 8.8 Full verification, wrap-up, commit
+
+**Next action:** Phase 9: read its prompt in docs/COGNEXA_PROMPTS.md and split it into checkpoints here. Hooks waiting for it: `app/tutor/suggest.py::next_concept` (temporary rule, LIM-024), `concept_interest` (questions-asked signal), `mastery.next_review_at` (review mode reads it), adaptive quiz concept choice (`selection.adaptive_concepts`).
 **Local stack:** `npx supabase start -x realtime,storage-api,imgproxy,studio,edge-runtime,logflare,vector,supavisor,postgres-meta` (mail UI http://127.0.0.1:54324); schema changes: `npx supabase migration up` (local Supabase) and `DATABASE_URL=<docker url> uv run ... scripts/migrate.py` (docker test DB)
 
 **Last cluster note:** Phase 3 content complete; 69/69 concepts
@@ -105,6 +115,7 @@
 | 11 | live checks | Lighthouse on the deployed landing page | After Phase 15: run Lighthouse (mobile) on the Vercel URL. The local lab score on this laptop was performance 74-80 (desktop 100); target 90+. If it is still below 90 on Vercel, tell Claude Code (LIM-015). |
 | 13 | live checks | Real LLM and embedding calls (Phase 5) | After adding `GROQ_API_KEY` and `GEMINI_API_KEY` and setting `LLM_PRIMARY_PROVIDER=groq`, `LLM_PRIMARY_MODEL=<current Groq model id>`, `LLM_FALLBACK_PROVIDER=gemini`, `LLM_FALLBACK_MODEL=<current Gemini model id>`, `EMBEDDING_PROVIDER=gemini`, `EMBEDDING_MODEL=<Gemini embedding model id>` (keep `EMBEDDING_DIM=768`) in `apps/api/.env`: run `uv run --project apps/api python scripts/llm_smoke.py`. Every line must say `ok`. If the Gemini `json` check fails with HTTP 400, set `GEMINI_API_VERSION=v1beta` and re-run. Then re-run `scripts/seed_vectors.py` (re-embeds with the real model, item 5) and, signed in as admin, press **Run live check** on /admin/usage. |
 | 14 | live checks | Quota message in the browser | Signed in as a student on the deployed site, set your own daily quota to 1 under Admin → Users (as admin), ask the tutor twice (Phase 7) and check the friendly "Daily AI limit reached" message with the reset time. Locally this is covered by API and unit tests. |
+| 17 | live checks | Short-answer grading with the real judge model | After item 13 (set `LLM_JUDGE_PROVIDER` / `LLM_JUDGE_MODEL`, e.g. the Gemini model): take a concept quiz that includes a short-answer question (e.g. Practice this concept on Recursion until one appears, or use the API), answer it once well and once poorly, and check the score, the matched/missing points and the feedback make sense. One AI request is used per graded short answer. |
 | 16 | live checks | Phase 7 tutor with real models (screen capture) | After item 13: start the API and web app on dev, ask the canonical recursion question and two of your own, open the Why panel, try Stop on a long answer, and record a short screen capture (or screenshots) into `docs/screenshots/phase7/real/`. Check that answers cite concepts as chips, that follow-ups appear, and that the quick check appears for a student with a weak practised prerequisite (Phase 8 creates real mastery). |
 | 15 | live checks | Phase 6 smoke run with real models (review together) | After item 13 (real keys): `uv run --project apps/api python scripts/phase6_smoke.py` (needs the dev Neo4j and Postgres seeded: `scripts/seed_neo4j.py`, `seed_postgres.py`, `seed_vectors.py`). It rewrites `evaluation/reports/phase6_smoke.md` with 10 test-set questions through both modes. Read each answer: right concepts matched? weak prerequisite explained? anything not in the context? Note problems in the report's review section and tell Claude Code. The committed report is the fake-mode run (retrieval only). |
 | 12 | live checks | Make yourself admin | After signing up on the cloud project: Supabase SQL editor → `update public.profiles set role = 'admin' where id = (select id from auth.users where email = '<your email>');` Wait 30 s (role cache) and reload; the Admin link appears. |
@@ -124,7 +135,7 @@
 | Repository | https://github.com/iammayankbhatt/Cognexa |
 | Live web app | _TBD (Vercel)_ |
 | Live API | _TBD (Render)_ |
-| Current phase | Phases 1 to 7 complete; next: Phase 8 (Quiz engine, grading, mastery). Workflow: single developer, `main` only (DEC-013), autopilot (DEC-019) |
+| Current phase | Phases 1 to 8 complete; next: Phase 9 (Recommender, baseline, spaced review). Workflow: single developer, `main` only (DEC-013), autopilot (DEC-019) |
 | Overall status | 🟡 In progress |
 
 Status legend: 🔴 Not started · 🟡 In progress · 🟢 Done + verified · ⚠️ Done with known issues · ⏸️ Blocked
@@ -148,7 +159,7 @@ Update the **Status** and **Where in code** columns as phases complete. Examiner
 | O2b | Graph traversal for prerequisite + related content (Obj. 2) | Cypher traversal, personalised ranking | 6 | 🟢 | `app/tutor/traverse.py`, `GraphRepository._walk` (shortest paths), `app/tutor/gather.py`; canonical failure case `tests/test_tutor_pipeline.py::test_canonical_failure_case_brings_in_call_stack`; Neo4j/in-memory parity `tests/test_tutor_graph.py` |
 | O2c | LLM generates grounded answer from retrieved context (Obj. 2) | Answer stage + citations + SSE | 6, 7 | 🟢 locally (real model: Human Action 15/16) | `app/tutor/answer.py`, `app/tutor/pipeline.py`, `app/api/tutor.py`, `tests/test_tutor_api.py` |
 | O3a | Rule-based recommender: weak concepts → prerequisite to review (Obj. 3) | Rules R1–R5 | 9 | 🔴 | |
-| O3b | Uses quiz performance AND questions asked (Abstract) | Mastery + concept_interest signal | 8, 9 | 🔴 | |
+| O3b | Uses quiz performance AND questions asked (Abstract) | Mastery + concept_interest signal | 8, 9 | 🟡 both signals recorded (mastery from graded answers, `concept_interest` from tutor questions); the recommender uses them in Phase 9 | `app/mastery/`, `app/quiz/`, `concept_interest` (migration 12), `docs/ARCHITECTURE.md` |
 | O4 | Functional end-to-end system (Obj. 4) | Full product, deployed | 1–15 | 🔴 | |
 | O5a | User study: adaptive vs non-adaptive baseline (Obj. 5) | Study mode, groups, pre/post tests, export | 3, 9, 12 | 🟡 matched pre/post forms ready | `data/subjects/dsa/questions/_study_sets.yaml` |
 | O5b | Comparison against plain, non-graph RAG (§1.9) | plain_rag mode + compare view + eval | 3, 6, 7, 12 | 🟡 plain_rag mode, compare API + live compare view (admin/reviewer) and a smoke report done; full evaluation in Phase 12 | `app/tutor/plain_rag.py`, `scripts/phase6_smoke.py`, `evaluation/reports/phase6_smoke.md`, `data/subjects/dsa/eval/testset.jsonl` |
@@ -167,7 +178,7 @@ Update the **Status** and **Where in code** columns as phases complete. Examiner
 | Email/password + Google login, verification, reset, roles (student/reviewer/admin) | 4 | 🟢 locally (Google: live check pending) | `apps/api/app/auth/`, `apps/api/app/api/me.py`, `apps/web/src/proxy.ts`, `src/components/auth/`, `src/app/(auth)/`, `src/app/auth/callback/`, `e2e/auth.spec.ts`, `tests/test_auth_*.py` |
 | Three themes (Neon Noir, Titanium Dark, Titanium Light) | 1, 4 | 🟢 incl. profile sync (`components/app/theme-sync.tsx`, e2e "theme follows the user") | `apps/web/src/app/globals.css`, `src/components/theme/`, `/design` route, `docs/screenshots/phase1/` |
 | Landing, How-it-works, About, Privacy, Terms pages | 4 | 🟢 | `src/app/(marketing)/`, `src/components/marketing/`, public `GET /graph` (`app/api/graph.py`), `docs/screenshots/phase4/` |
-| Onboarding + diagnostic quiz | 4, 8 | 🟡 onboarding flow done; the diagnostic step is a marked placeholder until Phase 8 | `src/app/app/onboarding/`, `POST /me/onboarding-complete` |
+| Onboarding + diagnostic quiz | 4, 8 | 🟢 real 10-question diagnostic seeds mastery (`e2e/quiz.spec.ts`) | `src/app/app/onboarding/`, `POST /me/onboarding-complete` |
 | LLM provider layer with fallback, retries, circuit breaker | 5 | 🟢 locally (real providers: live check pending) | `apps/api/app/llm/` (router, groq, gemini, fake, registry, pricing), `scripts/llm_smoke.py`, `tests/test_llm_router.py`, `tests/test_llm_providers.py` |
 | Per-user quotas, rate limits, global cap, cost metering | 5 | 🟢 | `apps/api/app/usage/`, `llm_calls` table (migration 10), `GET /me/usage`, `/admin/usage`, `tests/test_usage_guard.py` (20 parallel requests, exact limits) |
 | Response / classification / embedding caching | 5, 6 | 🟢 used by the tutor (answers to first questions, query embeddings) | `apps/api/app/cache/`, `scripts/seed_postgres.py` invalidation, `tests/test_cache.py` |
@@ -175,9 +186,9 @@ Update the **Status** and **Where in code** columns as phases complete. Examiner
 | Chat history (threads: search, rename, archive, delete) | 6, 7 | 🟢 | `app/api/tutor.py`, `apps/web/src/components/tutor/thread-list.tsx`, `e2e/tutor.spec.ts` |
 | Streaming answers, citations, follow-ups, regenerate | 6, 7 | 🟢 (incl. stop, edit-and-resend) | `app/api/tutor.py`, `apps/web/src/lib/tutor/`, `apps/web/src/components/tutor/` |
 | Thumbs up/down + report bad answer → moderation | 7, 11 | 🟡 feedback + reports stored, reported answers dropped from the cache; moderation queue in Phase 11 | `POST /tutor/messages/{id}/feedback`, `components/tutor/report-dialog.tsx` |
-| Quiz engine (6 modes, 5 question types), auto-grading, LLM short-answer grading | 8 | 🔴 | |
-| Mastery model with decay; spaced review (SM-2 lite) | 8, 9 | 🔴 | |
-| Concept library + concept pages | 8 | 🔴 | |
+| Quiz engine (6 modes, 5 question types), auto-grading, LLM short-answer grading | 8 | 🟢 locally (real judge: Human Action 17) | `app/quiz/`, `app/api/quiz.py`, `apps/web/src/components/quiz/`, `tests/test_quiz_{logic,api}.py` |
+| Mastery model with decay; spaced review (SM-2 lite) | 8, 9 | 🟡 mastery model with decay done; spaced review in Phase 9 | `app/mastery/`, `docs/ARCHITECTURE.md` |
+| Concept library + concept pages | 8 | 🟢 | `apps/web/src/components/learn/`, `GET /concepts/{id}`, `/notes/{concept_id}` |
 | Progress dashboard + Knowledge Map (mastery-coloured DAG) | 10 | 🔴 | |
 | Notes, bookmarks, personalised revision sheets (MD/PDF export) | 10 | 🔴 | |
 | Admin: graph editor, content/question editor, moderation, users, usage, settings | 4, 11 | 🟡 users page (role, study group, quota override, audit log) done in Phase 4 | `app/api/admin_users.py`, `src/app/admin/users/` |
@@ -240,8 +251,8 @@ Key flows (details in docs/ARCHITECTURE.md once written):
 | 4 | Auth, roles, app shell, public pages | 🟢 | 2026-11-19 | 2026-11-20 | `fbbdc49` `feat(phase-04): auth, roles, app shell, public pages` | | Verified locally: backend 161 tests, web 103 unit + 24 e2e (live auth cycle on the Supabase local stack), build without env vars (CI parity). GitHub Actions: first run red (BUG-018, test relied on seeded local Neo4j), green after `3e5419b` (run 44596309127). Google OAuth and cloud Supabase are live checks (Human Action 2, 7-10, 12). |
 | 5 | LLM layer, quotas, cost, cache, guardrails | 🟢 | 2026-11-20 | 2026-11-20 | `5750e49` `feat(phase-05): LLM layer, quotas, cost, cache, guardrails` | | GitHub Actions green (run 44604324609). Verified locally: backend 240 passed (CI-identical run: empty Neo4j, fresh DB, no keys), web 119 unit + 29 e2e from a cold server, builds with and without env. Real provider calls are a live check (Human Action 13). |
 | 6 | GraphRAG + plain RAG + agentic step | 🟢 | 2026-11-20 | 2026-11-20 | `f888d3a` `feat(phase-06)` | | GitHub Actions green (run 44656821252). Verified locally: backend 288 passed (48 new tutor tests), ruff, format, mypy clean. Live API run against local Neo4j + Supabase auth. Real-model smoke run is Human Action 15. |
-| 7 | Tutor chat UI | 🟢 | 2026-11-20 | 2026-11-20 | `feat(phase-07)` (see git log) | | Verified locally: backend 294 passed; web 167 unit + 26 e2e; screenshots in docs/screenshots/phase7. Real-model run is Human Action 16. |
-| 8 | Quiz engine, grading, mastery | 🔴 | | | | | |
+| 7 | Tutor chat UI | 🟢 | 2026-11-20 | 2026-11-20 | `b0a1d16` `feat(phase-07)` | | GitHub Actions green (run 44664169211). Verified locally: backend 294 passed; web 167 unit + 26 e2e; screenshots in docs/screenshots/phase7. Real-model run is Human Action 16. |
+| 8 | Quiz engine, grading, mastery | 🟢 | 2026-11-20 | 2026-11-20 | `feat(phase-08)` (see git log) | | Verified locally: backend 353 passed; web 177 unit, Playwright 27 passed + 1 skipped by a stack-lookup timeout (passes on rerun, LIM-028); screenshots in docs/screenshots/phase8. Real judge model is Human Action 17. |
 | 9 | Recommender, baseline, spaced review | 🔴 | | | | | |
 | 10 | Dashboard, knowledge map, notes | 🔴 | | | | | |
 | 11 | Admin console + LLM proposals | 🔴 | | | | | |
@@ -540,6 +551,27 @@ git tag -a v0.1 -m "Phase 1: Scaffold, design system, CI" && git push --tags   #
 - Screenshot runs double as exploratory tests: two real bugs (BUG-027 and the busy-across-threads case) were found by the screenshot script, not the specs.
 **Next step:** Phase 8: quiz engine, auto-grading, mastery model.
 
+### Session 12 — 2026-11-20 — Phase 8: quiz engine, auto-grading, mastery model (autopilot)
+**Goal:** Quizzes, grading and a rule-based mastery model that feed Report Objective 3, plus the Learn pages and the real onboarding diagnostic.
+**Built:**
+- `app/quiz/`: question selection per mode (`selection.py`: concept, adaptive by weakest mastery + next syllabus concept with difficulty matched to mastery, diagnostic of 10 easy auto-graded questions across the eight clusters, review of due concepts, pretest/posttest from `_study_sets.yaml`; questions answered in the last 7 days avoided when possible), grading (`grading.py`: exact match, multi-select partial credit, normalised code output, feedback with the chosen distractor's misconception and the diagnosed prerequisite), the short-answer judge (`judge.py`: JSON schema, temperature 0, usage guard, cache by question + normalised answer + model, pending on failure, fake keyword-coverage responder), `service.py` (immediate vs exam feedback, idempotent submit, regrade of pending answers, server-side timing with grace, retry-the-wrong-ones sessions), `repository.py`.
+- `app/mastery/`: `model.py` (update rule, prerequisite penalty, read-time decay, bands, target difficulty; constants in Settings) and `repository.py` (effective map, view, ordered-lock transactional updates; only changed rows are written, BUG-028).
+- API: `POST /quiz/sessions`, `GET /quiz/sessions/{id}`, `POST /quiz/sessions/{id}/answers`, `POST /quiz/sessions/{id}/submit`, `POST /quiz/sessions/{id}/regrade`, `GET /quiz/history`, `GET /me/mastery`, `GET /concepts/{id}` (notes sections, prerequisites, leads-to, related, question count, mastery), `GET/PUT /notes/{concept_id}` (note + bookmark; Phase 10 builds the notes list on it).
+- Migration 12: `quiz_sessions.question_ids` + `feedback_mode`, `quiz_answers.pending` + `details`, `concept_interest` (RLS, own-select). The tutor logs matched concepts of each classified question there and now personalises with decayed mastery.
+- Web: `/app/quizzes` (concept quiz with search + cluster filter, count, exam and timed options; Smart quiz; Review with due count; history table), `/app/quizzes/[sessionId]` (player: one question per screen, progress bar, question navigator with flags, countdown with auto-submit, keyboard 1-6 / Enter / Ctrl+Enter / F, immediate feedback panel with correct answer, misconception and "Learn it / Ask the tutor about it" links; results: score ring, per-concept bars, weak-prerequisite card, every question with explanation, pending short answers with "Grade now", retry the missed questions), onboarding step 3 runs the real diagnostic (exam mode) and shows the starting point, `/app/learn` (library by cluster in syllabus order with mastery badges, difficulty dots and "Recommended after" lock hints, search) and `/app/learn/[conceptId]` (all ten note sections, Python/C++ code tabs, builds-on / leads-to / related chips with mastery dots, Ask the tutor, Practice this concept, bookmark and note). Tutor accepts `?ask=` to prefill the composer. Concept links moved to `/app/learn/<id>` (old `?concept=` links redirect).
+- `docs/ARCHITECTURE.md` created with the mastery model, grading rules and the questions-asked signal.
+**Files touched:** `apps/api/app/{quiz,mastery}/*` (new), `app/api/{quiz,learn,notes}.py` (new), `app/main.py`, `app/core/config.py`, `app/db/tables.py`, `app/cache/{keys,service}.py`, `app/guardrails/input.py`, `app/graph/memory.py`, `app/tutor/{repository,service}.py`, `scripts/seed_postgres.py`, `supabase/migrations/20260101000012_quiz_sessions_and_interest.sql`, `apps/api/tests/test_quiz_{logic,api}.py` (new), `tests/test_tutor_api.py` (template seeds questions), `apps/web/src/components/{quiz,learn}/*` (new), `src/lib/quiz/*` (new), `src/app/app/{quizzes,learn,onboarding}/…`, `src/app/{app,admin}/layout.tsx`, `src/components/shared/mastery.ts` (+ test), `src/components/tutor/{markdown,why-panel,chat-empty,tutor-workspace}.tsx`, `src/components/app/concept-search.tsx`, `apps/web/e2e/{quiz,auth,tutor,screenshots}.spec.ts`, `docs/ARCHITECTURE.md`, `docs/screenshots/phase8/`, `progressfile.md`.
+**Commands run & results:** backend ruff ✅ · ruff format ✅ · mypy ✅ (95 files) · pytest ✅ 353 passed (59 new: 48 grading/mastery/selection, 11 quiz/learn/notes API) · web lint ✅ · typecheck ✅ · vitest ✅ 177 (10 new) · build ✅ · Playwright ✅ 27 passed, 1 skipped (the rename test's worker timed out on `npx supabase status` under load and its guard skipped it; it passes on rerun) · `npx supabase migration up` ✅ (migration 12) · `scripts/migrate.py` on the docker dev DB ✅.
+**Manual verification:** e2e "the onboarding diagnostic seeds mastery" (a new user takes the 10-question diagnostic; the Learn page then reports practised concepts) and "take a concept quiz end to end and see mastery on the concept page"; screenshots `docs/screenshots/phase8/` (question, feedback, results, concept page, library, quizzes home; Neon Noir and Titanium Light) checked by eye. The real judge model on dev is Human Action 17.
+**Bugs found this session:** BUG-028, BUG-029, BUG-030
+**Decisions:** DEC-040 to DEC-044
+**What we learned:**
+- Writing the test that grades every seeded question against its own answer key is a cheap content-integrity check: all 483 auto-graded questions pass.
+- A rule-based model is easy to defend: each number in `docs/ARCHITECTURE.md` can be recomputed by hand from a student's answers.
+- "Never block the student" shapes the design: a short answer whose grader is down is stored as pending and graded later, instead of failing the submission.
+- With `cacheComponents`, anything that reads request data (pathname, dynamic params) needs a Suspense boundary; the dev server says so in its log, which the e2e run surfaced (BUG-029).
+**Next step:** Phase 9: adaptive recommender, non-adaptive baseline, spaced review.
+
 ## 7. Bug Log
 
 ### 7.1 Bug index
@@ -574,6 +606,9 @@ Severity: **S1** critical (data loss, security, app down) · **S2** major (featu
 | BUG-025 | 2026-11-20 | 6 | S3 | scripts / CI | `phase6_smoke.py --out <temp path>` crashed after writing the report (`relative_to` on a path outside the repo); the new CI step would have failed | Fixed | `feat(phase-06)` | the CI step itself (`--offline --out $RUNNER_TEMP/...`), run locally with a temp path |
 | BUG-026 | 2026-11-20 | 7 (pre-existing since 4) | S3 | frontend | Dev server logged "Hydration failed" on /app/settings: server HTML had the skeleton, the client's first render had the profile | Fixed | `feat(phase-07)` | `src/components/app/me-provider.test.tsx` (hydrates server HTML with /me cached; fails without the fix) |
 | BUG-027 | 2026-11-20 | 7 | S2 | frontend | "New chat" then an immediate question posted it into the previous thread; with a turn still settling, the new chat's composer was also blocked | Fixed | `feat(phase-07)` | `e2e/tutor.spec.ts` "New chat followed by an immediate question starts a new thread (BUG-027)" |
+| BUG-028 | 2026-11-20 | 8 | S2 | backend | Answering correctly a question that diagnoses a prerequisite crashed the mastery update (KeyError) | Fixed | `feat(phase-08)` | `tests/test_quiz_api.py` (immediate-feedback test hits the path; penalty test covers the wrong-answer branch) |
+| BUG-029 | 2026-11-20 | 8 | S2 | frontend | Next.js dev server errored on `/app/learn/[conceptId]` and `/app/quizzes/[sessionId]`: request data (pathname, params) read outside Suspense with cacheComponents | Fixed | `feat(phase-08)` | `e2e/quiz.spec.ts` runs both routes; build shows them as partial prerenders |
+| BUG-030 | 2026-11-20 | 8 (pre-existing since 1) | S4 | frontend | A mastery of exactly 0.75 showed as "Strong" in the UI but "developing" in the backend bands | Fixed | `feat(phase-08)` | `src/components/shared/shared.test.tsx` boundary cases 0.75 / 0.76 |
 | BUG-018 | 2026-11-20 | 4 | S2 | ci / tests | GitHub Actions backend job failed at pytest after the Phase 4 push (run 44593254858); everything passed locally | Fixed | `fix(ci)` after `fbbdc49` | CI-identical local run: empty Neo4j container, fresh database, no Supabase env (161 passed) |
 
 ### 7.2 Bug details
@@ -895,6 +930,39 @@ Severity: **S1** critical (data loss, security, app down) · **S2** major (featu
 - **Commit:** `feat(phase-07)`
 - **Lesson / pattern to avoid:** never derive "what the user just chose" from the URL right after navigating.
 
+#### BUG-028 — Mastery update crashed on a correct answer to a prerequisite-diagnosing question
+- **Found:** 2026-11-20, Phase 8, first run of `test_concept_quiz_immediate_feedback_updates_mastery`
+- **Severity / Area:** S2 / backend
+- **Symptom:** `KeyError` in `MasteryRepository.apply` and a 500 for the answer.
+- **Root cause:** the diagnosed prerequisite was added to the set of rows to lock and write for every event, but its state was only created when the answer was wrong (the penalty case).
+- **Fix:** track the concepts that actually changed and write only those; a correct answer leaves the prerequisite untouched.
+- **Files changed:** `apps/api/app/mastery/repository.py`
+- **Regression test:** `tests/test_quiz_api.py::test_concept_quiz_immediate_feedback_updates_mastery` (stack questions diagnose prerequisites) and `test_wrong_answer_penalises_the_diagnosed_prerequisite`
+- **Commit:** `feat(phase-08)`
+- **Lesson / pattern to avoid:** keep "rows we lock" and "rows we change" as separate sets.
+
+#### BUG-029 — Dynamic app routes broke under cacheComponents
+- **Found:** 2026-11-20, Phase 8, Playwright web-server log ("encountered URL data `usePathname()` in a Client Component outside of `<Suspense>`", then "encountered URL data during prerendering")
+- **Severity / Area:** S2 / frontend
+- **Symptom:** the dev server reported errors for `/app/learn/[conceptId]` and `/app/quizzes/[sessionId]`; production prerendering of those routes would fail.
+- **Root cause:** with `cacheComponents`, the pathname and dynamic params are request data. The app shell (layout) read `usePathname()` and the pages awaited `params` outside any Suspense boundary; static routes never exposed this.
+- **Fix:** the `/app` and `/admin` layouts wrap the shell in Suspense with a skeleton fallback; dynamic pages read `params` inside a Suspense boundary.
+- **Files changed:** `apps/web/src/app/app/layout.tsx`, `src/app/admin/layout.tsx`, `src/app/app/learn/[conceptId]/page.tsx`, `src/app/app/quizzes/[sessionId]/page.tsx`
+- **Regression test:** `e2e/quiz.spec.ts` (both routes); `next build` lists them as partial prerenders (◐)
+- **Commit:** `feat(phase-08)`
+- **Lesson / pattern to avoid:** the first dynamic route under cacheComponents needs Suspense around everything that reads the URL.
+
+#### BUG-030 — Mastery band boundary differed between UI and backend
+- **Found:** 2026-11-20, Phase 8, while writing the mastery documentation
+- **Severity / Area:** S4 / frontend (pre-existing since Phase 1)
+- **Symptom:** 0.75 rendered as "Strong" in badges while the backend (and the spec) call 0.4–0.75 "developing".
+- **Root cause:** the Phase 1 helper used `< 0.75` for the middle band and its test pinned that choice.
+- **Fix:** `<= 0.75` is developing; the test now checks 0.75 → mid and 0.76 → high, matching `app/mastery/model.py`.
+- **Files changed:** `apps/web/src/components/shared/mastery.ts`, `shared.test.tsx`
+- **Regression test:** the updated boundary cases
+- **Commit:** `feat(phase-08)`
+- **Lesson / pattern to avoid:** one source of truth for thresholds; document inclusive/exclusive ends.
+
 ---
 
 ## 8. Decisions Log (lightweight ADRs)
@@ -939,6 +1007,11 @@ Severity: **S1** critical (data loss, security, app down) · **S2** major (featu
 | DEC-037 | 2026-11-20 | Tutor routing: one page `/app/tutor` with `?thread=`; the active thread is component state mirrored to the URL | Nested route `/app/tutor/[id]` | The streaming turn and panels must survive the switch from "new" to a created thread without remounting; state avoids the URL lag (BUG-027) | Deep links still work via the query parameter |
 | DEC-038 | 2026-11-20 | `GET /tutor/chunks?ids=` returns note text for the Why panel instead of storing chunk text in each trace | Store chunk text in `retrieval_trace` | Traces stay small (ids, kinds, tokens); the text is public course material | One extra request when a student expands a chunk |
 | DEC-039 | 2026-11-20 | Thread delete waits for the 5 s undo window before calling DELETE | Soft delete column | No schema change; undo is instant and reliable | Closing the tab within 5 s cancels the delete (acceptable) |
+| DEC-040 | 2026-11-20 | Mastery is rule-based (EMA-like update with difficulty weights, prerequisite penalty, read-time decay), documented in docs/ARCHITECTURE.md | BKT / IRT / learned models | Explainable to students and examiners, verifiable by hand, no training data needed; the report scopes ML mastery as future work | Constants in Settings for tuning after the user study |
+| DEC-041 | 2026-11-20 | Diagnostic, pretest and posttest always run in exam mode | Let students choose | Feedback during a placement or study test would change the answers that follow | The player shows feedback only on the results screen for these |
+| DEC-042 | 2026-11-20 | Short-answer grades are cached in `response_cache` with a new `grade:` kind and invalidated with the concept's other AI caches | A separate table | Reuses the TTL, invalidation and stats machinery from Phase 5 | `seed_postgres.py` invalidates `grade` entries for changed concepts |
+| DEC-043 | 2026-11-20 | Minimal per-concept note + bookmark API now (`/notes/{concept_id}`), the notes list and revision sheets in Phase 10 | Disabled buttons until Phase 10 | The concept page needed working buttons (no placeholders in shipped paths); the table already had `unique (user_id, concept_id)` | Phase 10 adds listing, search and Markdown preview on the same table |
+| DEC-044 | 2026-11-20 | Concept pages live at `/app/learn/<id>`; `?concept=` links redirect | Keep the query parameter | Clean, shareable URLs; one route per concept | Dynamic route needed the Suspense fix (BUG-029) |
 | DEC-022 | 2026-11-19 | Content code samples are C++14 (not 17) and Python 3.12; every snippet is a complete program that asserts its own claims and is compiled/run by the test suite | C++17 | The only local compiler is MinGW GCC 6.3 (no `-std=c++17`); C++14 also works on every CI compiler | Notes avoid C++17 features (structured bindings, `std::optional`) |
 
 ---
@@ -972,6 +1045,9 @@ Severity: **S1** critical (data loss, security, app down) · **S2** major (featu
 | LIM-023 | Only one streaming answer can be stopped at a time; switching to another chat while an answer streams lets it finish in the background (saved normally) | Rare: a student who switches mid-answer cannot stop the old one | Acceptable; the answer is saved and visible when they return |
 | LIM-024 | "Continue learning" on the tutor's empty state uses a temporary syllabus rule (first unmastered concept whose prerequisites are mastered, `app/tutor/suggest.py`) | Not adaptive yet | **TODO Phase 9:** replace `next_concept` with the rule-based recommender (R1–R5) and log recommendations |
 | LIM-025 | Stop-generating is unit/integration tested on the server (partial answer saved) but not covered by an e2e spec, because the fake provider answers too fast to press Stop | A UI regression in Stop could slip through | Covered manually in Human Action 16 with a real model; Phase 13 can add a slow fake mode for e2e |
+| LIM-026 | Pretest/posttest read the study forms from `data/subjects/<id>/questions/_study_sets.yaml` at runtime | The deployed API needs the `data/` folder | Phase 15 Dockerfile must copy `data/` (or Phase 12 moves the forms into the database) |
+| LIM-027 | The judge model's grades are not yet calibrated against human grading | Short-answer scores may be too strict or lenient | Human Action 17 spot check; Phase 12 can compare judge vs reviewer grades on a sample |
+| LIM-028 | Local e2e specs skip themselves when `npx supabase status` cannot be read in time; under heavy load one worker's lookup can time out, turning a test into a silent skip | A regression could hide behind a skip in a local run | Check the "skipped" count after each full run (done in Session 12); CI does not run these specs; Phase 13 can raise the lookup timeout or share one lookup per run |
 
 ---
 
@@ -1145,6 +1221,9 @@ Run ID / date / models used: _TBD_
 | Selective hydration | React hydrates Suspense boundaries one by one; data that lands in between must not change a boundary's first render | `useHydrated` in `useMe` (BUG-026) |
 | SSE over fetch | `EventSource` cannot POST or send headers, so the stream is read from `fetch().body` and parsed by hand | `lib/tutor/sse.ts` |
 | Run ids for async UI | Tag each in-flight operation; late results from an older one are ignored | `lib/tutor/use-tutor.ts` |
+| Exponential moving average | New value = old + rate × (observation − old): recent answers count more, one answer never dominates | `app/mastery/model.py` |
+| Read-time decay | Store the raw score; apply forgetting when reading, so nothing has to run on a schedule | `effective_score` |
+| Partial credit for multi-select | (correct picks − wrong picks) / correct options, floored at 0: guessing everything earns nothing | `app/quiz/grading.py` |
 | DAG / topological order | Directed graph without cycles; an order where every prerequisite comes first | validate_graph.py, recommender R4/R5 |
 | Server-Sent Events | One-way streaming over HTTP for token-by-token answers | /tutor/.../messages |
 | Row Level Security | Postgres policies that restrict rows per user | supabase/migrations |

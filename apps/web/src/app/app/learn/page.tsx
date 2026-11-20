@@ -1,15 +1,15 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 
-import { ComingSoon } from "@/components/app/coming-soon";
+import { LearnLibrary } from "@/components/learn/learn-library";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export const metadata: Metadata = { title: "Learn" };
 
 export default function Page() {
   return (
-    <ComingSoon
-      title="Learn"
-      description="Browse concepts, notes and the prerequisite map."
-      phase={8}
-    />
+    <Suspense fallback={<Skeleton className="h-64 w-full" aria-label="Loading concepts" />}>
+      <LearnLibrary />
+    </Suspense>
   );
 }

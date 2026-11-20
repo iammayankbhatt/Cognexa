@@ -27,6 +27,9 @@ PROTECTED_TAGS = (
     "catalogue",
     "plan_input",
     "followups",
+    "question",
+    "rubric",
+    "reference_answer",
 )
 _CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f\u200b-\u200f\u202a-\u202e\u2066-\u2069]")
 _BLANKS = re.compile(r"\n{3,}")

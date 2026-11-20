@@ -84,7 +84,7 @@ test("ask → trace → answer → why panel → report → persists after reloa
   // citation chip links to the concept page
   await expect(chat.getByRole("link", { name: /Recursion|Call Stack/ }).first()).toHaveAttribute(
     "href",
-    /\/app\/learn\?concept=/,
+    /\/app\/learn\/[a-z_]+/,
   );
 
   // Why this answer? (open by default on desktop)

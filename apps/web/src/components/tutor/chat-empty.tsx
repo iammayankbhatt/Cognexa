@@ -50,7 +50,7 @@ export function ChatEmpty({ onPick }: { onPick: (prompt: string) => void }) {
       </div>
       {data?.continue && (
         <Link
-          href={`/app/learn?concept=${encodeURIComponent(data.continue.concept_id)}`}
+          href={`/app/learn/${encodeURIComponent(data.continue.concept_id)}`}
           className="flex w-full items-center gap-3 rounded-xl border border-border bg-surface-2 p-3 text-left transition-colors duration-150 outline-none hover:border-accent focus-visible:ring-2 focus-visible:ring-ring"
         >
           <BookOpen aria-hidden className="size-5 shrink-0 text-accent" />

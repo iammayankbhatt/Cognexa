@@ -71,6 +71,23 @@ class Settings(BaseSettings):
     plain_rag_top_k: int = 6
     tutor_history_turns: int = 4
 
+    # Mastery model (Phase 8, docs/ARCHITECTURE.md "Mastery model").
+    mastery_learning_rate: float = 0.3
+    mastery_weight_easy: float = 0.8  # difficulty 1
+    mastery_weight_medium: float = 1.0  # difficulty 2
+    mastery_weight_hard: float = 1.2  # difficulty 3
+    mastery_prereq_penalty: float = 0.05  # wrong answer that diagnoses a weak prerequisite
+    mastery_decay_base: float = 0.98  # effective = score * base ** (days / period)
+    mastery_decay_period_days: float = 7.0
+    mastery_weak_below: float = 0.4
+    mastery_strong_above: float = 0.75
+
+    # Quizzes (Phase 8).
+    quiz_default_count: int = 8
+    quiz_seconds_per_question: int = 60  # timed mode
+    quiz_no_repeat_days: int = 7
+    quiz_time_grace_s: int = 5
+
     # Feature flags (defaults; admins can override them in app_settings at runtime).
     agentic_mode: bool = True
     study_mode: bool = False

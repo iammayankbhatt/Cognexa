@@ -83,7 +83,7 @@ function makeComponents(names: Record<string, string>): Components {
         return (
           <ConceptChip
             name={names[id] ?? id.replace(/_/g, " ")}
-            href={`/app/learn?concept=${encodeURIComponent(id)}`}
+            href={`/app/learn/${encodeURIComponent(id)}`}
             className="mx-0.5 align-baseline"
           />
         );

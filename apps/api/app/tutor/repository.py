@@ -13,8 +13,10 @@ from sqlalchemy import and_, delete, func, insert, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.tables import chat_messages, chat_threads, mastery, message_feedback
+from app.db.tables import chat_messages, chat_threads, concept_interest, message_feedback
 from app.llm.types import Message
+from app.mastery.model import DEFAULT_PARAMS, MasteryParams
+from app.mastery.repository import MasteryRepository
 
 
 def _now() -> dt.datetime:
@@ -253,13 +255,26 @@ class ChatRepository:
         }
 
     # ---------------------------------------------------------------- mastery
-    async def mastery_map(self, user_id: uuid.UUID, subject_id: str) -> dict[str, float]:
-        """Scores of practised concepts (attempts > 0); a missing id means never practised."""
-        rows = await self.session.execute(
-            select(mastery.c.concept_id, mastery.c.score).where(
-                mastery.c.user_id == user_id,
-                mastery.c.subject_id == subject_id,
-                mastery.c.attempts > 0,
+    async def mastery_map(
+        self, user_id: uuid.UUID, subject_id: str, params: MasteryParams = DEFAULT_PARAMS
+    ) -> dict[str, float]:
+        """Effective (time-decayed) scores of practised concepts; absent = never practised."""
+        return await MasteryRepository(self.session, params).effective_map(user_id, subject_id)
+
+    async def log_interest(
+        self, user_id: uuid.UUID, subject_id: str, concept_ids: list[str], source: str = "tutor"
+    ) -> None:
+        """The "questions asked" signal for the recommender (one row per matched concept)."""
+        if concept_ids:
+            await self.session.execute(
+                insert(concept_interest),
+                [
+                    {
+                        "user_id": user_id,
+                        "concept_id": c,
+                        "subject_id": subject_id,
+                        "source": source,
+                    }
+                    for c in dict.fromkeys(concept_ids)
+                ],
             )
-        )
-        return {r.concept_id: float(r.score) for r in rows}

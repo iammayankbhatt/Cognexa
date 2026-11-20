@@ -69,7 +69,7 @@ class LLMCache:
 
     # ---------------------------------------------------------------- invalidation
     async def invalidate_concepts(
-        self, concept_ids: Iterable[str], kinds: Iterable[str] = ("resp", "cls")
+        self, concept_ids: Iterable[str], kinds: Iterable[str] = ("resp", "cls", "grade")
     ) -> int:
         """Concept content changed, or an edge touching these concepts changed."""
         async with self.db.sessions()() as session, session.begin():

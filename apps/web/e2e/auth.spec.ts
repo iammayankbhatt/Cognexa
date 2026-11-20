@@ -37,7 +37,7 @@ async function finishOnboarding(page: Page) {
   await page.getByRole("button", { name: "Get started" }).click();
   await page.getByRole("radio", { name: /Intermediate/ }).click();
   await page.getByRole("button", { name: "Continue" }).click();
-  await page.getByRole("button", { name: "Go to my dashboard" }).click();
+  await page.getByRole("button", { name: "Skip for now" }).click();
   await expect(page).toHaveURL(/\/app$/, { timeout: NAV_TIMEOUT });
 }
 

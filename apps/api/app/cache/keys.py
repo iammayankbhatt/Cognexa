@@ -7,7 +7,7 @@ import re
 import unicodedata
 from collections.abc import Iterable
 
-KINDS = ("resp", "cls", "emb")
+KINDS = ("resp", "cls", "emb", "grade")
 _SPACE = re.compile(r"\s+")
 _EDGE_PUNCT = re.compile(r"^[\s\W_]+|[\s\W_]+$")
 

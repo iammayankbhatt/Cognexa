@@ -115,6 +115,15 @@ export function TutorWorkspace() {
     composer.current?.focus();
   }, [threadId]);
 
+  // "Ask the tutor about it" links (quiz results, concept pages) open /app/tutor?ask=<text>:
+  // the question is put in the composer for the student to send or edit, once.
+  const ask = params.get("ask");
+  useEffect(() => {
+    if (!ask) return;
+    composer.current?.setText(ask.slice(0, 2000));
+    router.replace(urlThread ? `${pathname}?thread=${urlThread}` : pathname, { scroll: false });
+  }, [ask, router, pathname, urlThread]);
+
   const send = async (text: string) => {
     stick.current = true;
     if (compareMode && canCompare) {

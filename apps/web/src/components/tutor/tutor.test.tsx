@@ -89,7 +89,7 @@ describe("Markdown", () => {
       />,
     );
     const chip = screen.getByRole("link", { name: "Call Stack" });
-    expect(chip).toHaveAttribute("href", "/app/learn?concept=call_stack");
+    expect(chip).toHaveAttribute("href", "/app/learn/call_stack");
   });
 
   it("never renders raw HTML from the answer", () => {

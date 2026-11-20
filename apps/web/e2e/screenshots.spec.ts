@@ -175,3 +175,74 @@ test.describe("phase 7 tutor (needs local Supabase + API in fake mode)", () => {
     });
   }
 });
+
+test.describe("phase 8 quizzes and learn (needs local Supabase + API)", () => {
+  for (const theme of ["neon-noir", "titanium-light"] as const) {
+    test(`phase 8: ${theme}`, async ({ page }) => {
+      const stack = await localStack();
+      test.skip(!stack, "local Supabase / API are not running");
+      test.setTimeout(180_000);
+      const out = path.join(SHOTS, "phase8");
+      const u = await createUser(stack!, "Quinn Quiz");
+      const shot = async (name: string, fullPage = false) => {
+        await settle(page);
+        await page.screenshot({ path: path.join(out, `${name}-${theme}.png`), fullPage });
+      };
+      try {
+        await setProfile(stack!, u.id, { onboarding_completed: true, theme });
+        await page.addInitScript((t) => localStorage.setItem("cognexa-theme", t), theme);
+        await page.emulateMedia({ reducedMotion: "reduce" });
+        await page.goto("/login");
+        await page.getByLabel("Email").fill(u.email);
+        await page.getByLabel("Password").fill(u.password);
+        await page.getByRole("button", { name: "Sign in" }).click();
+        await page.waitForURL(/\/app$/, { timeout: 30_000 });
+
+        await page.goto("/app/learn/recursion");
+        await page.getByRole("tab", { name: "Python" }).waitFor({ timeout: 30_000 });
+        await page.getByRole("button", { name: "Practice this concept" }).click();
+        await page.waitForURL(/\/app\/quizzes\/[0-9a-f-]+/, { timeout: 30_000 });
+        await page.getByRole("navigation", { name: "Questions" }).waitFor();
+        await shot("1-quiz-question");
+        for (let i = 0; i < 8; i++) {
+          const radio = page.getByRole("radio").first();
+          if (await radio.isVisible().catch(() => false)) await radio.click();
+          else if (
+            await page
+              .getByRole("checkbox")
+              .first()
+              .isVisible()
+              .catch(() => false)
+          )
+            await page.getByRole("checkbox").first().click();
+          else
+            await page.locator("textarea[id^='answer-']").fill("Each call pushes a stack frame.");
+          await page.getByRole("button", { name: "Check answer" }).click();
+          await page
+            .getByRole("button", { name: /Next question|See results/ })
+            .waitFor({ timeout: 30_000 });
+          if (i === 0) await shot("2-quiz-feedback");
+          await page.getByRole("button", { name: /Next question|See results/ }).click();
+        }
+        await page
+          .getByRole("heading", { name: "Concept quiz results" })
+          .waitFor({ timeout: 30_000 });
+        await shot("3-quiz-results", true);
+
+        await page.goto("/app/learn/recursion");
+        await page.getByText(/\d+ answers, \d+ correct/).waitFor({ timeout: 30_000 });
+        await shot("4-concept-page");
+        await page.goto("/app/learn");
+        await page.getByRole("heading", { name: "Foundations" }).waitFor({ timeout: 30_000 });
+        await shot("5-learn-library");
+        await page.goto("/app/quizzes");
+        await page
+          .getByRole("cell", { name: /Concept quiz: Recursion/ })
+          .waitFor({ timeout: 30_000 });
+        await shot("6-quizzes-home");
+      } finally {
+        await deleteUser(stack!, u.id);
+      }
+    });
+  }
+});

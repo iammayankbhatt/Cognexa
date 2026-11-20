@@ -32,6 +32,7 @@ from app.llm.embeddings import EmbeddingProvider
 from app.llm.errors import LLMError
 from app.llm.router import LLMRouter
 from app.llm.types import LLMResult
+from app.mastery.model import MasteryParams
 from app.tutor.answer import GRAPHRAG_SYSTEM, PLAIN_RAG_SYSTEM
 from app.tutor.catalogue import CatalogueCache
 from app.tutor.graph_source import TutorGraph
@@ -173,7 +174,9 @@ class TutorService:
                 before = edited["created_at"]
             history = await repo.history(thread_id, self.settings.tutor_history_turns, before)
             previous = await repo.last_assistant(thread_id, before)
-            mastery = await repo.mastery_map(user.id, thread["subject_id"])
+            mastery = await repo.mastery_map(
+                user.id, thread["subject_id"], MasteryParams.from_settings(self.settings)
+            )
 
         continuation = None
         if previous is not None and mode == "graphrag" and previous["mode"] == "graphrag":
@@ -325,6 +328,10 @@ class TutorService:
                 await repo.supersede(prep.regenerate_of)
             row = await repo.add_message(**values)
             await repo.touch_thread(prep.thread_id)
+            if trace.mode == "graphrag" and trace.classification_path in ("llm", "hybrid"):
+                await repo.log_interest(
+                    prep.user.id, prep.turn.subject_id, [m.id for m in trace.matched]
+                )
         if not checked.ok and done.cache_key and self.pipeline.cache is not None:
             await self.pipeline.cache.invalidate_key(done.cache_key)
         return {

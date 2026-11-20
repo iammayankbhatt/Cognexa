@@ -19,7 +19,7 @@ import httpx
 import pytest
 
 from app.auth.deps import CurrentUser
-from app.content.loader import load_chunks
+from app.content.loader import load_chunks, load_questions
 from app.content.vectors import embed_pending
 from app.core.config import get_settings
 from app.db.engine import create_engine, session_factory, to_asyncpg_dsn
@@ -82,6 +82,9 @@ async def _build_template(url: str) -> None:
             async with s.begin():
                 await ConceptMirrorRepository(s).upsert_from_file(load_subject("dsa"))
                 await ContentRepository(s).upsert_chunks(load_chunks("dsa"))
+                await ContentRepository(s).upsert_questions(
+                    [("dsa", cid, q) for cid, q in load_questions("dsa")]
+                )
             await embed_pending(s, FakeEmbeddingProvider(EMBEDDING_DIM))
     finally:
         await engine.dispose()

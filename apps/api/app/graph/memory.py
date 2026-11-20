@@ -77,6 +77,9 @@ class InMemoryGraph:
         return c.order_index if c else 0
 
     # ------------------------------------------------------------------ TutorGraph
+    async def get_concept(self, concept_id: str) -> GraphConcept | None:
+        return self.concepts.get(concept_id)
+
     async def list_concepts(self, subject_id: str) -> list[GraphConcept]:
         if subject_id != self.subject_id:
             return []

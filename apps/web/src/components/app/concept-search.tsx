@@ -37,7 +37,7 @@ export function ConceptSearch() {
   function go(c: ConceptLite) {
     setQ("");
     setOpen(false);
-    router.push(`/app/learn?concept=${encodeURIComponent(c.id)}`);
+    router.push(`/app/learn/${encodeURIComponent(c.id)}`);
   }
 
   return (
