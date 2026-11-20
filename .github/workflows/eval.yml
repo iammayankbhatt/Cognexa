@@ -1,0 +1,62 @@
+name: Evaluation (manual)
+
+# Runs a small evaluation with the real models. Manual only: it spends free-tier quota, so it
+# never runs on push. Needs repository secrets GROQ_API_KEY and GEMINI_API_KEY and repository
+# variables for the model ids (LLM_PRIMARY_MODEL, LLM_FALLBACK_MODEL, LLM_JUDGE_MODEL,
+# EMBEDDING_MODEL). Uses the in-memory graph built from the repo's source files, so no database
+# is needed; the report is uploaded as an artifact.
+on:
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: "Number of test-set items (spread across categories)"
+        default: "15"
+        required: true
+      ragas:
+        description: "Compute RAGAs metrics with the judge model"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: eval
+  cancel-in-progress: false
+
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      LLM_PRIMARY_PROVIDER: groq
+      LLM_PRIMARY_MODEL: ${{ vars.LLM_PRIMARY_MODEL }}
+      LLM_FALLBACK_PROVIDER: gemini
+      LLM_FALLBACK_MODEL: ${{ vars.LLM_FALLBACK_MODEL }}
+      LLM_JUDGE_PROVIDER: gemini
+      LLM_JUDGE_MODEL: ${{ vars.LLM_JUDGE_MODEL }}
+      EMBEDDING_PROVIDER: gemini
+      EMBEDDING_MODEL: ${{ vars.EMBEDDING_MODEL }}
+      EMBEDDING_DIM: "768"
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: apps/api/uv.lock
+      - name: Install dependencies (with the eval group)
+        working-directory: apps/api
+        run: uv sync --frozen --group eval
+      - name: Run evaluation
+        run: >
+          uv run --project apps/api --group eval python evaluation/ragas_eval.py
+          --offline --limit "${{ inputs.limit }}" --run-id "ci-${{ github.run_id }}"
+          ${{ inputs.ragas && '--ragas' || '--no-ragas' }}
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-report-${{ github.run_id }}
+          path: evaluation/reports/ci-${{ github.run_id }}/

@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import (
     admin_ai,
+    admin_eval,
     admin_users,
     concepts,
     dashboard,
@@ -18,6 +19,7 @@ from app.api import (
     quiz,
     recommendations,
     revision_sheets,
+    study,
     tutor,
 )
 from app.auth.deps import ProfileCache
@@ -92,6 +94,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(graph.router)
     app.include_router(admin_users.router)
     app.include_router(admin_ai.router)
+    app.include_router(admin_eval.router)
     app.include_router(tutor.router)
     app.include_router(quiz.router)
     app.include_router(learn.router)
@@ -99,6 +102,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(recommendations.router)
     app.include_router(dashboard.router)
     app.include_router(revision_sheets.router)
+    app.include_router(study.router)
     return app
 
 

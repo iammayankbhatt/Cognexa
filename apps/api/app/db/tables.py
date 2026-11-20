@@ -72,6 +72,9 @@ profiles = Table(
     Column("onboarding_completed", Boolean, nullable=False, server_default="false"),
     Column("quota_override", JSONB),
     Column("experience_level", Text),
+    Column("study_enrolled_at", DateTime(timezone=True)),
+    Column("study_consent_at", DateTime(timezone=True)),
+    Column("study_withdrawn_at", DateTime(timezone=True)),
     _now(),
     _updated(),
 )
@@ -354,6 +357,10 @@ study_settings = Table(
     Column("pretest_set_id", Text),
     Column("posttest_set_id", Text),
     Column("started_at", DateTime(timezone=True)),
+    Column("posttest_unlock_at", DateTime(timezone=True)),
+    Column("posttest_after_days", SmallInteger, nullable=False, server_default="14"),
+    Column("pretest_minutes", SmallInteger, nullable=False, server_default="20"),
+    Column("export_salt", Text, nullable=False),
     _updated(),
 )
 

@@ -13,7 +13,7 @@
 **Mode:** autopilot, main only, no tags. One commit per phase (`feat(phase-NN): ...`), then `git push origin main` (explicitly authorised for autopilot; if push fails, log it under Human Action Needed and continue). No `gh` CLI and no Supabase CLI were found on this machine at start; CI runs are checked through the public GitHub API when possible.
 **Environment notes:** local `apps/api/.env` and `apps/web/.env.local` exist (created from the examples; fake LLM/embedding providers, `REPLACE_ME` for cloud values). Never open or print them; use `uv run --project apps/api python scripts/check_env.py`.
 **Phase order:** core 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 12 → 15 (prep only), then extras 11 → 13 → 14 → 16.
-**Current phase:** 12 — Evaluation: RAGAs harness and user-study mode (not started). Phase 10 complete (Session 14). Core order continues 12 → 15 (prep), then 11 → 13 → 14 → 16.
+**Current phase:** 15 — Deployment preparation only (files, configs, runbook; no dashboard actions). Phase 12 complete (Session 15). Then extras 11 → 13 → 14 → 16.
 
 **Phase 2 checkpoints (done)**
 - [x] 2.1 Env files, `scripts/check_env.py`, `.env.example` for all phases
@@ -110,7 +110,19 @@
 - [x] 10.6 Empty states for new users; tests (aggregation, graph shape, notes CRUD + RLS, revision sheet with FakeProvider; e2e dashboard + map drawer); screenshots in 3 themes
 - [x] 10.7 Full verification, wrap-up, commit
 
-**Next action:** Phase 12: read its prompt in docs/COGNEXA_PROMPTS.md and split it into checkpoints here. Ready for it: plain_rag + graphrag pipelines (`TutorPipeline`, `InMemoryGraph` for offline runs), 85-item test set, study forms, baseline engine and `recommendations_log`, `study_settings` / `eval_runs` / `eval_results` tables.
+**Phase 12 checkpoints (done)**
+- [x] 12.1 `evaluation/` metrics + stats (prerequisite hit rate, concept accuracy@k, off-topic decline, latency/tokens, normalized gain, Wilcoxon, effect size, bootstrap CI) with hand-computed unit tests; `eval` dependency group (scipy, matplotlib, ragas)
+- [x] 12.2 `evaluation/ragas_eval.py`: both modes on the 85-item test set via the pipeline (offline in-memory or dev services), no cache, 429-aware, resumable `raw.jsonl`; RAGAs metrics when a real judge is configured
+- [x] 12.3 Report: `report.md` + matplotlib PNGs by mode and category; optional push to `eval_runs` / `eval_results`
+- [x] 12.4 Admin evaluation API + `/admin/evaluation` page (latest run, metrics by mode/category, item drill-down side by side)
+- [x] 12.5 `.github/workflows/eval.yml` (workflow_dispatch only, 15 items, secrets)
+- [x] 12.6 Study mode backend (migration 14): balanced random / alternate assignment, consent / withdraw, pretest (timed 20 min) → learning → posttest unlock (date or N days), `GET /study/me`
+- [x] 12.7 Admin study API + page: toggle, assignment, unlock date, enrolment counts, funnel, anonymised CSV export (participant hash, group, pre, post, normalized gain, activity counts)
+- [x] 12.8 Web study flow: consent screen, pretest/posttest cards and routing
+- [x] 12.9 `evaluation/study_analysis.ipynb` (describe, Welch t, Mann-Whitney U, Cohen's d, plots, power analysis, results paragraph template)
+- [x] 12.10 Tests (assignment balancing, CSV anonymisation, gain), fake-mode full eval run + committed report, wrap-up
+
+**Next action:** Phase 15 (prep only): read its prompt, then write the Dockerfile (copy `data/`, LIM-026), `render.yaml`, Vercel config notes, keep-alive workflow, `docs/DEPLOYMENT.md` runbook, production smoke script. No dashboard actions: everything live goes to Human Action Needed.
 **Local stack:** `npx supabase start -x realtime,storage-api,imgproxy,studio,edge-runtime,logflare,vector,supavisor,postgres-meta` (mail UI http://127.0.0.1:54324); schema changes: `npx supabase migration up` (local Supabase) and `DATABASE_URL=<docker url> uv run ... scripts/migrate.py` (docker test DB)
 
 **Last cluster note:** Phase 3 content complete; 69/69 concepts
@@ -132,6 +144,9 @@
 | 11 | live checks | Lighthouse on the deployed landing page | After Phase 15: run Lighthouse (mobile) on the Vercel URL. The local lab score on this laptop was performance 74-80 (desktop 100); target 90+. If it is still below 90 on Vercel, tell Claude Code (LIM-015). |
 | 13 | live checks | Real LLM and embedding calls (Phase 5) | After adding `GROQ_API_KEY` and `GEMINI_API_KEY` and setting `LLM_PRIMARY_PROVIDER=groq`, `LLM_PRIMARY_MODEL=<current Groq model id>`, `LLM_FALLBACK_PROVIDER=gemini`, `LLM_FALLBACK_MODEL=<current Gemini model id>`, `EMBEDDING_PROVIDER=gemini`, `EMBEDDING_MODEL=<Gemini embedding model id>` (keep `EMBEDDING_DIM=768`) in `apps/api/.env`: run `uv run --project apps/api python scripts/llm_smoke.py`. Every line must say `ok`. If the Gemini `json` check fails with HTTP 400, set `GEMINI_API_VERSION=v1beta` and re-run. Then re-run `scripts/seed_vectors.py` (re-embeds with the real model, item 5) and, signed in as admin, press **Run live check** on /admin/usage. |
 | 14 | live checks | Quota message in the browser | Signed in as a student on the deployed site, set your own daily quota to 1 under Admin → Users (as admin), ask the tutor twice (Phase 7) and check the friendly "Daily AI limit reached" message with the reset time. Locally this is covered by API and unit tests. |
+| 18 | live checks | Full evaluation with real models (the report's numbers) | After item 13: `cd apps/api && uv sync --group eval`, then from the repo root `uv run --project apps/api --group eval python evaluation/ragas_eval.py --run-id real-1 --push` (dev Neo4j + Postgres must be seeded, and `seed_vectors.py` re-run with the real embedding model). It is resumable: if free-tier limits stop it, run the same command again later. Commit `evaluation/reports/real-1/` (report.md, summary.json, PNGs; raw.jsonl stays out of git), paste the headline table into progressfile.md §13.1 and review the item drill-down on /admin/evaluation. |
+| 19 | dashboards | Manual evaluation workflow secrets | GitHub → Settings → Secrets and variables → Actions: secrets `GROQ_API_KEY`, `GEMINI_API_KEY`; variables `LLM_PRIMARY_MODEL`, `LLM_FALLBACK_MODEL`, `LLM_JUDGE_MODEL`, `EMBEDDING_MODEL`. Then Actions → "Evaluation (manual)" → Run workflow (15 items by default); the report is an artifact. |
+| 20 | live checks | Run the user study | When ready to recruit: Admin → User study → Start the study, set the post-test date. Recruit at least 64 completers per group to detect a medium effect at 80 % power (see `evaluation/study_analysis.ipynb`, power cell); fewer is fine for a pilot but say so in the report. At the end: Export anonymised CSV → put it next to the notebook as `cognexa-study.csv` → run all cells → copy the numbers into §13.2. |
 | 17 | live checks | Short-answer grading with the real judge model | After item 13 (set `LLM_JUDGE_PROVIDER` / `LLM_JUDGE_MODEL`, e.g. the Gemini model): take a concept quiz that includes a short-answer question (e.g. Practice this concept on Recursion until one appears, or use the API), answer it once well and once poorly, and check the score, the matched/missing points and the feedback make sense. One AI request is used per graded short answer. |
 | 16 | live checks | Phase 7 tutor with real models (screen capture) | After item 13: start the API and web app on dev, ask the canonical recursion question and two of your own, open the Why panel, try Stop on a long answer, and record a short screen capture (or screenshots) into `docs/screenshots/phase7/real/`. Check that answers cite concepts as chips, that follow-ups appear, and that the quick check appears for a student with a weak practised prerequisite (Phase 8 creates real mastery). |
 | 15 | live checks | Phase 6 smoke run with real models (review together) | After item 13 (real keys): `uv run --project apps/api python scripts/phase6_smoke.py` (needs the dev Neo4j and Postgres seeded: `scripts/seed_neo4j.py`, `seed_postgres.py`, `seed_vectors.py`). It rewrites `evaluation/reports/phase6_smoke.md` with 10 test-set questions through both modes. Read each answer: right concepts matched? weak prerequisite explained? anything not in the context? Note problems in the report's review section and tell Claude Code. The committed report is the fake-mode run (retrieval only). |
@@ -152,7 +167,7 @@
 | Repository | https://github.com/iammayankbhatt/Cognexa |
 | Live web app | _TBD (Vercel)_ |
 | Live API | _TBD (Render)_ |
-| Current phase | Phases 1 to 10 complete; next: Phase 12 (Evaluation + user study). Workflow: single developer, `main` only (DEC-013), autopilot (DEC-019) |
+| Current phase | Phases 1 to 10 and 12 complete; next: Phase 15 (deployment prep). Workflow: single developer, `main` only (DEC-013), autopilot (DEC-019) |
 | Overall status | 🟡 In progress |
 
 Status legend: 🔴 Not started · 🟡 In progress · 🟢 Done + verified · ⚠️ Done with known issues · ⏸️ Blocked
@@ -178,9 +193,9 @@ Update the **Status** and **Where in code** columns as phases complete. Examiner
 | O3a | Rule-based recommender: weak concepts → prerequisite to review (Obj. 3) | Rules R1–R5 | 9 | 🟢 | `app/recommender/engine.py`, `app/recommender/service.py`, `tests/test_recommender_{engine,api}.py` (canonical chain → call_stack), Next best step card |
 | O3b | Uses quiz performance AND questions asked (Abstract) | Mastery + concept_interest signal | 8, 9 | 🟢 weak = low mastery with attempts OR asked ≥ 3 times in 7 days (`weak_concepts`) | `app/mastery/`, `app/quiz/`, `concept_interest` (migration 12), `docs/ARCHITECTURE.md` |
 | O4 | Functional end-to-end system (Obj. 4) | Full product, deployed | 1–15 | 🔴 | |
-| O5a | User study: adaptive vs non-adaptive baseline (Obj. 5) | Study mode, groups, pre/post tests, export | 3, 9, 12 | 🟡 pre/post forms, baseline engine, group routing and recommendation logging done; study mode UI + export in Phase 12 | `data/subjects/dsa/questions/_study_sets.yaml` |
-| O5b | Comparison against plain, non-graph RAG (§1.9) | plain_rag mode + compare view + eval | 3, 6, 7, 12 | 🟡 plain_rag mode, compare API + live compare view (admin/reviewer) and a smoke report done; full evaluation in Phase 12 | `app/tutor/plain_rag.py`, `scripts/phase6_smoke.py`, `evaluation/reports/phase6_smoke.md`, `data/subjects/dsa/eval/testset.jsonl` |
-| O5c | RAGAs reference-free metrics (§2.2 [10]) | ragas_eval.py + admin eval page | 12 | 🔴 | |
+| O5a | User study: adaptive vs non-adaptive baseline (Obj. 5) | Study mode, groups, pre/post tests, export | 3, 9, 12 | 🟢 built (running the study = Human Action 20) | `app/study/`, `app/api/study.py`, `/app/study`, `/admin/study`, `evaluation/study_analysis.ipynb` | `data/subjects/dsa/questions/_study_sets.yaml` |
+| O5b | Comparison against plain, non-graph RAG (§1.9) | plain_rag mode + compare view + eval | 3, 6, 7, 12 | 🟢 harness + fake-mode results (real run = Human Action 18) | `evaluation/`, `/admin/evaluation`, `evaluation/reports/fake-offline-full/` | `app/tutor/plain_rag.py`, `scripts/phase6_smoke.py`, `evaluation/reports/phase6_smoke.md`, `data/subjects/dsa/eval/testset.jsonl` |
+| O5c | RAGAs reference-free metrics (§2.2 [10]) | ragas_eval.py + admin eval page | 12 | 🟡 wired through our provider layer; numbers need the real judge (Human Action 18) | `evaluation/ragas_adapter.py` |
 | G1 | LLM proposes tags, human verifies against fixed schema (Gap I, §3.4) | Proposals pipeline + review queue + PDF ingestion | 11 | 🔴 | |
 | G2 | Prerequisites retrieved via explicit Cypher traversal (Gap II) | Traversal stage + "Why this answer?" panel | 6, 7 | 🟢 | `app/tutor/traverse.py`, `app/tutor/trace.py`, `apps/web/src/components/tutor/{why-panel,trace-graph,trace-strip}.tsx` |
 | G3 | One graph powers both tutor and recommender (Gap III) | Shared GraphRepository | 6, 9 | 🟢 both read the same `GraphRepository` (`app/recommender/service.py::build_graph`) | `app/graph/repository.py`, `app/tutor/graph_source.py` |
@@ -271,9 +286,9 @@ Key flows (details in docs/ARCHITECTURE.md once written):
 | 7 | Tutor chat UI | 🟢 | 2026-11-20 | 2026-11-20 | `b0a1d16` `feat(phase-07)` | | GitHub Actions green (run 44664169211). Verified locally: backend 294 passed; web 167 unit + 26 e2e; screenshots in docs/screenshots/phase7. Real-model run is Human Action 16. |
 | 8 | Quiz engine, grading, mastery | 🟢 | 2026-11-20 | 2026-11-20 | `3583df7` `feat(phase-08)` | | GitHub Actions green (run 44669379523). Verified locally: backend 353 passed; web 177 unit, Playwright 27 passed + 1 skipped by a stack-lookup timeout (passes on rerun, LIM-028); screenshots in docs/screenshots/phase8. Real judge model is Human Action 17. |
 | 9 | Recommender, baseline, spaced review | 🟢 | 2026-11-20 | 2026-11-20 | `df5115d` `feat(phase-09)` | | GitHub Actions green (run 44674166034). Verified locally: backend 382 passed (after BUG-031); Playwright 29/29; web 181 unit; live two-group check on the local stack. |
-| 10 | Dashboard, knowledge map, notes | 🟢 | 2026-11-20 | 2026-11-20 | `feat(phase-10)` (see git log) | | Verified locally: backend 387 passed; Playwright 32 (31 + the tutor spec rerun after a locator fix); web 186 unit; screenshots in docs/screenshots/phase10 (3 themes). |
+| 10 | Dashboard, knowledge map, notes | 🟢 | 2026-11-20 | 2026-11-20 | `d669b13` `feat(phase-10)` | | GitHub Actions green (run 44689275333). Verified locally: backend 387 passed; Playwright 32 (31 + the tutor spec rerun after a locator fix); web 186 unit; screenshots in docs/screenshots/phase10 (3 themes). |
 | 11 | Admin console + LLM proposals | 🔴 | | | | | |
-| 12 | Evaluation + user study | 🔴 | | | | | |
+| 12 | Evaluation + user study | 🟢 (fake-mode numbers; real run = Human Action 18) | 2026-11-20 | 2026-11-20 | `feat(phase-12)` (see git log) | | Verified locally: backend 400 passed (after updating one Phase 8 test to the new study gating), web 188 unit, Playwright 34/34; fake-mode full evaluation committed. |
 | 13 | Hardening | 🔴 | | | | | |
 | 14 | Bug hunt + fresh-eyes review | 🔴 | | | | | |
 | 15 | Deployment + keep-alive | 🔴 | | | | | |
@@ -626,6 +641,29 @@ git tag -a v0.1 -m "Phase 1: Scaffold, design system, CI" && git push --tags   #
 - An aggregated "one call" endpoint keeps the dashboard fast and consistent, and its numbers are easy to test with seeded quizzes.
 **Next step:** Phase 12: evaluation harness and user-study mode.
 
+### Session 15 — 2026-11-20 — Phase 12: evaluation harness and user-study mode (autopilot)
+**Goal:** The evidence for the report (Objective 5, §1.9, RAGAs): an automated GraphRAG vs plain-RAG evaluation and a user-study mode comparing adaptive and non-adaptive recommendations.
+**Built:**
+- `evaluation/metrics.py` (prerequisite hit rate, concept accuracy@k, off-topic decline, latency, tokens, per mode × category tables, normalized gain) and `evaluation/stats.py` (Wilcoxon signed-rank with tie correction, matched-pairs rank-biserial r, seeded percentile bootstrap CI), pure Python so CI runs the tests; scipy cross-check matches to 1e-6.
+- `evaluation/ragas_adapter.py`: RAGAs 0.4.4 judge LLM and embeddings implemented on top of our `LLMRouter` / `EmbeddingProvider` (CLAUDE.md rule 1), with Faithfulness, AnswerRelevancy, LLMContextPrecisionWithReference and LLMContextRecall.
+- `evaluation/ragas_eval.py`: both modes on the 85 items through the real pipeline code (cache off, agentic step off), offline or dev services, provider-error waits and retries, resumable `raw.jsonl`, RAGAs only with a real judge, `--push` into `eval_runs` / `eval_results`; `evaluation/report.py` writes `report.md` (headline, all items, by category, paired statistics) and PNG charts.
+- Admin: `/admin/evaluation` API (runs, run tables, item drill-down) and page (paired headline table, metrics by mode/category, items with both answers side by side); manual `eval.yml` workflow (15 items, secrets, artifact).
+- Study mode (migration 14): balanced random / alternate group assignment with a row lock against races, consent / withdraw (study fields protected by the existing database guard, extended), state machine consent → pretest (resumed if open, timed, exam mode) → learning → posttest (admin date or N days) → complete; the tutor pauses while a study test is open; admin study API (toggle linked to STUDY_MODE, assignment, unlock settings, funnel, audit log) and anonymised CSV export (salted participant codes, scores, normalized gain, activity and recommendation counts; no names or emails).
+- Web: `/app/study` (consent explanation, progress steps, start tests, withdraw), a dashboard study banner, `/admin/study` (start/stop, settings, funnel, CSV download) and `/admin/evaluation`.
+- `evaluation/study_analysis.ipynb`: completion table, descriptives, Welch t, Mann-Whitney U, Cohen's d, plots, engagement, power analysis (64 per group for d = 0.5 at 80 % power) and a results paragraph template; runs end to end on a labelled synthetic sample when no CSV is present.
+- Fake-mode full evaluation run committed (`evaluation/reports/fake-offline-full/`) and pushed to the local dev database.
+**Files touched:** `evaluation/*` (new), `apps/api/app/api/{admin_eval,study}.py` (new), `app/study/*` (new), `app/api/quiz.py`, `app/tutor/service.py`, `app/llm/gemini.py`, `app/db/tables.py`, `app/main.py`, `supabase/migrations/20260101000014_study_mode.sql`, `apps/api/tests/test_{evaluation,admin_eval_api,study_api}.py` (new), `tests/test_llm_providers.py`, `apps/api/pyproject.toml` + `uv.lock` (eval group), `apps/web/src/components/{admin,study}/*`, `src/lib/{study,api}.ts`, `src/app/{app/study,admin/study,admin/evaluation}/page.tsx`, all `src/app/admin/**/page.tsx` (instant opt-out), `src/app/app/page.tsx`, `src/components/app/nav.ts`, `apps/web/e2e/study.spec.ts`, `.github/workflows/{ci,eval}.yml`, `.gitignore`, `progressfile.md`.
+**Commands run & results:** backend ruff ✅ (incl. `evaluation/` and the notebook) · ruff format ✅ · mypy ✅ (105 files) · pytest: 399 passed + 1 failed (`test_adaptive_review_and_study_forms` created a pre-test as a non-enrolled student, now correctly refused; the test now enables the study and consents first) → passes · web lint ✅ · typecheck ✅ · vitest ✅ 188 · build ✅ · Playwright ✅ 34/34, 0 framework errors in the server log · `evaluation/ragas_eval.py --offline` (170 runs) + `--push` ✅ · notebook executed ✅ · migration 14 applied locally ✅.
+**Manual verification:** full offline evaluation (170 runs) and `--push`; notebook executed cell by cell; e2e: consent → timed pre-test, admin study and evaluation pages.
+**Bugs found this session:** BUG-033, BUG-034 (pre-existing)
+**Decisions:** DEC-050 to DEC-053
+**What we learned:**
+- A paired design (same items, both modes) with a non-parametric test and an effect size answers "is GraphRAG better on these questions" without assuming normal scores.
+- Writing statistics in plain Python and checking them once against scipy keeps CI light and still trustworthy.
+- Optional dependency groups can change type-checking results (Pillow widened an SDK type): code should be correct regardless of which extras are installed (BUG-033).
+- Power analysis before recruiting turns "we found no difference" into an honest statement about what the study could detect.
+**Next step:** Phase 15: deployment preparation.
+
 ## 7. Bug Log
 
 ### 7.1 Bug index
@@ -665,6 +703,8 @@ Severity: **S1** critical (data loss, security, app down) · **S2** major (featu
 | BUG-030 | 2026-11-20 | 8 (pre-existing since 1) | S4 | frontend | A mastery of exactly 0.75 showed as "Strong" in the UI but "developing" in the backend bands | Fixed | `feat(phase-08)` | `src/components/shared/shared.test.tsx` boundary cases 0.75 / 0.76 |
 | BUG-031 | 2026-11-20 | 9 | S2 | backend | `GET /tutor/chunks` returned 404: replacing the `/tutor/suggestions` handler by text slice also deleted the endpoint that followed it | Fixed | `feat(phase-09)` | `tests/test_tutor_api.py::test_chunks_endpoint_returns_note_text_in_order` (existing; caught it) |
 | BUG-032 | 2026-11-20 | 10 | S2 | frontend | The knowledge map drew nothing: Cytoscape's canvases had height 0 | Fixed | `feat(phase-10)` | `e2e/progress.spec.ts` waits for the visible node canvas |
+| BUG-033 | 2026-11-20 | 12 | S4 | backend | mypy failed on `app/llm/gemini.py` once the eval group (Pillow) was installed: `list[str]` did not match the SDK's widened, invariant list type | Fixed | `feat(phase-12)` | `tests/test_llm_providers.py` asserts the unchanged embed request shape; mypy runs with and without the group |
+| BUG-034 | 2026-11-20 | 12 (pre-existing since 4) | S3 | frontend | Dev server error "Could not validate that a segment in your UI has instant navigation" on admin pages | Fixed | `feat(phase-12)` | `e2e/study.spec.ts` admin test; the log check showed 0 occurrences after the fix |
 | BUG-018 | 2026-11-20 | 4 | S2 | ci / tests | GitHub Actions backend job failed at pytest after the Phase 4 push (run 44593254858); everything passed locally | Fixed | `fix(ci)` after `fbbdc49` | CI-identical local run: empty Neo4j container, fresh database, no Supabase env (161 passed) |
 
 ### 7.2 Bug details
@@ -1041,6 +1081,28 @@ Severity: **S1** critical (data loss, security, app down) · **S2** major (featu
 - **Commit:** `feat(phase-10)`
 - **Lesson / pattern to avoid:** give containers managed by third-party renderers an intrinsic size.
 
+#### BUG-033 — Type check depended on optional packages
+- **Found:** 2026-11-20, Phase 12, mypy after `uv sync --group eval`
+- **Severity / Area:** S4 / backend
+- **Symptom:** `Argument "contents" to "embed_content" has incompatible type "list[str]"` in untouched code.
+- **Root cause:** google-genai's type hints include `PIL.Image` when Pillow is installed (it arrived with matplotlib); the resulting list type is invariant, so `list[str]` no longer matched.
+- **Fix:** send one `types.Content` per text (the same JSON on the wire).
+- **Files changed:** `apps/api/app/llm/gemini.py`
+- **Regression test:** `tests/test_llm_providers.py::test_gemini_embeddings_batch_normalise_and_check_dim` now asserts `content.parts == [{"text": ...}]`
+- **Commit:** `feat(phase-12)`
+- **Lesson / pattern to avoid:** run the type checker with the optional groups installed too.
+
+#### BUG-034 — Admin pages dropped from prerendering (instant-navigation validation)
+- **Found:** 2026-11-20, Phase 12, Playwright web-server log on /admin/study and /admin/evaluation
+- **Severity / Area:** S3 / frontend (pre-existing since the Phase 4 admin gate)
+- **Symptom:** Next.js logged "Could not validate that a segment in your UI has instant navigation" for admin pages.
+- **Root cause:** `AdminGate` renders admin pages only after the client-side role check, so prerendering omits the page segment and Next.js cannot validate it (Next.js docs: instant-unrendered-segment).
+- **Fix:** every admin page (Server Component) exports `instant = false`, the documented opt-out for segments that are intentionally absent in some states; the backend still enforces roles on every admin endpoint.
+- **Files changed:** `apps/web/src/app/admin/**/page.tsx`
+- **Regression test:** `e2e/study.spec.ts` "admins see the study funnel and evaluation runs" (log checked: 0 occurrences)
+- **Commit:** `feat(phase-12)`
+- **Lesson / pattern to avoid:** read framework warnings in the dev-server log after e2e runs; they point at real rendering issues.
+
 ---
 
 ## 8. Decisions Log (lightweight ADRs)
@@ -1095,6 +1157,10 @@ Severity: **S1** critical (data loss, security, app down) · **S2** major (featu
 | DEC-047 | 2026-11-20 | Spaced review is scheduled after every quiz mode except pretest/posttest (not only concept quizzes) | Concept quizzes only (prompt wording) | Smart, review and diagnostic quizzes are practice too; study tests must not change the schedule | Diagnostic seeds review dates for its 10 concepts |
 | DEC-048 | 2026-11-20 | Dashboard "overall mastery" averages effective mastery over all approved concepts, counting unpractised ones as 0 | Average over practised concepts only | A syllabus-wide number shows progress honestly; the practised count is shown next to it | New learners start at 0 % |
 | DEC-049 | 2026-11-20 | Revision sheets use the regular answer model through the usage guard (1 request) and the GraphRAG context rules, not a separate summariser | A dedicated summarisation pipeline | Same grounding, citations and quotas as the tutor; fake mode works offline | Sheet length is bounded by the 3500-token context and 1500 output tokens |
+| DEC-050 | 2026-11-20 | Evaluation calls the pipeline code directly with the response cache and the agentic step off | Use the /tutor/compare HTTP endpoint; agentic on | Same code as production without HTTP and quota overhead; a diagnostic question would replace the answer and make modes incomparable | Agentic behaviour needs its own evaluation (future work) |
+| DEC-051 | 2026-11-20 | Statistics in pure Python (Wilcoxon, rank-biserial, bootstrap) with a one-off scipy cross-check | Depend on scipy everywhere | CI and the API image stay light; results verified against scipy | scipy only in the optional `eval` group |
+| DEC-052 | 2026-11-20 | RAGAs runs through a custom judge LLM/embeddings adapter over our router | RAGAs' own provider factories | CLAUDE.md rule 1 (one provider layer: retries, fallback, metering) | Adapter must follow RAGAs' base-class API (checked on 0.4.4) |
+| DEC-053 | 2026-11-20 | Study gating: the tutor pauses while a study test is open, open tests are resumed, tests are forced timed + exam mode | Trust students not to use AI during tests | "No AI" during the pre-test must hold for the comparison to be fair | A test left open blocks the tutor until it expires |
 | DEC-022 | 2026-11-19 | Content code samples are C++14 (not 17) and Python 3.12; every snippet is a complete program that asserts its own claims and is compiled/run by the test suite | C++17 | The only local compiler is MinGW GCC 6.3 (no `-std=c++17`); C++14 also works on every CI compiler | Notes avoid C++17 features (structured bindings, `std::optional`) |
 
 ---
@@ -1134,6 +1200,9 @@ Severity: **S1** critical (data loss, security, app down) · **S2** major (featu
 | LIM-029 | R1 counts never-practised prerequisites as gaps (spec), so a learner who fails a mid-syllabus quiz without earlier practice is sent to the syllabus root | Can feel like a step back for students who know the basics but never took a quiz on them | The onboarding diagnostic seeds mastery across clusters; Phase 12 can tune (e.g. count only gaps with evidence) using study data |
 | LIM-030 | Time on task is an estimate (quiz answer time + 90 s per tutor question) | Not a measured reading time | Label says "~"; Phase 12 can log page time if the study needs it |
 | LIM-031 | The full 69-node knowledge map is wide at "fit" zoom; labels are small until the student zooms in | Overview labels are hard to read on small screens | Cluster filter, path fit and the list view mitigate; Phase 13 can add compound cluster nodes |
+| LIM-032 | The committed evaluation numbers come from fake mode (retrieval only); answer quality (RAGAs) is not yet measured | The report cannot quote answer-quality results yet | Human Action 18 (real run) |
+| LIM-033 | RAGAs adapter verified against the 0.4.4 base-class API but not yet run end to end with a real judge | A judge-format issue could surface in the real run | Run the 15-item manual workflow first (Human Action 19) |
+| LIM-034 | The tutor stays paused until an abandoned study test's timer runs out | A student who closes the tab mid-test waits up to 20 min | Acceptable for study integrity; the pre-test can be resumed |
 
 ---
 
@@ -1260,19 +1329,22 @@ _(Claude Code: keep this in sync with both .env.example files.)_
 
 ### 13.1 Automated (RAGAs + custom), filled in during Phase 12
 
+**Fake-mode run `fake-offline-full` (2026-11-20, offline in-memory graph, FakeProvider, fake embeddings): retrieval metrics only.** The real-model run that the report should quote is Human Action 18; answer-quality metrics (RAGAs) need the real judge.
+
 | Metric | Plain RAG | GraphRAG | Δ | p-value | Notes |
 |---|---|---|---|---|---|
-| Prerequisite Hit Rate (unnamed_prerequisite) | | | | | **headline** |
-| Prerequisite Hit Rate (all) | | | | | |
-| Faithfulness | | | | | |
-| Answer relevancy | | | | | |
-| Context precision | | | | | |
-| Context recall | | | | | |
-| Concept accuracy@1 | n/a | | | | |
-| Off-topic decline accuracy | | | | | |
-| Avg latency (s) / avg tokens | | | | | |
+| Prerequisite Hit Rate (unnamed_prerequisite, n = 27) | 0.30 | 0.74 | +0.44 (95 % CI +0.19 to +0.67) | 0.0027 (Wilcoxon) | **headline**; rank-biserial r = +0.75 |
+| Prerequisite Hit Rate (all items with gold prerequisites, n = 27) | 0.30 | 0.74 | +0.44 | 0.0027 | only unnamed-prerequisite items carry gold prerequisites |
+| Faithfulness | — | — | | | needs the real judge (Human Action 18) |
+| Answer relevancy | — | — | | | needs the real judge |
+| Context precision | — | — | | | needs the real judge |
+| Context recall | — | — | | | needs the real judge |
+| Concept accuracy@1 (all) | 0.47* | 0.65 | | | *plain RAG: concept of the top chunk |
+| Concept accuracy@3 (all) | 0.73 | 0.79 | +0.06 | 0.32 | not significant |
+| Off-topic decline accuracy (n = 8) | 0.00 | 0.88 | | | plain RAG never declines |
+| Avg latency / avg tokens | 0.18 s / 2,100 | 0.01 s / 9,139 | | | fake-mode timings; GraphRAG tokens include the classifier's catalogue prompt |
 
-Run ID / date / models used: _TBD_
+Run ID / date / models used: `fake-offline-full`, 2026-11-20, FakeProvider + fake embeddings (dim 768). Report: `evaluation/reports/fake-offline-full/report.md`.
 
 ### 13.2 User study
 
@@ -1315,6 +1387,9 @@ Run ID / date / models used: _TBD_
 | Exposure logging | Record what each learner was shown (and clicked, and completed) so two groups can be compared fairly | `recommendations_log` |
 | CSS variables in canvas libraries | Canvas drawing cannot use `var(--x)`; read the computed value and re-style when the theme changes | `mapStyle(cssVar)` in the knowledge map |
 | Dagre layered layout | Places a DAG in ranks so every edge points the same way (prerequisites above dependents) | Knowledge map, `rankDir: "TB"` |
+| Wilcoxon signed-rank test | Compares paired scores (same item, two systems) without assuming normality | `evaluation/stats.py` |
+| Normalized gain | (post − pre) / (max − pre): learning relative to what was left to learn | study CSV, notebook |
+| Statistical power | Chance a study detects a real effect of a given size; decides how many participants to recruit | notebook power cell |
 | DAG / topological order | Directed graph without cycles; an order where every prerequisite comes first | validate_graph.py, recommender R4/R5 |
 | Server-Sent Events | One-way streaming over HTTP for token-by-token answers | /tutor/.../messages |
 | Row Level Security | Postgres policies that restrict rows per user | supabase/migrations |

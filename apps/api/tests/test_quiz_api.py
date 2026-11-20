@@ -271,9 +271,15 @@ async def test_adaptive_review_and_study_forms(tenv: TEnv) -> None:
     review = await start(tenv, h, mode="review", count=3)
     assert {q["concept_id"] for q in review["questions"]} == {"bst"}
 
+    # Study forms: a student takes the pre-test once the study is running and they consented
+    # (Phase 12 gating; the gating itself is tested in test_study_api.py).
+    _, admin = await tenv.env.user("boss@example.com", role="admin")
+    r = await tenv.client.put("/admin/study", headers=admin, json={"enabled": True})
+    assert r.status_code == 200
+    assert (await tenv.client.post("/study/consent", headers=h)).status_code == 200
     pre = await start(tenv, h, mode="pretest")
     assert len(pre["questions"]) == 20 and pre["questions"][0]["id"] == "call_stack-q01"
-    assert pre["feedback_mode"] == "exam"
+    assert pre["feedback_mode"] == "exam" and pre["deadline"]
 
 
 async def test_quiz_validation_and_isolation(tenv: TEnv) -> None:

@@ -225,8 +225,11 @@ class GeminiEmbeddingProvider(EmbeddingProvider):
         for start in range(0, len(texts), EMBED_BATCH):
             batch = texts[start : start + EMBED_BATCH]
             try:
+                # One Content per text: type-correct whether or not Pillow is installed (it
+                # widens the SDK's list type, and list[str] is invariant).
+                contents = [types.Content(parts=[types.Part(text=t)]) for t in batch]
                 response = await self.client.aio.models.embed_content(
-                    model=self.model, contents=list(batch), config=config
+                    model=self.model, contents=contents, config=config
                 )
             except Exception as e:
                 raise _translate(e) from e

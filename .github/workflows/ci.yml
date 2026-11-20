@@ -52,9 +52,9 @@ jobs:
       - name: Install dependencies
         run: uv sync --frozen
       - name: Ruff lint
-        run: uv run ruff check .
+        run: uv run ruff check . ../../evaluation
       - name: Ruff format
-        run: uv run ruff format --check .
+        run: uv run ruff format --check . ../../evaluation
       - name: Mypy
         run: uv run mypy app
       - name: Validate concept graph

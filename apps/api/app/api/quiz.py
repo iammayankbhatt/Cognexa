@@ -7,14 +7,19 @@ from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
+from sqlalchemy import select
 
 from app.auth.deps import CurrentUser, get_current_user
 from app.core.config import Settings, get_settings
+from app.core.errors import AppError
+from app.core.flags import get_flags
 from app.db.session import Database, get_database
+from app.db.tables import profiles
 from app.graph.provider import GraphProvider
 from app.llm.deps import get_judge_llm, get_usage_guard
 from app.llm.router import LLMRouter
 from app.quiz.service import QuizService
+from app.study import service as study
 from app.tutor.service import TutorDeps
 from app.usage.guard import UsageGuard
 
@@ -71,7 +76,32 @@ class SubmitIn(BaseModel):
 
 
 @router.post("/sessions", status_code=201)
-async def create_session(body: SessionIn, user: User, service: Service) -> dict[str, Any]:
+async def create_session(
+    body: SessionIn,
+    user: User,
+    service: Service,
+    db: Annotated[Database, Depends(get_database)],
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> dict[str, Any]:
+    if body.mode in study.TEST_MODES and user.role == "student":
+        # Study tests: only at the right step of the study, timed, and resumed (not restarted)
+        # if one is already open.
+        async with db.sessions()() as session:
+            flags = await get_flags(session, settings)
+            profile_row = (
+                await session.execute(select(profiles).where(profiles.c.id == user.id))
+            ).first()
+            state = await study.study_state(
+                session,
+                dict(profile_row._mapping) if profile_row else {},
+                bool(flags.get("STUDY_MODE")),
+            )
+            existing = (await study.test_sessions(session, user.id)).get(body.mode)
+        if existing is not None and existing["submitted_at"] is None:
+            return await service.get(user, existing["id"])
+        if state["step"] != body.mode:
+            raise AppError("not_available", f"The {body.mode} is not available right now.", 409)
+        body = body.model_copy(update={"timed": True, "feedback_mode": "exam"})
     return await service.create(
         user,
         mode=body.mode,

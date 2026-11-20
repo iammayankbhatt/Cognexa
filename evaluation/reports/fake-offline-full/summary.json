@@ -1,0 +1,190 @@
+{
+  "table": {
+    "graphrag": {
+      "all": {
+        "n": 85,
+        "prerequisite_hit_rate": 0.7407407407407407,
+        "off_topic_decline_accuracy": 0.875,
+        "avg_latency_ms": 11.258823529411766,
+        "avg_tokens": 9138.670588235294,
+        "concept_accuracy@1": 0.6493506493506493,
+        "concept_accuracy@3": 0.7922077922077922
+      },
+      "direct": {
+        "n": 22,
+        "prerequisite_hit_rate": null,
+        "off_topic_decline_accuracy": null,
+        "avg_latency_ms": 8.272727272727273,
+        "avg_tokens": 9376.90909090909,
+        "concept_accuracy@1": 0.9545454545454546,
+        "concept_accuracy@3": 1.0
+      },
+      "misconception": {
+        "n": 13,
+        "prerequisite_hit_rate": null,
+        "off_topic_decline_accuracy": null,
+        "avg_latency_ms": 11.76923076923077,
+        "avg_tokens": 9098.538461538461,
+        "concept_accuracy@1": 0.23076923076923078,
+        "concept_accuracy@3": 0.6153846153846154
+      },
+      "multi_concept": {
+        "n": 15,
+        "prerequisite_hit_rate": null,
+        "off_topic_decline_accuracy": null,
+        "avg_latency_ms": 10.133333333333333,
+        "avg_tokens": 9805.333333333334,
+        "concept_accuracy@1": 1.0,
+        "concept_accuracy@3": 1.0
+      },
+      "off_topic": {
+        "n": 8,
+        "prerequisite_hit_rate": null,
+        "off_topic_decline_accuracy": 0.875,
+        "avg_latency_ms": 5.625,
+        "avg_tokens": 6022.5,
+        "concept_accuracy@1": null,
+        "concept_accuracy@3": null
+      },
+      "unnamed_prerequisite": {
+        "n": 27,
+        "prerequisite_hit_rate": 0.7407407407407407,
+        "off_topic_decline_accuracy": null,
+        "avg_latency_ms": 15.74074074074074,
+        "avg_tokens": 9516.814814814816,
+        "concept_accuracy@1": 0.4074074074074074,
+        "concept_accuracy@3": 0.5925925925925926
+      }
+    },
+    "plain_rag": {
+      "all": {
+        "n": 85,
+        "prerequisite_hit_rate": 0.2962962962962963,
+        "off_topic_decline_accuracy": 0.0,
+        "avg_latency_ms": 183.36470588235295,
+        "avg_tokens": 2100.3058823529414,
+        "concept_accuracy@1": 0.4675324675324675,
+        "concept_accuracy@3": 0.7272727272727273
+      },
+      "direct": {
+        "n": 22,
+        "prerequisite_hit_rate": null,
+        "off_topic_decline_accuracy": null,
+        "avg_latency_ms": 196.77272727272728,
+        "avg_tokens": 1910.0454545454545,
+        "concept_accuracy@1": 0.6818181818181818,
+        "concept_accuracy@3": 0.8181818181818182
+      },
+      "misconception": {
+        "n": 13,
+        "prerequisite_hit_rate": null,
+        "off_topic_decline_accuracy": null,
+        "avg_latency_ms": 171.07692307692307,
+        "avg_tokens": 2139.846153846154,
+        "concept_accuracy@1": 0.46153846153846156,
+        "concept_accuracy@3": 0.6923076923076923
+      },
+      "multi_concept": {
+        "n": 15,
+        "prerequisite_hit_rate": null,
+        "off_topic_decline_accuracy": null,
+        "avg_latency_ms": 188.93333333333334,
+        "avg_tokens": 2041.0,
+        "concept_accuracy@1": 0.4666666666666667,
+        "concept_accuracy@3": 0.7333333333333333
+      },
+      "off_topic": {
+        "n": 8,
+        "prerequisite_hit_rate": null,
+        "off_topic_decline_accuracy": 0.0,
+        "avg_latency_ms": 183.125,
+        "avg_tokens": 2355.0,
+        "concept_accuracy@1": null,
+        "concept_accuracy@3": null
+      },
+      "unnamed_prerequisite": {
+        "n": 27,
+        "prerequisite_hit_rate": 0.2962962962962963,
+        "off_topic_decline_accuracy": null,
+        "avg_latency_ms": 175.33333333333334,
+        "avg_tokens": 2193.777777777778,
+        "concept_accuracy@1": 0.2962962962962963,
+        "concept_accuracy@3": 0.6666666666666666
+      }
+    }
+  },
+  "headline_pairs": [
+    {
+      "metric": "prerequisite_hit",
+      "pairs": 27,
+      "n": 16,
+      "mean_a": 0.2962962962962963,
+      "mean_b": 0.7407407407407407,
+      "mean_diff": 0.4444444444444444,
+      "w_plus": 119.0,
+      "w_minus": 17.0,
+      "z": -3.0,
+      "p_value": 0.0026997960632601918,
+      "rank_biserial": 0.75,
+      "ci_low": 0.18518518518518517,
+      "ci_high": 0.6666666666666666
+    },
+    {
+      "metric": "concept_hit_at_3",
+      "pairs": 27,
+      "n": 10,
+      "mean_a": 0.6666666666666666,
+      "mean_b": 0.5925925925925926,
+      "mean_diff": -0.07407407407407407,
+      "w_plus": 22.0,
+      "w_minus": 33.0,
+      "z": -0.6324555320336759,
+      "p_value": 0.5270892568655381,
+      "rank_biserial": -0.2,
+      "ci_low": -0.2962962962962963,
+      "ci_high": 0.14814814814814814
+    }
+  ],
+  "overall_pairs": [
+    {
+      "metric": "prerequisite_hit",
+      "pairs": 27,
+      "n": 16,
+      "mean_a": 0.2962962962962963,
+      "mean_b": 0.7407407407407407,
+      "mean_diff": 0.4444444444444444,
+      "w_plus": 119.0,
+      "w_minus": 17.0,
+      "z": -3.0,
+      "p_value": 0.0026997960632601918,
+      "rank_biserial": 0.75,
+      "ci_low": 0.18518518518518517,
+      "ci_high": 0.6666666666666666
+    },
+    {
+      "metric": "concept_hit_at_3",
+      "pairs": 77,
+      "n": 25,
+      "mean_a": 0.7272727272727273,
+      "mean_b": 0.7922077922077922,
+      "mean_diff": 0.06493506493506493,
+      "w_plus": 195.0,
+      "w_minus": 130.0,
+      "z": -1.0,
+      "p_value": 0.31731050786291415,
+      "rank_biserial": 0.2,
+      "ci_low": -0.06493506493506493,
+      "ci_high": 0.19480519480519481
+    }
+  ],
+  "meta": {
+    "run_id": "fake-offline-full",
+    "generated": "2026-11-20T06:51:07+00:00",
+    "source": "offline (in-memory graph and vectors from the source files)",
+    "providers": "fake:fake-model",
+    "embeddings": "fake-embedding (dim 768)",
+    "items": 85,
+    "ragas": "not run: the judge is the offline fake model (set LLM_JUDGE_PROVIDER)",
+    "fake": true
+  }
+}

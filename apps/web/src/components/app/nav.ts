@@ -2,6 +2,7 @@ import {
   BarChart3,
   BookOpen,
   ClipboardCheck,
+  FlaskConical,
   LayoutDashboard,
   MessageSquareText,
   Network,
@@ -36,4 +37,6 @@ export const ADMIN_NAV: NavItem[] = [
   { href: "/admin/users", label: "Users", icon: Users },
   { href: "/admin/usage", label: "AI usage", icon: BarChart3 },
   { href: "/admin/settings", label: "AI settings", icon: SlidersHorizontal },
+  { href: "/admin/evaluation", label: "Evaluation", icon: FlaskConical },
+  { href: "/admin/study", label: "User study", icon: Users },
 ];

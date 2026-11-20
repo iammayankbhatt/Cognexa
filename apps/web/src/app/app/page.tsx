@@ -17,6 +17,7 @@ import Link from "next/link";
 import { useMe } from "@/components/app/me-provider";
 import { AccuracyTrend, ClusterBars } from "@/components/dashboard/charts";
 import { NextStepCard } from "@/components/recommend/next-step-card";
+import { StudyBanner } from "@/components/study/study-page";
 import { EmptyState } from "@/components/shared/empty-state";
 import { ErrorState } from "@/components/shared/error-state";
 import { MasteryBadge } from "@/components/shared/mastery-badge";
@@ -147,6 +148,8 @@ export default function DashboardPage() {
           </div>
         }
       />
+
+      <StudyBanner />
 
       {fresh && (
         <EmptyState

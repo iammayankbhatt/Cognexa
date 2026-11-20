@@ -33,6 +33,7 @@ from app.llm.errors import LLMError
 from app.llm.router import LLMRouter
 from app.llm.types import LLMResult
 from app.mastery.model import MasteryParams
+from app.study.service import open_test
 from app.tutor.answer import GRAPHRAG_SYSTEM, PLAIN_RAG_SYSTEM
 from app.tutor.catalogue import CatalogueCache
 from app.tutor.graph_source import TutorGraph
@@ -150,6 +151,12 @@ class TutorService:
         question = clean_user_text(text, limits.max_input_chars)
 
         async with self.db.sessions()() as session:
+            if await open_test(session, user.id):
+                raise AppError(
+                    "test_in_progress",
+                    "Finish your study test first: the tutor is paused while it is open.",
+                    409,
+                )
             repo = ChatRepository(session)
             thread = await repo.get_thread(user.id, thread_id)
             if thread is None:

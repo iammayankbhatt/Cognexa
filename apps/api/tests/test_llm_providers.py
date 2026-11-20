@@ -223,6 +223,7 @@ async def test_gemini_embeddings_batch_normalise_and_check_dim() -> None:
     assert [len(json.loads(r.content)["requests"]) for r in seen] == [100, 50]
     first = json.loads(seen[0].content)["requests"][0]
     assert first["taskType"] == "RETRIEVAL_DOCUMENT" and first["outputDimensionality"] == 2
+    assert first["content"]["parts"] == [{"text": "t0"}]  # one Content per text
     query = await emb.for_queries().embed(["q"])
     assert len(query) == 1 and json.loads(seen[-1].content)["requests"][0]["taskType"] == (
         "RETRIEVAL_QUERY"

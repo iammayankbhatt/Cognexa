@@ -158,6 +158,18 @@ export async function apiStream(
   }
 }
 
+/** Authenticated GET that returns the raw body as a Blob (CSV and other downloads). */
+export async function apiBlob(path: string): Promise<Blob> {
+  let token = await accessToken();
+  let res = await send(path, { method: "GET" }, token);
+  if (res.status === 401) {
+    token = await accessToken(true);
+    if (token) res = await send(path, { method: "GET" }, token);
+  }
+  if (!res.ok) throw await parseError(res);
+  return res.blob();
+}
+
 /** Fire-and-forget warm-up so a sleeping free-tier backend is awake by the time it is needed. */
 export function warmApi(): void {
   void api("/health", { anonymous: true }).catch(() => undefined);
