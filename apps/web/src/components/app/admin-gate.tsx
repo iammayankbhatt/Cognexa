@@ -27,7 +27,11 @@ export function AdminGate({
       <EmptyState
         icon={<ShieldAlert />}
         title="403: Not allowed"
-        description="This area is only available to administrators."
+        description={
+          minimum === "admin"
+            ? "This area is only available to administrators."
+            : "This area is only available to reviewers and administrators."
+        }
         action={
           <Link href="/app" className={buttonVariants({ variant: "outline" })}>
             Back to dashboard

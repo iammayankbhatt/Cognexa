@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 
+import { AdminGate } from "@/components/app/admin-gate";
+
 import { UsageDashboard } from "./usage-dashboard";
 
 export const metadata: Metadata = { title: "AI usage" };
@@ -8,5 +10,9 @@ export const metadata: Metadata = { title: "AI usage" };
 export const instant = false;
 
 export default function AdminUsagePage() {
-  return <UsageDashboard />;
+  return (
+    <AdminGate minimum="admin">
+      <UsageDashboard />
+    </AdminGate>
+  );
 }

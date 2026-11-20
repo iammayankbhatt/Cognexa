@@ -13,7 +13,7 @@
 **Mode:** autopilot, main only, no tags. One commit per phase (`feat(phase-NN): ...`), then `git push origin main` (explicitly authorised for autopilot; if push fails, log it under Human Action Needed and continue). No `gh` CLI and no Supabase CLI were found on this machine at start; CI runs are checked through the public GitHub API when possible.
 **Environment notes:** local `apps/api/.env` and `apps/web/.env.local` exist (created from the examples; fake LLM/embedding providers, `REPLACE_ME` for cloud values). Never open or print them; use `uv run --project apps/api python scripts/check_env.py`.
 **Phase order:** core 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 12 → 15 (prep only), then extras 11 → 13 → 14 → 16.
-**Current phase:** 11 — Admin console + LLM proposals (extras). Core phases done; Phase 15 preparation complete (Session 16; the live deploy is Human Action 21-27). Then 13 → 14 → 16.
+**Current phase:** 13 — Hardening (extras). Phase 11 committed (Session 17). Core phases done; Phase 15 preparation complete (the live deploy is Human Action 21-27). Then 14 → 16.
 
 **Phase 2 checkpoints (done)**
 - [x] 2.1 Env files, `scripts/check_env.py`, `.env.example` for all phases
@@ -132,7 +132,19 @@
 - [x] 15.7 Keep-alive fails on a degraded `/health/deep` (BUG-035); CI `container` job builds and boots the image
 - [x] 15.8 `docs/DEPLOYMENT.md` runbook; full verification; wrap-up; commit
 
-**Next action:** Phase 11 (extras): read its prompt in docs/COGNEXA_PROMPTS.md, split into checkpoints (admin graph editor with DAG check, LLM edge proposals + review queue, moderation of reported answers, content admin), then implement.
+**Phase 11 checkpoints**
+- [x] 11.1 Graph editor API: concept create/update (Neo4j + Postgres mirror), edge add/remove with rationale, cycle rejection with the blocking path, audit_log, cache invalidation (catalogue, /graph, response cache), export concepts.yaml
+- [x] 11.2 Proposals core: `graph_proposals` repository, apply/reject in an idempotent graph-first saga (partial failure reported and retryable), bulk approve, acceptance stats
+- [x] 11.3 "Suggest edges" for a concept (LLM JSON through the usage guard; fake responder for local mode)
+- [x] 11.4 Document ingestion (PDF via pypdf / Markdown / TXT, 10 MB, scanned-PDF message): sections → chunks → LLM tags {concept, kind, confidence} or new concept → proposals; approved chunks embedded into Neo4j + content_chunks
+- [x] 11.5 Content & question bank API: edit chunks (re-embed), edit/validate/deactivate questions, mark reviewed, question stats (attempts, % correct, discrimination flags)
+- [x] 11.6 Moderation API (reports with message, trace, comment; resolve / dismiss / invalidate cache; thumbs-down by concept) + overview API + user disable / usage view + usage CSV
+- [x] 11.7 Web: admin overview, graph editor (Cytoscape + table, edge dialog explaining cycles, YAML export)
+- [x] 11.8 Web: proposals review queue + ingestion upload, content & question editor, moderation queue, users / usage additions
+- [x] 11.9 Tests (role enforcement on every admin endpoint, cycle path, approve/reject transactions, PDF fixture ingestion, question validation, audit) + e2e; verify by ingesting a DSA notes PDF on dev and seeing the tutor cite the new chunk
+- [x] 11.10 Full verification, wrap-up, commit
+
+**Next action:** Phase 13 (hardening): read its prompt in docs/COGNEXA_PROMPTS.md, split it into checkpoints here, then start with the security review.
 **Local stack:** `npx supabase start -x realtime,storage-api,imgproxy,studio,edge-runtime,logflare,vector,supavisor,postgres-meta` (mail UI http://127.0.0.1:54324); schema changes: `npx supabase migration up` (local Supabase) and `DATABASE_URL=<docker url> uv run ... scripts/migrate.py` (docker test DB)
 
 **Last cluster note:** Phase 3 content complete; 69/69 concepts
@@ -167,6 +179,8 @@
 | 25 | dashboards | Deploy: CORS + Supabase auth URLs + Google origins + branded e-mail templates | docs/DEPLOYMENT.md §3.5-3.6: Render `ALLOWED_ORIGINS` = Vercel URL; Supabase Site URL + redirect `https://<vercel>/auth/callback`; Google OAuth client authorised origin = Vercel URL; SMTP on; brand "Confirm signup" and "Reset password". |
 | 26 | live checks | Deploy: first admin + keep-alive | §3.7: sign up on the live site, then `scripts/promote_admin.py <you> --allow-remote` with `COGNEXA_ENV_FILE`. §3.8: GitHub variable `API_URL` = Render URL, run Actions → Keep-alive once (green). |
 | 27 | live checks | Production smoke test (records the live URLs) | §4: `scripts/prod_smoke.py --api <render> --web <vercel> --report smoke.md` with a test account in `SMOKE_EMAIL` / `SMOKE_PASSWORD` (+ `SUPABASE_URL`, `SUPABASE_ANON_KEY`), then the manual checklist. Paste the table and the live URLs into progressfile.md (§0 Live web app / Live API) and tell Claude Code. |
+| 28 | content to review | Phase 11: ingest your own lecture notes | Start the API and web app on dev (with real keys, item 13, the tagging is done by the real model; in fake mode a keyword tagger is used and mislabels some sections, LIM-038). Signed in as admin: Admin → Proposals → Upload a file (a 5-10 page text-based DSA PDF). Open each proposal, check the concept and kind (edit before approving if needed), approve the good ones, reject the rest with a note. Then ask the tutor about one of those concepts with an `explain` question ("Explain …") and open Why this answer?: the new chunk id (`llm-…`) is listed under context. Note the acceptance rate on the Proposals page for the report (G1). |
+| 29 | content to review | Copy admin content edits back into git | Chunk and question edits made in Admin → Content live in the databases (`source = 'admin'`) and win over the files on re-seed (DEC-060), but they are not written back to `data/subjects/` automatically (LIM-039). Graph edits: Admin → Graph editor → Export concepts.yaml, replace the file, run `scripts/validate_graph.py`, commit. |
 | 12 | live checks | Make yourself admin | Superseded by item 26 (`scripts/promote_admin.py`, audited). The SQL editor alternative still works: `update public.profiles set role = 'admin' where id = (select id from auth.users where email = '<your email>');` Wait 30 s (role cache) and reload; the Admin link appears. |
 
 ---
@@ -184,7 +198,7 @@
 | Repository | https://github.com/iammayankbhatt/Cognexa |
 | Live web app | _TBD (Vercel)_ |
 | Live API | _TBD (Render)_ |
-| Current phase | Phases 1 to 10 and 12 complete; Phase 15 prepared (deploy runbook ready, live deploy pending the human); next: Phase 11. Workflow: single developer, `main` only (DEC-013), autopilot (DEC-019) |
+| Current phase | Phases 1 to 12 complete; Phase 15 prepared (deploy runbook ready, live deploy pending the human); next: Phase 13. Workflow: single developer, `main` only (DEC-013), autopilot (DEC-019) |
 | Overall status | 🟡 In progress |
 
 Status legend: 🔴 Not started · 🟡 In progress · 🟢 Done + verified · ⚠️ Done with known issues · ⏸️ Blocked
@@ -213,7 +227,7 @@ Update the **Status** and **Where in code** columns as phases complete. Examiner
 | O5a | User study: adaptive vs non-adaptive baseline (Obj. 5) | Study mode, groups, pre/post tests, export | 3, 9, 12 | 🟢 built (running the study = Human Action 20) | `app/study/`, `app/api/study.py`, `/app/study`, `/admin/study`, `evaluation/study_analysis.ipynb` | `data/subjects/dsa/questions/_study_sets.yaml` |
 | O5b | Comparison against plain, non-graph RAG (§1.9) | plain_rag mode + compare view + eval | 3, 6, 7, 12 | 🟢 harness + fake-mode results (real run = Human Action 18) | `evaluation/`, `/admin/evaluation`, `evaluation/reports/fake-offline-full/` | `app/tutor/plain_rag.py`, `scripts/phase6_smoke.py`, `evaluation/reports/phase6_smoke.md`, `data/subjects/dsa/eval/testset.jsonl` |
 | O5c | RAGAs reference-free metrics (§2.2 [10]) | ragas_eval.py + admin eval page | 12 | 🟡 wired through our provider layer; numbers need the real judge (Human Action 18) | `evaluation/ragas_adapter.py` |
-| G1 | LLM proposes tags, human verifies against fixed schema (Gap I, §3.4) | Proposals pipeline + review queue + PDF ingestion | 11 | 🔴 | |
+| G1 | LLM proposes tags, human verifies against fixed schema (Gap I, §3.4) | Proposals pipeline + review queue + PDF ingestion | 11 | 🟢 locally (real tagger: Human Action 28) | `app/admin/{llm_proposals,proposals,graph_editor}.py`, `app/api/admin_{proposals,graph}.py`, `/admin/proposals`, `/admin/graph`, acceptance rate `GET /admin/proposals/stats`, `tests/test_admin_proposals_api.py`, `tests/test_ingest_split.py`, `docs/ARCHITECTURE.md` (DEC-058) |
 | G2 | Prerequisites retrieved via explicit Cypher traversal (Gap II) | Traversal stage + "Why this answer?" panel | 6, 7 | 🟢 | `app/tutor/traverse.py`, `app/tutor/trace.py`, `apps/web/src/components/tutor/{why-panel,trace-graph,trace-strip}.tsx` |
 | G3 | One graph powers both tutor and recommender (Gap III) | Shared GraphRepository | 6, 9 | 🟢 both read the same `GraphRepository` (`app/recommender/service.py::build_graph`) | `app/graph/repository.py`, `app/tutor/graph_source.py` |
 | T | "Agentic" (title) | Bounded agentic controller (answer / diagnostic check / expand) | 6 | 🟢 locally | `app/tutor/controller.py`; tests `test_controller_never_exceeds_two_steps`, `test_controller_diagnostic_ends_turn_and_reply_resumes_it`, `test_diagnostic_question_then_reply_continues_turn` |
@@ -234,13 +248,13 @@ Update the **Status** and **Where in code** columns as phases complete. Examiner
 | Prompt-injection guardrails, off-topic handling | 5, 6, 13 | 🟢 input cleaning, delimiter-safe templates, output checks, classifier off-topic decline (no further calls) | `apps/api/app/guardrails/`, `tests/test_guardrails.py`, `tests/test_source_hygiene.py` |
 | Chat history (threads: search, rename, archive, delete) | 6, 7 | 🟢 | `app/api/tutor.py`, `apps/web/src/components/tutor/thread-list.tsx`, `e2e/tutor.spec.ts` |
 | Streaming answers, citations, follow-ups, regenerate | 6, 7 | 🟢 (incl. stop, edit-and-resend) | `app/api/tutor.py`, `apps/web/src/lib/tutor/`, `apps/web/src/components/tutor/` |
-| Thumbs up/down + report bad answer → moderation | 7, 11 | 🟡 feedback + reports stored, reported answers dropped from the cache; moderation queue in Phase 11 | `POST /tutor/messages/{id}/feedback`, `components/tutor/report-dialog.tsx` |
+| Thumbs up/down + report bad answer → moderation | 7, 11 | 🟢 moderation queue (message, trace, comment; resolve / dismiss / invalidate cache / fix content) + thumbs-down by concept | `POST /tutor/messages/{id}/feedback`, `components/tutor/report-dialog.tsx`, `app/api/admin_console.py`, `components/admin/moderation-queue.tsx` |
 | Quiz engine (6 modes, 5 question types), auto-grading, LLM short-answer grading | 8 | 🟢 locally (real judge: Human Action 17) | `app/quiz/`, `app/api/quiz.py`, `apps/web/src/components/quiz/`, `tests/test_quiz_{logic,api}.py` |
 | Mastery model with decay; spaced review (SM-2 lite) | 8, 9 | 🟢 ladder 1→3→7→14→30, `/review/due`, /app/review | `app/mastery/`, `docs/ARCHITECTURE.md` |
 | Concept library + concept pages | 8 | 🟢 | `apps/web/src/components/learn/`, `GET /concepts/{id}`, `/notes/{concept_id}` |
 | Progress dashboard + Knowledge Map (mastery-coloured DAG) | 10 | 🟢 | `GET /dashboard`, `GET /graph/mastery`, `src/app/app/page.tsx`, `src/components/graph/knowledge-map.tsx`, `docs/screenshots/phase10/` |
 | Notes, bookmarks, personalised revision sheets (MD/PDF export) | 10 | 🟢 locally (real model: Human Action 13) | `app/api/{notes,revision_sheets}.py`, `src/components/notes/` |
-| Admin: graph editor, content/question editor, moderation, users, usage, settings | 4, 11 | 🟡 users page (role, study group, quota override, audit log) done in Phase 4 | `app/api/admin_users.py`, `src/app/admin/users/` |
+| Admin: graph editor, content/question editor, moderation, users, usage, settings | 4, 5, 11 | 🟢 overview, graph editor (cycle-safe, YAML export), proposals + ingestion, content & question editor (validation, student preview, item statistics), moderation, users (usage view, disable), usage CSV; role matrix tested on every route | `app/api/admin_*.py`, `app/admin/`, `src/app/admin/`, `src/components/admin/`, `tests/test_admin_*.py`, `e2e/admin.spec.ts` |
 | Data export + account deletion | 4 | 🟢 | `GET /me/export`, `DELETE /me` (`app/api/me.py`, `app/auth/admin.py`), settings page, `tests/test_auth_api.py` |
 | Security hardening, a11y, performance, observability, backups | 13 | 🔴 | |
 | Free-tier deployment + keep-alive | 15 | 🟡 | Prepared and verified locally (image, Blueprint, runbook, smoke test, keep-alive); live deploy is Human Action 21-27 |
@@ -304,11 +318,11 @@ Key flows (details in docs/ARCHITECTURE.md once written):
 | 8 | Quiz engine, grading, mastery | 🟢 | 2026-11-20 | 2026-11-20 | `3583df7` `feat(phase-08)` | | GitHub Actions green (run 44669379523). Verified locally: backend 353 passed; web 177 unit, Playwright 27 passed + 1 skipped by a stack-lookup timeout (passes on rerun, LIM-028); screenshots in docs/screenshots/phase8. Real judge model is Human Action 17. |
 | 9 | Recommender, baseline, spaced review | 🟢 | 2026-11-20 | 2026-11-20 | `df5115d` `feat(phase-09)` | | GitHub Actions green (run 44674166034). Verified locally: backend 382 passed (after BUG-031); Playwright 29/29; web 181 unit; live two-group check on the local stack. |
 | 10 | Dashboard, knowledge map, notes | 🟢 | 2026-11-20 | 2026-11-20 | `d669b13` `feat(phase-10)` | | GitHub Actions green (run 44689275333). Verified locally: backend 387 passed; Playwright 32 (31 + the tutor spec rerun after a locator fix); web 186 unit; screenshots in docs/screenshots/phase10 (3 themes). |
-| 11 | Admin console + LLM proposals | 🔴 | | | | | |
+| 11 | Admin console + LLM proposals | 🟢 locally (real tagger: Human Action 28) | 2026-11-20 | 2026-11-20 | `feat(phase-11)` (hash in git log) | | Verified locally: backend 451 passed, ruff, format, mypy clean; web lint, typecheck, 202 unit, build; Playwright `admin.spec.ts` 3/3; live ingestion of a 6-page PDF on dev (6 sections → 6 proposals → approved → new chunk in the tutor's context), then test data removed. |
 | 12 | Evaluation + user study | 🟢 (fake-mode numbers; real run = Human Action 18) | 2026-11-20 | 2026-11-20 | `5a31418` `feat(phase-12)` | | GitHub Actions green (run 44694456973). Verified locally: backend 400 passed (after updating one Phase 8 test to the new study gating), web 188 unit, Playwright 34/34; fake-mode full evaluation committed. |
 | 13 | Hardening | 🔴 | | | | | |
 | 14 | Bug hunt + fresh-eyes review | 🔴 | | | | | |
-| 15 | Deployment + keep-alive | 🟡 prepared (live deploy = Human Action 21-27) | 2026-11-20 | | `feat(phase-15)` (see git log) | | Verified locally: backend 425 passed (25 new), web lint/typecheck/188 unit/build; image built and run (non-root, `$PORT`, healthy); `prod_smoke.py` 11/11 against the local stack. |
+| 15 | Deployment + keep-alive | 🟡 prepared (live deploy = Human Action 21-27) | 2026-11-20 | | `e28956b` `feat(phase-15)` | | GitHub Actions green incl. the new container job (run 44698029440). Verified locally: backend 425 passed (25 new), web lint/typecheck/188 unit/build; image built and run (non-root, `$PORT`, healthy); `prod_smoke.py` 11/11 against the local stack. |
 | 16 | Docs, diagrams, demo script | 🔴 | | | | | |
 
 ### Phase 0 checklist (human)
@@ -706,6 +720,35 @@ git tag -a v0.1 -m "Phase 1: Scaffold, design system, CI" && git push --tags   #
 - Gating deploys on CI (`checksPass`) makes "red CI never reaches production" a platform rule, not a habit.
 **Next step:** Phase 11 (extras): admin console and LLM proposals.
 
+### Session 17 — 2026-11-20 — Phase 11: admin console and LLM proposals (autopilot)
+**Goal:** The reviewer/admin console of the Phase 11 prompt: graph editor, LLM proposals (suggest edges, document ingestion) with human review, content & question editor, moderation, users and usage additions.
+**Built (backend, first half of the session):**
+- `app/admin/graph_editor.py`: concept create/update (Neo4j + Postgres mirror), edge add/remove with rationale, cycle rejection with the existing chain, audit_log, invalidation of the concept catalogue, public /graph cache and response cache; `GET /admin/graph/export.yaml` (round-trips through `validate_concept_file`).
+- `app/admin/proposals.py`: `graph_proposals` repository, approve / reject / bulk approve (confirmed count), acceptance statistics, and the graph-first apply order with a retryable `503 partial_apply` (DEC-058).
+- `app/admin/llm_proposals.py`: "Suggest edges" (JSON through the usage guard, fake responder), document ingestion (pypdf text extraction, 10 MB, scanned-PDF and encrypted-PDF messages, section splitting, tagging in batches of four sections), approved chunks embedded into Neo4j + `content_chunks` with `source = 'llm'`.
+- `app/api/admin_content.py`: chunk edit (re-embedded) and review flag; question edit validated by the same `Question` model as the YAML files; deactivate; per-question statistics (attempts, % correct, discrimination D = p(upper) - p(lower), flags). `app/api/admin_console.py`: overview, moderation queue + actions + cache invalidation, thumbs-down by concept, a user's usage (no chat contents), usage CSV. Account disabling (`profiles.disabled_at`, refused in `get_current_user`, DEC-059). Migration 15.
+**Built (this part of the session):**
+- Web: content & question editor (`components/admin/content-editor.tsx`): concept picker synced to the URL, note sections with Markdown + live preview, review flags, embedded state; question form per type with client-side validation that mirrors the server (`lib/admin-question.ts`, DEC-061), preview rendered by the real quiz `QuestionView`, statistics flags; deep links `?concept=…&chunk=…`.
+- Web: moderation queue (`components/admin/moderation-queue.tsx`): status tabs, question + answer + student comment, collapsible trace (concepts walked, context chunks with links, agentic steps), resolve / dismiss / start review with a note, invalidate cache, "Fix content" jump; ratings-by-concept table.
+- Web: users page usage dialog (30 days, activity counts, no chat contents) and disable / enable with a confirmation; usage CSV export button; `/admin/content` and `/admin/moderation` routes.
+- Fixed two compile errors left in the in-progress graph editor and proposals pages (BUG-038, BUG-039).
+- Document splitting recognises bare title lines in PDFs (BUG-037, DEC-063) with unit tests.
+- `tests/test_admin_roles.py`: walks the app's route table (cross-checked with OpenAPI) and checks every `/admin` route declares a role, refuses students (403) and anonymous callers (401), and refuses reviewers on admin-only routes (DEC-062).
+- Web unit tests (`components/admin/admin.test.tsx`, `lib/admin-question.test.ts`) and `e2e/admin.spec.ts` (reviewer gating + cycle explanation, upload → proposals → reject with note, admin content / moderation / users usage).
+- `docs/ARCHITECTURE.md`: admin console and proposals section.
+**Files touched:** `apps/api/app/admin/*`, `apps/api/app/api/admin_{graph,proposals,content,console,users}.py`, `apps/api/app/auth/deps.py`, `apps/api/app/db/{profiles,repositories,tables}.py`, `apps/api/app/graph/repository.py`, `apps/api/app/main.py`, `apps/api/pyproject.toml` + `uv.lock` (pypdf), `apps/api/tests/{pdf_helpers,test_admin_roles,test_ingest_split,test_admin_*_api}.py`, `supabase/migrations/20260101000015_admin_console.sql`, `apps/web/src/app/admin/**`, `apps/web/src/components/admin/*`, `apps/web/src/components/app/{nav.ts,admin-gate.tsx,app-shell.tsx}`, `apps/web/src/lib/{admin,admin-question,api}.ts` (+ tests), `apps/web/e2e/admin.spec.ts`, `docs/ARCHITECTURE.md`, `progressfile.md`.
+**Commands run & results:** backend ruff ✅ · format ✅ · mypy ✅ (115 files) · pytest ✅ 451 passed · web lint ✅ · typecheck ✅ · vitest ✅ 202 · build ✅ (37 routes) · `npx playwright test e2e/admin.spec.ts` ✅ 3/3 · `validate_graph.py` ✅ · `validate_content.py --strict` ✅.
+**Manual verification:** on the dev stack (API restarted: the running process predated the Phase 11 routes, and port 3000 still served an old `next start` build), a script signed in a fresh local admin, uploaded a 6-page DSA notes PDF, waited for tagging, approved the tag proposals and asked the tutor. First run: 1 section / 1 proposal (BUG-037). After the fix: 6 sections → 6 proposals (acceptance stats updated) → approved → "Explain breadth-first search." has the new `llm-…` chunk in its retrieval trace. The recursion question is classified `debug`, which selects pitfalls/mechanism chunks, so the new `overview` chunk is correctly not chosen there. The fake tagger mislabelled the binary-search page as `control_flow` (LIM-038), which a reviewer would correct. The 7 test chunks were then deleted from the dev Postgres and Neo4j by id and the 2 cached answers that used those concepts invalidated, so dev content equals the seeded notes again.
+**Bugs found this session:** BUG-037, BUG-038, BUG-039
+**Decisions:** DEC-058 to DEC-063
+**What we learned:**
+- Two databases without a shared transaction stay consistent if every write is idempotent and the order is fixed: the retry of a half-finished operation simply finishes it.
+- Validating on the client with the server's rules gives instant, specific feedback; the server stays the authority, so the two must be tested against the same cases.
+- A role test generated from the route table protects routes nobody has written yet; cross-checking against OpenAPI keeps the walk honest when framework internals change.
+- PDFs lose Markdown structure: headings come out as short plain lines, so a splitter needs layout heuristics (blank line before, longer body after) and tests for its false positives.
+- A long-running dev server without auto-reload silently serves old code; when a new route returns 404, check the process before the code.
+**Next step:** Phase 13 (hardening).
+
 ## 7. Bug Log
 
 ### 7.1 Bug index
@@ -748,6 +791,9 @@ Severity: **S1** critical (data loss, security, app down) · **S2** major (featu
 | BUG-033 | 2026-11-20 | 12 | S4 | backend | mypy failed on `app/llm/gemini.py` once the eval group (Pillow) was installed: `list[str]` did not match the SDK's widened, invariant list type | Fixed | `feat(phase-12)` | `tests/test_llm_providers.py` asserts the unchanged embed request shape; mypy runs with and without the group |
 | BUG-035 | 2026-11-20 | 15 (pre-existing since 2) | S2 | deploy | The keep-alive workflow could never fail on an unhealthy dependency | Fixed | `feat(phase-15)` | Workflow parses the JSON and fails on `degraded`; logic mirrored by `prod_smoke.py` deep-health check (tests/test_prod_smoke.py) |
 | BUG-036 | 2026-11-20 | 15 | S4 | tests | Two new tests failed on first run: the start-up warning was invisible to `caplog`, and loading `prod_smoke.py` by path crashed in `@dataclass` | Fixed | `feat(phase-15)` | the tests themselves |
+| BUG-037 | 2026-11-20 | 11 | S2 | backend / ingestion | A 6-page lecture-notes PDF became one section (and one proposal tagged to a single concept) | Fixed | `feat(phase-11)` | `tests/test_ingest_split.py` (6-page PDF → 6 titled sections; no false titles) |
+| BUG-038 | 2026-11-20 | 11 | S3 | frontend | Web typecheck failed: the proposals page passed `content` to the Markdown renderer, whose prop is `text` | Fixed | `feat(phase-11)` | `npm run typecheck` in CI |
+| BUG-039 | 2026-11-20 | 11 | S3 | frontend | Lint error in the graph editor (setState inside an effect); the cycle warning could also show the result of a previous edge choice | Fixed | `feat(phase-11)` | `npm run lint`; `e2e/admin.spec.ts` cycle explanation |
 | BUG-034 | 2026-11-20 | 12 (pre-existing since 4) | S3 | frontend | Dev server error "Could not validate that a segment in your UI has instant navigation" on admin pages | Fixed | `feat(phase-12)` | `e2e/study.spec.ts` admin test; the log check showed 0 occurrences after the fix |
 | BUG-018 | 2026-11-20 | 4 | S2 | ci / tests | GitHub Actions backend job failed at pytest after the Phase 4 push (run 44593254858); everything passed locally | Fixed | `fix(ci)` after `fbbdc49` | CI-identical local run: empty Neo4j container, fresh database, no Supabase env (161 passed) |
 
@@ -1169,6 +1215,39 @@ Severity: **S1** critical (data loss, security, app down) · **S2** major (featu
 - **Commit:** `feat(phase-15)`
 - **Lesson / pattern to avoid:** test logging through the configured output; register path-loaded modules before executing them.
 
+#### BUG-037 — PDF notes with plain page titles became a single section
+- **Found:** 2026-11-20, Phase 11, by Claude Code (live ingestion check on dev)
+- **Severity / Area:** S2 / backend, document ingestion
+- **Symptom:** a 6-page DSA notes PDF (one topic per page, titled "Recursion", "Call Stack", …) produced `sections: 1` and one `tag_chunk` proposal, which the tagger assigned to `hash_tables`; approving it would have attached all six topics to one concept.
+- **Root cause:** `split_sections` only recognised Markdown (`#`) and numbered ("3.2 Stacks") headings. Text extracted from a PDF has neither: titles are short plain lines. The page texts were then packed together up to the 2400-character section limit.
+- **Fix:** a bare title line starts a section when it follows a blank line or page break, is capitalised, has at most 8 words / 60 characters, has no sentence punctuation or code symbols, and is followed by a longer body line (DEC-063). Form feeds count as page breaks.
+- **Files changed:** `apps/api/app/admin/llm_proposals.py`
+- **Regression test:** `tests/test_ingest_split.py` (6-page PDF → 6 sections with the right titles; short last line of a paragraph, code lines and sentences are not titles; Markdown / numbered headings still win)
+- **Commit:** `feat(phase-11)`
+- **Lesson / pattern to avoid:** test parsers with the real input format (a generated PDF), not only with Markdown that already carries its structure.
+
+#### BUG-038 — Proposals page passed the wrong prop to the Markdown renderer
+- **Found:** 2026-11-20, Phase 11, by Claude Code (`npm run typecheck` at session start)
+- **Severity / Area:** S3 / frontend (introduced earlier in this phase, never committed)
+- **Symptom:** `TS2322: Property 'content' does not exist on type 'MarkdownProps'`; a tag_chunk preview would have rendered nothing.
+- **Root cause:** the shared renderer's prop is `text`.
+- **Fix:** `<Markdown text={…} />`.
+- **Files changed:** `apps/web/src/components/admin/proposals-review.tsx`
+- **Regression test:** strict typecheck in CI.
+- **Commit:** `feat(phase-11)`
+- **Lesson / pattern to avoid:** run typecheck before ending a session, even mid-phase.
+
+#### BUG-039 — Graph editor's cycle check set state inside an effect
+- **Found:** 2026-11-20, Phase 11, by Claude Code (`npm run lint`)
+- **Severity / Area:** S3 / frontend (introduced earlier in this phase, never committed)
+- **Symptom:** `react-hooks/set-state-in-effect` error; between choosing a new concept and the check returning, the warning of the previous choice could still be shown.
+- **Root cause:** the effect reset the result with `setCheck(null)` and stored answers without saying which edge they were for.
+- **Fix:** store the result together with its edge key and derive the shown result only when the key matches the current choice; the effect only subscribes to the request.
+- **Files changed:** `apps/web/src/components/admin/graph-editor.tsx`
+- **Regression test:** lint in CI; `e2e/admin.spec.ts` checks the cycle explanation and the disabled Add button.
+- **Commit:** `feat(phase-11)`
+- **Lesson / pattern to avoid:** key asynchronous results by the input they answer instead of clearing state in effects.
+
 ---
 
 ## 8. Decisions Log (lightweight ADRs)
@@ -1230,6 +1309,12 @@ Severity: **S1** critical (data loss, security, app down) · **S2** major (featu
 | DEC-055 | 2026-11-20 | Render deploys with `autoDeployTrigger: checksPass` and a build filter | Deploy on every commit (`commit`) | A red CI never reaches production; docs-only commits do not rebuild | A deploy waits for CI (about 3 min) |
 | DEC-056 | 2026-11-20 | Production misconfiguration is logged at start-up, not fatal | Refuse to start | On free tiers the service goes live before every key is added; a crash loop hides the cause | Operators must read the start-up log (runbook §3.3) |
 | DEC-057 | 2026-11-20 | Image built from the repo root with the repo's layout (`/srv/apps/api`, `/srv/data`); Render region Singapore | Context `apps/api` + moving data; Oregon (default) | Data files are found relative to the code without changes; Singapore is the closest Render region to Mumbai (Supabase) | Larger build context, kept small by `.dockerignore` |
+| DEC-058 | 2026-11-20 | Graph edits and proposal approvals: validate/embed → Neo4j (idempotent MERGE) → one Postgres transaction (row + proposal status + audit); a failure after the graph write returns `503 partial_apply` and the same call is retried | Two-phase commit; Postgres first; an outbox worker | No shared transaction is possible; idempotent writes in a fixed order make retry the recovery path with no extra infrastructure on free tiers | A partial failure is visible to the reviewer until retried |
+| DEC-059 | 2026-11-20 | Disabling an account sets `profiles.disabled_at` and `get_current_user` refuses it (403 `account_disabled`); admins cannot disable themselves | Banning in Supabase Auth only | Works for both local and cloud auth, keeps the data, reversible, audited | Takes effect within the 30 s profile cache (LIM-040) |
+| DEC-060 | 2026-11-20 | Chunks and questions edited in the admin console get `source = 'admin'` (approved LLM chunks `'llm'`) and seeding skips them | Write edits back to the YAML/Markdown files | The deployed API has no write access to the repo; reviewed work must survive a re-seed | Edits must be copied into git by hand (LIM-039, Human Action 29) |
+| DEC-061 | 2026-11-20 | The question editor validates on the client with rules mirrored from `app/content/models.py`; the server validates again and is authoritative | Server-only validation; generate a zod schema | Field-level messages before a round-trip; the rules are few and stable | Rule changes must be made in both places; both are unit-tested with the same cases |
+| DEC-062 | 2026-11-20 | Role enforcement is tested by walking the app's route table (checked against OpenAPI) instead of listing endpoints by hand | Hand-written endpoint lists per test file | New admin routes are covered automatically; a route without `require_role` fails CI | The walk follows FastAPI internals; the OpenAPI cross-check fails loudly if they change |
+| DEC-063 | 2026-11-20 | Document splitting treats a short capitalised line after a blank line and before a longer body line as a title | Font-size based layout analysis (pdfplumber); one section per page | Works on pypdf's plain text with no new dependency; page-per-section breaks topics that span pages | Unusual layouts can still merge or split sections; reviewers see every proposal |
 | DEC-053 | 2026-11-20 | Study gating: the tutor pauses while a study test is open, open tests are resumed, tests are forced timed + exam mode | Trust students not to use AI during tests | "No AI" during the pre-test must hold for the comparison to be fair | A test left open blocks the tutor until it expires |
 | DEC-022 | 2026-11-19 | Content code samples are C++14 (not 17) and Python 3.12; every snippet is a complete program that asserts its own claims and is compiled/run by the test suite | C++17 | The only local compiler is MinGW GCC 6.3 (no `-std=c++17`); C++14 also works on every CI compiler | Notes avoid C++17 features (structured bindings, `std::optional`) |
 
@@ -1275,6 +1360,9 @@ Severity: **S1** critical (data loss, security, app down) · **S2** major (featu
 | LIM-035 | `apps/web/vercel.json` (`git.deploymentEnabled`, main only) is untested on Vercel; the docs do not say whether it is read from the Root Directory in a monorepo | Preview deployments might still be created | Runbook §3.4 step 5: check after the first deploy; fallback "Ignored Build Step" command documented |
 | LIM-036 | Production is not deployed yet: Supabase cloud migrations, Render, Vercel, Aura and the keep-alive are prepared and verified locally only | Live URLs unknown; Objective 4 "deployed" open | Human Action 21-27 (runbook docs/DEPLOYMENT.md) |
 | LIM-037 | One API instance with in-process rate-limit windows and caches | They reset whenever the free instance sleeps or restarts | Acceptable at this scale; quotas and usage live in Postgres |
+| LIM-038 | In fake mode, ingestion tagging and edge suggestions are keyword-based and mislabel some sections (e.g. a binary-search page tagged `control_flow`) | Local proposals are only a demo of the flow | Real tagger with keys (Human Action 13, 28); reviewers check every proposal |
+| LIM-039 | Admin edits to chunks and questions are not written back to `data/subjects/` (only the graph has a YAML export) | Git and the databases can drift | Human Action 29; a content export could be added in Phase 16 |
+| LIM-040 | Disabling an account takes effect within the profile cache TTL (30 s), like role changes (LIM-016) | A just-disabled user keeps access for up to 30 s | Acceptable at this scale |
 | LIM-034 | The tutor stays paused until an abandoned study test's timer runs out | A student who closes the tab mid-test waits up to 20 min | Acceptable for study integrity; the pre-test can be resumed |
 
 ---
@@ -1487,6 +1575,9 @@ Run ID / date / models used: `fake-offline-full`, 2026-11-20, FakeProvider + fak
 | Multi-stage Docker build | One stage installs dependencies with build tools, the final stage copies only the result, so the shipped image is smaller and has fewer tools an attacker could use | `apps/api/Dockerfile` |
 | Infrastructure as code (Blueprint) | The service's settings live in a versioned file instead of only in a dashboard, so they are reviewed and reproducible | `render.yaml` |
 | Liveness vs deep health | `/health` says "the process answers"; `/health/deep` also queries the databases. Platforms restart on the first; monitors and keep-alive use the second | `app/api/health.py`, keep-alive |
+| Idempotent saga | A multi-step change across systems where each step can be repeated safely, so a failure is fixed by running it again | `app/admin/proposals.py` (DEC-058) |
+| Item discrimination | How much better strong learners do on a question than weak ones: D = p(correct, upper half) − p(correct, lower half) | `item_stats` in `app/api/admin_content.py` |
+| Human-in-the-loop | The model proposes, a person approves or edits; acceptance rate measures how useful the proposals are | `/admin/proposals` |
 | Smoke test | A short end-to-end check right after a deploy that the critical paths work, not a full test suite | `scripts/prod_smoke.py` |
 
 ---

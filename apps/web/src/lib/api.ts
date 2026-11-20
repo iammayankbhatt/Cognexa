@@ -170,6 +170,28 @@ export async function apiBlob(path: string): Promise<Blob> {
   return res.blob();
 }
 
+/** Authenticated POST of a file's raw bytes (document ingestion). Returns the JSON reply. */
+export async function apiUpload<T>(path: string, file: Blob): Promise<T> {
+  const init: RequestInit = {
+    method: "POST",
+    body: file,
+    headers: { "Content-Type": "application/octet-stream" },
+  };
+  try {
+    let token = await accessToken();
+    let res = await send(path, init, token);
+    if (res.status === 401) {
+      token = await accessToken(true);
+      if (token) res = await send(path, init, token);
+    }
+    if (!res.ok) throw await parseError(res);
+    return (await res.json()) as T;
+  } catch (err) {
+    if (err instanceof ApiError) throw err;
+    throw new ApiError(0, "network_error", "Could not reach the server. Check your connection.");
+  }
+}
+
 /** Fire-and-forget warm-up so a sleeping free-tier backend is awake by the time it is needed. */
 export function warmApi(): void {
   void api("/health", { anonymous: true }).catch(() => undefined);

@@ -7,7 +7,11 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import (
     admin_ai,
+    admin_console,
+    admin_content,
     admin_eval,
+    admin_graph,
+    admin_proposals,
     admin_users,
     concepts,
     dashboard,
@@ -98,6 +102,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(admin_users.router)
     app.include_router(admin_ai.router)
     app.include_router(admin_eval.router)
+    app.include_router(admin_graph.router)
+    app.include_router(admin_content.router)
+    app.include_router(admin_console.router)
+    app.include_router(admin_proposals.router)
     app.include_router(tutor.router)
     app.include_router(quiz.router)
     app.include_router(learn.router)

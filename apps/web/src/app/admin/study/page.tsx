@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 
+import { AdminGate } from "@/components/app/admin-gate";
+
 import { StudyConsole } from "@/components/admin/study-console";
 
 // Admin pages render only after the client-side role check (AdminGate), so prerendering
@@ -9,5 +11,9 @@ export const instant = false;
 export const metadata: Metadata = { title: "User study" };
 
 export default function Page() {
-  return <StudyConsole />;
+  return (
+    <AdminGate minimum="admin">
+      <StudyConsole />
+    </AdminGate>
+  );
 }

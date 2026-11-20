@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.content.models import Question
 from app.content.notes import Chunk
 from app.db.tables import app_settings, concepts, content_chunks, questions, subjects
-from app.graph.models import ConceptFile
+from app.graph.models import ConceptDef, ConceptFile
 
 # Quota and cap defaults (CLAUDE.md rule 2 / Phase 2 part D). Admin edits survive re-seeding because
 # defaults are only inserted when the key is missing.
@@ -82,6 +82,29 @@ class ConceptMirrorRepository:
                 )
             )
         return 1, len(rows)
+
+    async def upsert_one(self, subject_id: str, c: ConceptDef) -> None:
+        """Mirror one concept edited in the admin graph editor."""
+        stmt = insert(concepts).values(
+            id=c.id,
+            subject_id=subject_id,
+            name=c.name,
+            cluster=c.cluster,
+            difficulty=c.difficulty,
+            order_index=c.order_index if c.order_index is not None else 0,
+        )
+        await self._s.execute(
+            stmt.on_conflict_do_update(
+                index_elements=[concepts.c.id],
+                set_={
+                    "name": stmt.excluded.name,
+                    "cluster": stmt.excluded.cluster,
+                    "difficulty": stmt.excluded.difficulty,
+                    "order_index": stmt.excluded.order_index,
+                    "updated_at": func.now(),
+                },
+            )
+        )
 
     async def count(self, subject_id: str) -> int:
         result = await self._s.execute(
@@ -183,6 +206,8 @@ class ContentRepository:
         await self._s.execute(
             stmt.on_conflict_do_update(
                 index_elements=[content_chunks.c.id],
+                # chunks edited in the admin console (source 'admin') keep the admin's text
+                where=content_chunks.c.source == "notes",
                 set_={
                     "concept_id": stmt.excluded.concept_id,
                     "subject_id": stmt.excluded.subject_id,
@@ -202,6 +227,8 @@ class ContentRepository:
             delete(content_chunks).where(
                 content_chunks.c.concept_id.in_({c.concept_id for c in chunks}),
                 content_chunks.c.id.not_in([c.id for c in chunks]),
+                # chunks approved from LLM proposals or written by admins are not in the notes
+                content_chunks.c.source == "notes",
             )
         )
         return len(rows)
@@ -255,7 +282,12 @@ class ContentRepository:
         }
         update_cols["updated_at"] = func.now()
         await self._s.execute(
-            stmt.on_conflict_do_update(index_elements=[questions.c.id], set_=update_cols)
+            stmt.on_conflict_do_update(
+                index_elements=[questions.c.id],
+                set_=update_cols,
+                # questions edited or deactivated in the admin console keep the admin's version
+                where=questions.c.source.is_distinct_from("admin"),
+            )
         )
         await self._s.execute(
             update(questions)

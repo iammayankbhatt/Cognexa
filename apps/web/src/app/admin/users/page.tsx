@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 
+import { AdminGate } from "@/components/app/admin-gate";
+
 import { AdminUsersTable } from "./users-table";
 
 export const metadata: Metadata = { title: "Users" };
@@ -10,5 +12,9 @@ export const metadata: Metadata = { title: "Users" };
 export const instant = false;
 
 export default function AdminUsersPage() {
-  return <AdminUsersTable />;
+  return (
+    <AdminGate minimum="admin">
+      <AdminUsersTable />
+    </AdminGate>
+  );
 }

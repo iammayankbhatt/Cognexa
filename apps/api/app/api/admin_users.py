@@ -30,6 +30,7 @@ class UserOut(BaseModel):
     onboarding_completed: bool
     experience_level: str | None
     quota_override: dict[str, Any] | None
+    disabled_at: dt.datetime | None = None
     created_at: dt.datetime | None
 
 
@@ -54,6 +55,7 @@ class UserPatch(BaseModel):
     study_group: Literal["adaptive", "baseline", "none"] | None = None
     quota_override: QuotaOverride | None = None
     clear_quota_override: bool = False
+    disabled: bool | None = None  # true: every API call is refused; false: re-enabled
 
     @field_validator("clear_quota_override")
     @classmethod
@@ -74,6 +76,7 @@ def _out(row: dict[str, Any]) -> UserOut:
         onboarding_completed=bool(row["onboarding_completed"]),
         experience_level=row.get("experience_level"),
         quota_override=row.get("quota_override"),
+        disabled_at=row.get("disabled_at"),
         created_at=row.get("created_at"),
     )
 
@@ -111,6 +114,10 @@ async def update_user(
         changes["quota_override"] = body.quota_override.model_dump(exclude_none=True)
     elif body.clear_quota_override:
         changes["quota_override"] = None
+    if body.disabled is not None:
+        if user_id == admin.id and body.disabled:
+            raise AppError("forbidden", "Admins cannot disable their own account.", 403)
+        changes["disabled_at"] = dt.datetime.now(dt.UTC) if body.disabled else None
     if not changes:
         raise AppError("validation_error", "Nothing to change.", 422)
 

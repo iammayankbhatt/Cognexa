@@ -84,6 +84,10 @@ async def get_current_user(
         if profile is None:
             raise AppError("unauthorized", "This account no longer exists.", 401)
         cache.put(claims.user_id, profile)
+    if profile.get("disabled_at") is not None:
+        raise AppError(
+            "account_disabled", "This account has been disabled. Contact the course team.", 403
+        )
     return CurrentUser(
         id=claims.user_id, email=claims.email, role=str(profile["role"]), profile=profile
     )

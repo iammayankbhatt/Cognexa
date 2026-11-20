@@ -13,7 +13,7 @@ export default function AdminLayout({ children }: LayoutProps<"/admin">) {
   return (
     <Suspense fallback={<Skeleton className="m-6 h-64" aria-label="Loading" />}>
       <AppShell>
-        <AdminGate>{children}</AdminGate>
+        <AdminGate minimum="reviewer">{children}</AdminGate>
       </AppShell>
     </Suspense>
   );

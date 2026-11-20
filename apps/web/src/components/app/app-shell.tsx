@@ -7,7 +7,7 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 
 import { ConceptSearch } from "@/components/app/concept-search";
 import { useMe, useSignOut } from "@/components/app/me-provider";
-import { ADMIN_NAV, MAIN_NAV, type NavItem } from "@/components/app/nav";
+import { adminNavFor, MAIN_NAV, type NavItem } from "@/components/app/nav";
 import { ThemeSync } from "@/components/app/theme-sync";
 import { UsageMeter } from "@/components/app/usage-meter";
 import { WakingBanner } from "@/components/app/waking-banner";
@@ -91,18 +91,18 @@ function NavList({
 
 function SidebarContent({
   collapsed,
-  isStaff,
+  adminItems,
   onNavigate,
 }: {
   collapsed: boolean;
-  isStaff: boolean;
+  adminItems: NavItem[];
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
   return (
     <nav aria-label="Main" className="flex flex-1 flex-col gap-6 overflow-y-auto p-3">
       <NavList items={MAIN_NAV} pathname={pathname} collapsed={collapsed} onNavigate={onNavigate} />
-      {isStaff && (
+      {adminItems.length > 0 && (
         <div className="space-y-2">
           <p
             className={cn(
@@ -113,7 +113,7 @@ function SidebarContent({
             Admin
           </p>
           <NavList
-            items={ADMIN_NAV}
+            items={adminItems}
             pathname={pathname}
             collapsed={collapsed}
             onNavigate={onNavigate}
@@ -217,7 +217,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     collapseListeners.forEach((l) => l());
   }
 
-  const isStaff = me?.role === "admin" || me?.role === "reviewer";
+  const adminItems = adminNavFor(me?.role);
 
   return (
     <div className="flex min-h-dvh flex-col bg-bg text-text">
@@ -233,7 +233,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="flex h-14 items-center border-b border-border px-3">
             <Brand collapsed={collapsed} />
           </div>
-          <SidebarContent collapsed={collapsed} isStaff={isStaff} />
+          <SidebarContent collapsed={collapsed} adminItems={adminItems} />
           <div className="border-t border-border p-3">
             <Button
               variant="ghost"
@@ -275,7 +275,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </div>
               <SidebarContent
                 collapsed={false}
-                isStaff={isStaff}
+                adminItems={adminItems}
                 onNavigate={() => setDrawer(false)}
               />
             </aside>

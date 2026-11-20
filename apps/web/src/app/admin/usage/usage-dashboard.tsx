@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Activity, CircleCheck, CircleX, Loader2, Zap } from "lucide-react";
+import { Activity, CircleCheck, CircleX, Download, Loader2, Zap } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -13,7 +13,8 @@ import { ErrorState } from "@/components/shared/error-state";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { api, ApiError, type UsageDay } from "@/lib/api";
+import { saveBlob } from "@/lib/admin";
+import { api, apiBlob, ApiError, type UsageDay } from "@/lib/api";
 import { friendlyError } from "@/lib/errors";
 import { fillDays, formatUsd } from "@/lib/usage";
 import { cn } from "@/lib/utils";
@@ -176,26 +177,40 @@ export function UsageDashboard() {
         title="AI usage"
         description="Requests, tokens and notional cost (free tiers cost nothing; this shows what it would cost at scale)."
         actions={
-          <div
-            role="radiogroup"
-            aria-label="Time range"
-            className="flex rounded-lg border border-border p-0.5"
-          >
-            {RANGES.map((r) => (
-              <button
-                key={r}
-                type="button"
-                role="radio"
-                aria-checked={days === r}
-                onClick={() => setDays(r)}
-                className={cn(
-                  "rounded-md px-3 py-1 text-sm transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
-                  days === r ? "bg-primary text-primary-fg" : "text-muted hover:text-text",
-                )}
-              >
-                {r} days
-              </button>
-            ))}
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() =>
+                void apiBlob(`/admin/usage/export.csv?days=${days}`)
+                  .then((b) => saveBlob(b, `cognexa-usage-${days}d.csv`))
+                  .catch((e: unknown) =>
+                    toast.error(e instanceof ApiError ? e.message : "Export failed."),
+                  )
+              }
+            >
+              <Download aria-hidden className="size-4" /> Export CSV
+            </Button>
+            <div
+              role="radiogroup"
+              aria-label="Time range"
+              className="flex rounded-lg border border-border p-0.5"
+            >
+              {RANGES.map((r) => (
+                <button
+                  key={r}
+                  type="button"
+                  role="radio"
+                  aria-checked={days === r}
+                  onClick={() => setDays(r)}
+                  className={cn(
+                    "rounded-md px-3 py-1 text-sm transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+                    days === r ? "bg-primary text-primary-fg" : "text-muted hover:text-text",
+                  )}
+                >
+                  {r} days
+                </button>
+              ))}
+            </div>
           </div>
         }
       />

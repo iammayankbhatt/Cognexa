@@ -50,6 +50,7 @@ class ChunkRecord(BaseModel):
     text: str
     order: int = 0
     reviewed: bool = False
+    source: str = "notes"  # notes | llm | admin; seeding only replaces "notes" chunks
 
 
 _LUCENE_WORD = re.compile(r"[a-z0-9]+")
@@ -338,6 +339,26 @@ class GraphRepository:
         )
         return bool(rows and rows[0]["cyclic"])
 
+    async def prerequisite_path(self, start: str, end: str) -> list[str]:
+        """Concept ids on the shortest PREREQUISITE_OF chain start -> ... -> end ([] if none).
+
+        Used to explain a rejected edge: adding end -> start would close this chain into a cycle.
+        """
+        if start == end:
+            return [start]
+        rows = await self._read(
+            f"MATCH p = shortestPath((a:Concept {{id: $start}})"
+            f"-[:{PREREQUISITE}*1..{MAX_CYCLE_SEARCH}]->(b:Concept {{id: $end}})) "
+            "RETURN [n IN nodes(p) | n.id] AS ids",
+            start=start,
+            end=end,
+        )
+        return list(rows[0]["ids"]) if rows else []
+
+    async def subject_name(self, subject_id: str) -> str | None:
+        rows = await self._read("MATCH (s:Subject {id: $id}) RETURN s.name AS name", id=subject_id)
+        return str(rows[0]["name"]) if rows and rows[0]["name"] is not None else None
+
     # ------------------------------------------------------------------ writes
     async def upsert_subject(self, subject_id: str, name: str) -> None:
         async with self._session() as session:
@@ -450,12 +471,16 @@ class GraphRepository:
             return deleted > 0
 
     async def upsert_chunk(self, chunk: ChunkRecord) -> None:
+        """Create or update a chunk. Seeding from the notes (source 'notes') never overwrites a
+        chunk that an admin edited (source 'admin') or that came from an approved proposal."""
         async with self._session() as session:
             await session.run(
                 "MATCH (c:Concept {id: $concept_id}) "
                 "MERGE (k:Chunk {id: $id}) "
+                "WITH c, k WHERE $source <> 'notes' OR coalesce(k.source, 'notes') = 'notes' "
                 "SET k.concept_id = $concept_id, k.subject_id = $subject_id, k.kind = $kind, "
-                "k.heading = $heading, k.text = $text, k.`order` = $order, k.reviewed = $reviewed "
+                "k.heading = $heading, k.text = $text, k.`order` = $order, k.reviewed = $reviewed, "
+                "k.source = $source "
                 "MERGE (c)-[:HAS_CHUNK]->(k)",
                 **chunk.model_dump(),
             )
@@ -466,7 +491,8 @@ class GraphRepository:
             return 0
         rows = await self._write(
             "MATCH (c:Concept)-[:HAS_CHUNK]->(k:Chunk) WHERE c.id IN $concepts "
-            "AND NOT k.id IN $keep WITH k, k.id AS id DETACH DELETE k RETURN count(id) AS n",
+            "AND NOT k.id IN $keep AND coalesce(k.source, 'notes') = 'notes' "
+            "WITH k, k.id AS id DETACH DELETE k RETURN count(id) AS n",
             concepts=list(keep_ids_by_concept),
             keep=[i for ids in keep_ids_by_concept.values() for i in ids],
         )

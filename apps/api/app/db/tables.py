@@ -75,6 +75,7 @@ profiles = Table(
     Column("study_enrolled_at", DateTime(timezone=True)),
     Column("study_consent_at", DateTime(timezone=True)),
     Column("study_withdrawn_at", DateTime(timezone=True)),
+    Column("disabled_at", DateTime(timezone=True)),
     _now(),
     _updated(),
 )
@@ -116,6 +117,7 @@ content_chunks = Table(
     Column("content_hash", Text),
     Column("embedding_hash", Text),
     Column("embedding_model", Text),
+    Column("source", Text, nullable=False, server_default="notes"),  # notes | llm | admin
     _now(),
     _updated(),
 )
@@ -139,6 +141,7 @@ questions = Table(
     Column("diagnoses_prereq", Text, ForeignKey("concepts.id")),
     Column("status", Text, nullable=False, server_default="active"),
     Column("source", Text),
+    Column("reviewed", Boolean, nullable=False, server_default="false"),
     _now(),
     _updated(),
 )
@@ -344,6 +347,24 @@ graph_proposals = Table(
     Column("reviewer_id", UUID(as_uuid=True), ForeignKey("profiles.id")),
     Column("decided_at", DateTime(timezone=True)),
     Column("note", Text),
+    _now(),
+    _updated(),
+)
+
+ingest_documents = Table(
+    "ingest_documents",
+    metadata,
+    _uuid_pk(),
+    Column("subject_id", Text, ForeignKey("subjects.id"), nullable=False),
+    Column("filename", Text, nullable=False),
+    Column("media_type", Text, nullable=False),
+    Column("size_bytes", Integer, nullable=False),
+    Column("pages", Integer),
+    Column("sections", Integer, nullable=False, server_default="0"),
+    Column("proposals", Integer, nullable=False, server_default="0"),
+    Column("status", Text, nullable=False, server_default="processing"),
+    Column("error", Text),
+    Column("uploaded_by", UUID(as_uuid=True), ForeignKey("profiles.id")),
     _now(),
     _updated(),
 )

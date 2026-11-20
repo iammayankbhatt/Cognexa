@@ -36,6 +36,7 @@ PROFILE_FIELDS = (
     "onboarding_completed",
     "experience_level",
     "quota_override",
+    "disabled_at",
     "created_at",
 )
 
@@ -143,7 +144,7 @@ class ProfileRepository:
     async def admin_update(
         self, actor: uuid.UUID | None, target: uuid.UUID, changes: dict[str, Any]
     ) -> dict[str, Any] | None:
-        allowed = {"role", "quota_override", "study_group"}
+        allowed = {"role", "quota_override", "study_group", "disabled_at"}
         values = {k: v for k, v in changes.items() if k in allowed}
         before = await self.get(target)
         if before is None:

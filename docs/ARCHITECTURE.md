@@ -90,3 +90,53 @@ Timing is server-side: timed sessions refuse answers after the limit (plus 5 s g
 Each tutor question that was classified (not a continuation, not off-topic) logs its matched
 concepts to `concept_interest (user, concept, source, asked_at)`. The Phase 9 recommender uses it
 alongside quiz performance, as the report's abstract requires.
+
+## Admin console and LLM proposals (Phase 11)
+
+The report's semi-automated graph building ("an LLM proposes tags and a human verifies them",
+Gap I) is implemented as a review queue. Nothing the model suggests reaches the graph until a
+reviewer approves it.
+
+### Where proposals come from
+
+- **Suggest edges** (graph editor): one JSON call with the concept and candidate concepts returns
+  missing `PREREQUISITE_OF` / `RELATED_TO` edges with a rationale and a confidence.
+- **Document ingestion** (`POST /admin/ingest`, PDF with a text layer, Markdown or text, 10 MB):
+  the text is split into sections at Markdown headings, numbered headings ("3.2 Stacks") or bare
+  title lines (a short capitalised line after a blank line, as PDFs usually have), sections are
+  packed to 200-2400 characters, and the model tags each one `{concept_id, kind, confidence,
+  rationale}` or proposes a new concept. A scanned PDF (almost no text) is refused with a clear
+  message.
+
+Proposals are stored in `graph_proposals` (pending → approved / rejected, with the reviewer's
+note). The review queue filters by type, confidence and document, shows the affected subgraph,
+lets the reviewer edit before approving, and can bulk-approve above a confidence threshold after
+confirming the exact count. `GET /admin/proposals/stats` gives the acceptance rate the report
+quotes ("LLM proposals accepted X % after human review").
+
+### Applying a change across two databases (DEC-058)
+
+Neo4j and Postgres cannot share a transaction, so every apply follows one fixed order:
+
+1. validate and embed (nothing is written if this fails);
+2. write Neo4j with idempotent `MERGE` (an edge is cycle-checked first; a cycle is refused with
+   the existing chain, e.g. `control_flow → functions → call_stack → recursion`);
+3. one Postgres transaction that writes the chunk / concept mirror **and** marks the proposal
+   approved, plus `audit_log`.
+
+If step 3 fails after step 2, the API answers `503 partial_apply`. Retrying the same approval
+re-runs the idempotent graph write and completes, so the two stores converge. Afterwards the
+tutor's concept catalogue, the public `/graph` cache and cached answers that used the affected
+concepts are invalidated.
+
+Approved chunks are stored with `source = 'llm'` and `reviewed = true`; chunks edited in the
+content editor get `source = 'admin'`. Seeding from `data/subjects/` only replaces `notes` chunks,
+so reviewed work survives a re-seed (DEC-060).
+
+### Roles
+
+Reviewers handle the graph, proposals, content and moderation; admins also manage users, AI usage,
+settings and the user study. Every `/admin` route declares its minimum role; a test walks the
+app's route table and checks that students (403), anonymous callers (401) and, on admin-only
+routes, reviewers (403) are refused (`tests/test_admin_roles.py`). A disabled account
+(`profiles.disabled_at`) is refused on every API call.

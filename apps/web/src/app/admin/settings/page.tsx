@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 
+import { AdminGate } from "@/components/app/admin-gate";
+
 import { SettingsForm } from "./settings-form";
 
 export const metadata: Metadata = { title: "AI settings" };
@@ -8,5 +10,9 @@ export const metadata: Metadata = { title: "AI settings" };
 export const instant = false;
 
 export default function AdminSettingsPage() {
-  return <SettingsForm />;
+  return (
+    <AdminGate minimum="admin">
+      <SettingsForm />
+    </AdminGate>
+  );
 }
