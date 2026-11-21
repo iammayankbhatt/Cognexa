@@ -33,7 +33,7 @@ from app.cache.service import CachedQueryEmbedder, LLMCache
 from app.core.config import Settings, get_settings
 from app.core.errors import register_error_handlers
 from app.core.logging import configure_logging
-from app.core.middleware import RequestIdMiddleware
+from app.core.middleware import RequestIdMiddleware, UnhandledErrorMiddleware
 from app.core.prod_check import production_problems
 from app.db.session import Database
 from app.graph.provider import GraphProvider
@@ -85,6 +85,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     register_error_handlers(app)
 
+    # Added first => innermost: uncaught exceptions become the 500 envelope inside CORS and the
+    # request ID (BUG-055).
+    app.add_middleware(UnhandledErrorMiddleware)
     # Compress JSON over ~1 KB (graph, dashboard, history). Starlette skips text/event-stream,
     # so tutor answers still stream token by token.
     app.add_middleware(GZipMiddleware, minimum_size=1000)

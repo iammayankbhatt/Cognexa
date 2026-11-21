@@ -264,7 +264,7 @@ async def test_message_stream_order_persistence_and_metering(tenv: TEnv) -> None
     assert names[0] == "trace" and names[-1] == "done"
     assert "token" in names and names.index("token") == 1
     tail = names[len(names) - 1 - names[::-1].index("token") + 1 : -1]
-    assert set(tail) <= {"citation", "followups"} and "followups" in tail
+    assert tail == ["followups"]  # no `citation` events: chips come from the text
     trace = events[0][1]
     assert trace["summary"].startswith("Function Calls") or "Recursion" in trace["summary"]
     ids = {m["id"] for m in trace["matched"]} | {c["id"] for c in trace["concepts"]}
@@ -535,6 +535,70 @@ async def test_disconnect_saves_partial_answer_as_truncated(tenv: TEnv) -> None:
         await tenv.env.db.fetchval("select count(*) from llm_calls where user_id = $1", user.id)
         == 2
     )
+
+
+async def test_disconnect_before_any_token_keeps_the_previous_answer(tenv: TEnv) -> None:
+    """BUG-053: stopping a regenerate right after the trace event saved an empty truncated
+    answer and superseded the good one."""
+    user, thread_id = await _user_and_thread(tenv)
+    service = _service(tenv)
+    prep = await service.prepare(user, thread_id, "explain binary search", "graphrag")
+    async for _ in service.stream(prep):
+        pass
+    old = await tenv.env.db.fetchrow(
+        "select id, content from chat_messages where thread_id = $1 and role = 'assistant'",
+        thread_id,
+    )
+    regen = await service.prepare(
+        user, thread_id, "explain binary search", "graphrag", regenerate_of=old["id"]
+    )
+    stream = service.stream(regen)
+    async for name, _ in stream:
+        if name == "trace":
+            break
+    await stream.aclose()
+    rows = await tenv.env.db.fetch(
+        "select id, content, superseded_at from chat_messages "
+        "where thread_id = $1 and role = 'assistant'",
+        thread_id,
+    )
+    assert [(r["id"], r["superseded_at"]) for r in rows] == [(old["id"], None)]
+    assert all(r["content"] for r in rows)
+
+
+async def test_concurrent_regenerates_and_edits_leave_one_live_turn(tenv: TEnv) -> None:
+    """BUG-054: the 'latest only' checks ran outside the write transaction, so two regenerates
+    (two tabs, a retry) both superseded the old answer and both stayed live."""
+    _, h = await tenv.env.user("ada@example.com")
+    thread = await new_thread(tenv, h)
+    events = await ask(tenv, h, thread, "explain binary search")
+    answer_id = last(events, "done")["message_id"]
+    url = f"/tutor/messages/{answer_id}/regenerate"
+    rs = await asyncio.gather(*[tenv.client.post(url, headers=h) for _ in range(2)])
+    assert all(r.status_code in (200, 409) for r in rs), [r.text for r in rs]
+    live = await tenv.env.db.fetchval(
+        "select count(*) from chat_messages where thread_id = $1 and role = 'assistant' "
+        "and superseded_at is null",
+        uuid.UUID(thread),
+    )
+    assert live == 1
+
+    question = await tenv.env.db.fetchval(
+        "select id from chat_messages where thread_id = $1 and role = 'user' "
+        "and superseded_at is null",
+        uuid.UUID(thread),
+    )
+    edit = f"/tutor/messages/{question}/edit"
+    rs = await asyncio.gather(
+        *[tenv.client.post(edit, headers=h, json={"content": f"explain heaps {i}"}) for i in (1, 2)]
+    )
+    assert sorted(r.status_code for r in rs) == [200, 409], [r.text[:200] for r in rs]
+    users = await tenv.env.db.fetchval(
+        "select count(*) from chat_messages where thread_id = $1 and role = 'user' "
+        "and superseded_at is null",
+        uuid.UUID(thread),
+    )
+    assert users == 1
 
 
 async def test_cancelled_stream_task_still_saves(tenv: TEnv) -> None:

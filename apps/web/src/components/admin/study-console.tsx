@@ -5,6 +5,7 @@ import { Download } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import type { Body } from "@/lib/api-contract";
 import { ErrorState } from "@/components/shared/error-state";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
@@ -30,7 +31,7 @@ export function StudyConsole() {
   });
   const [unlock, setUnlock] = useState<string | null>(null);
   const save = useMutation({
-    mutationFn: (body: Record<string, unknown>) =>
+    mutationFn: (body: Body<"StudyPatch">) =>
       api<AdminStudy>("/admin/study", { method: "PUT", body }),
     onSuccess: (d) => {
       qc.setQueryData(KEY, d);
@@ -84,7 +85,9 @@ export function StudyConsole() {
             <span className="block font-medium">Group assignment</span>
             <select
               value={data.assignment}
-              onChange={(e) => save.mutate({ assignment: e.target.value })}
+              onChange={(e) =>
+                save.mutate({ assignment: e.target.value as "random" | "alternate" })
+              }
               className="h-9 w-full rounded-lg border border-border bg-bg px-2 outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <option value="random">Random, balanced</option>

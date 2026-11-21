@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import type { Body } from "@/lib/api-contract";
 import { api } from "@/lib/api";
 
 export interface NoteItem {
@@ -81,7 +82,7 @@ export function useSheetMutations() {
     mutationFn: (conceptIds?: string[]) =>
       api<RevisionSheet>("/revision-sheets", {
         method: "POST",
-        body: conceptIds?.length ? { concept_ids: conceptIds } : {},
+        body: (conceptIds?.length ? { concept_ids: conceptIds } : {}) satisfies Body<"SheetIn">,
       }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["revision-sheets"] });

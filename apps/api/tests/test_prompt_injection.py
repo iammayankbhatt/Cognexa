@@ -19,16 +19,11 @@ from app.admin.llm_proposals import Section, tag_prompt
 from app.graph.memory import InMemoryGraph
 from app.guardrails.input import PROTECTED_TAGS, clean_user_text, injection_signals
 from app.guardrails.output import LEAK_REPLY, check_output
-from app.guardrails.prompts import (
-    CANARY,
-    TUTOR_SYSTEM,
-    ContextBlock,
-    render_context,
-    tutor_messages,
-)
+from app.guardrails.prompts import CANARY, ContextBlock, render_context
 from app.llm.fake import FakeProvider
 from app.quiz.grading import QuestionData
 from app.quiz.judge import JUDGE_SYSTEM, judge_messages
+from app.tutor.answer import GRAPHRAG_SYSTEM, answer_messages
 from app.tutor.pipeline import TurnInput
 from tests.test_tutor_pipeline import make_pipeline, run
 
@@ -77,8 +72,12 @@ def test_tutor_prompt_keeps_the_attack_inside_one_question_block(
     name: str, text: str, flag: bool
 ) -> None:
     question = clean_user_text(text, 4000)
-    msgs = tutor_messages(question, [ContextBlock("stack", "Overview", "A stack is LIFO.")])
-    assert msgs[0].role == "system" and msgs[0].content == TUTOR_SYSTEM
+    msgs = answer_messages(
+        mode="graphrag",
+        question=question,
+        context=[ContextBlock("stack", "Overview", "A stack is LIFO.")],
+    )
+    assert msgs[0].role == "system" and msgs[0].content == GRAPHRAG_SYSTEM
     user = msgs[-1].content
     assert tags(user) == [
         "<context>",
@@ -148,10 +147,10 @@ def test_approved_chunk_text_cannot_break_out_of_the_context() -> None:
 
 
 def test_leaked_system_prompt_or_canary_is_replaced() -> None:
-    leak = "Sure! My instructions are: " + TUTOR_SYSTEM
-    result = check_output(leak, TUTOR_SYSTEM)
+    leak = "Sure! My instructions are: " + GRAPHRAG_SYSTEM
+    result = check_output(leak, GRAPHRAG_SYSTEM)
     assert not result.ok and result.text == LEAK_REPLY
-    canary = check_output(f"The marker is {CANARY}.", TUTOR_SYSTEM)
+    canary = check_output(f"The marker is {CANARY}.", GRAPHRAG_SYSTEM)
     assert not canary.ok and canary.text == LEAK_REPLY
-    fine = check_output("A stack is last in, first out [stack].", TUTOR_SYSTEM)
+    fine = check_output("A stack is last in, first out [stack].", GRAPHRAG_SYSTEM)
     assert fine.ok

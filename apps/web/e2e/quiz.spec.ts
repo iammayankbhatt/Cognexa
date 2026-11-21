@@ -57,8 +57,9 @@ test("take a concept quiz end to end and see mastery on the concept page", async
   await expect(page).toHaveURL(/\/app\/quizzes\/[0-9a-f-]+/, { timeout: NAV_TIMEOUT });
 
   const nav = page.getByRole("navigation", { name: "Questions" }).getByRole("button");
-  await expect(nav).toHaveCount(8, { timeout: NAV_TIMEOUT });
-  const total = 8;
+  // 8 questions per concept, minus the 2 kept for the study's pre/post-tests (BUG-050)
+  await expect(nav).toHaveCount(6, { timeout: NAV_TIMEOUT });
+  const total = 6;
   for (let i = 0; i < total; i++) {
     await answerCurrent(page);
     await page.getByRole("button", { name: "Check answer" }).click();
@@ -121,11 +122,12 @@ test("the dashboard shows the next best step and a quiz schedules a review", asy
   await page.getByRole("button", { name: "Practice this concept" }).click();
   await expect(page).toHaveURL(/\/app\/quizzes\/[0-9a-f-]+/, { timeout: NAV_TIMEOUT });
   const nav = page.getByRole("navigation", { name: "Questions" }).getByRole("button");
-  await expect(nav).toHaveCount(8, { timeout: NAV_TIMEOUT });
-  for (let i = 0; i < 8; i++) {
+  // 8 questions per concept, minus the 2 kept for the study's pre/post-tests (BUG-050)
+  await expect(nav).toHaveCount(6, { timeout: NAV_TIMEOUT });
+  for (let i = 0; i < 6; i++) {
     await answerCurrent(page);
     await page.getByRole("button", { name: "Check answer" }).click();
-    await page.getByRole("button", { name: i === 7 ? "See results" : "Next question" }).click();
+    await page.getByRole("button", { name: i === 5 ? "See results" : "Next question" }).click();
   }
   await expect(page.getByRole("region", { name: "Next best step" })).toBeVisible({
     timeout: NAV_TIMEOUT,

@@ -105,3 +105,24 @@ async def test_failed_model_call_is_502_and_refunded(env: Env) -> None:  # noqa:
     assert r.status_code == 502 and r.json()["error"]["code"] == "llm_unavailable"
     assert await env.db.fetchval("select coalesce(sum(ai_requests), 0) from usage_daily") == 0
     assert await env.db.fetchval("select count(*) from llm_calls") == 0
+
+
+async def test_me_reports_tutor_modes_from_role_and_flag(env: Env) -> None:  # noqa: F811
+    """BUG-057: PLAIN_RAG_VISIBLE_TO_STUDENTS was enforced by the API but the web could not know
+    it, so turning it on changed nothing for students."""
+    _, admin = await env.user("boss@example.com", role="admin")
+    _, student = await env.user("ada@example.com")
+    assert (await env.client.get("/me", headers=student)).json()["tutor_modes"] == ["graphrag"]
+    assert (await env.client.get("/me", headers=admin)).json()["tutor_modes"] == [
+        "graphrag",
+        "plain_rag",
+    ]
+    r = await env.client.put(
+        "/admin/settings",
+        headers=admin,
+        json={"features": {"AGENTIC_MODE": True, "STUDY_MODE": False,
+                           "PLAIN_RAG_VISIBLE_TO_STUDENTS": True}},
+    )  # fmt: skip
+    assert r.status_code == 200, r.text
+    me = (await env.client.get("/me", headers=student)).json()
+    assert me["tutor_modes"] == ["graphrag", "plain_rag"]

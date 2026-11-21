@@ -1,6 +1,6 @@
 "use client";
 
-import { GitCompareArrows, MessagesSquare, PanelRight } from "lucide-react";
+import { GitCompareArrows, MessagesSquare, PanelRight, Search } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -46,6 +46,8 @@ export function TutorWorkspace() {
   }
   const me = useMe();
   const canCompare = me.data?.role === "admin" || me.data?.role === "reviewer";
+  const canPlain = me.data?.tutor_modes?.includes("plain_rag") ?? false;
+  const [plainMode, setPlainMode] = useState(false);
 
   const select = useCallback(
     (id: string | null) => {
@@ -139,7 +141,7 @@ export function TutorWorkspace() {
       });
       return true;
     }
-    return chat.send(text);
+    return chat.send(text, plainMode && canPlain ? "plain_rag" : "graphrag");
   };
 
   const rate = (id: string, rating: -1 | 0 | 1) =>
@@ -286,6 +288,21 @@ export function TutorWorkspace() {
               compareMode ? "Ask a question to compare GraphRAG with plain RAG…" : undefined
             }
           >
+            {canPlain && !compareMode && (
+              <button
+                type="button"
+                aria-pressed={plainMode}
+                onClick={() => setPlainMode((v) => !v)}
+                title="Answer with plain similarity search instead of the concept graph (for comparison)"
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  plainMode ? "bg-surface-2 text-accent" : "text-muted hover:text-text",
+                )}
+              >
+                <Search aria-hidden className="size-3.5" />
+                Plain RAG baseline
+              </button>
+            )}
             {canCompare && (
               <button
                 type="button"

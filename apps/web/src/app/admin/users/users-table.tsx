@@ -5,6 +5,7 @@ import { Activity, Ban, ChevronLeft, ChevronRight, Search, UserCheck, Users } fr
 import { useState } from "react";
 import { toast } from "sonner";
 
+import type { Body } from "@/lib/api-contract";
 import { EmptyState } from "@/components/shared/empty-state";
 import { ErrorState } from "@/components/shared/error-state";
 import { PageHeader } from "@/components/shared/page-header";
@@ -130,7 +131,7 @@ function UserRow({
   const qc = useQueryClient();
   const [quota, setQuota] = useState(user.quota_override?.daily_ai_requests?.toString() ?? "");
   const patch = useMutation({
-    mutationFn: (body: Patch) =>
+    mutationFn: (body: Patch & Body<"UserPatch">) =>
       api<AdminUser>(`/admin/users/${user.id}`, { method: "PATCH", body }),
     onSuccess: () => {
       toast.success("User updated.");
@@ -239,7 +240,10 @@ export function AdminUsersTable() {
   const qc = useQueryClient();
   const disable = useMutation({
     mutationFn: (u: AdminUser) =>
-      api<AdminUser>(`/admin/users/${u.id}`, { method: "PATCH", body: { disabled: true } }),
+      api<AdminUser>(`/admin/users/${u.id}`, {
+        method: "PATCH",
+        body: { disabled: true } satisfies Body<"UserPatch">,
+      }),
     onSuccess: () => {
       toast.success("Account disabled. Every API call from it is now refused.");
       setDisabling(null);

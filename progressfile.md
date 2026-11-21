@@ -13,7 +13,7 @@
 **Mode:** autopilot, main only, no tags. One commit per phase (`feat(phase-NN): ...`), then `git push origin main` (explicitly authorised for autopilot; if push fails, log it under Human Action Needed and continue). No `gh` CLI and no Supabase CLI were found on this machine at start; CI runs are checked through the public GitHub API when possible.
 **Environment notes:** local `apps/api/.env` and `apps/web/.env.local` exist (created from the examples; fake LLM/embedding providers, `REPLACE_ME` for cloud values). Never open or print them; use `uv run --project apps/api python scripts/check_env.py`.
 **Phase order:** core 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 12 → 15 (prep only), then extras 11 → 13 → 14 → 16.
-**Current phase:** 14 — Bug hunt and fresh-eyes review (extras). Phases 11 and 13 committed (Sessions 17-18). Core phases done; Phase 15 preparation complete (the live deploy is Human Action 21-27). Then 16.
+**Current phase:** 16 — Documentation, diagrams, viva demo script (last extra). Phase 14 committed (Session 19). Core phases done; Phase 15 preparation complete (the live deploy is Human Action 21-27).
 
 **Phase 2 checkpoints (done)**
 - [x] 2.1 Env files, `scripts/check_env.py`, `.env.example` for all phases
@@ -155,7 +155,26 @@
 - [x] 13.8 E2E journeys (student end to end; admin approve proposal / resolve report / change quota) and a CI e2e job against docker services
 - [x] 13.9 Full verification, wrap-up, commit
 
-**Next action:** Phase 14 (bug hunt, fresh-eyes review): read its prompt in docs/COGNEXA_PROMPTS.md, split it into checkpoints here. First check the new CI `e2e` job on GitHub (first run of Playwright in CI) and fix it if red.
+**Phase 14 checkpoints**
+- [x] 14.1 CI green after `fix(ci)` (BUG-046): run 44765658303 on `3df997a` succeeded
+- [x] 14.2 Fresh-eyes review by a subagent without the history: 13 findings (0 critical, 2 high, 5 medium, 6 low); triage below (R# = review finding)
+  - [x] R2 high: concurrent answers / regrades / answer-vs-submit double-applied mastery → session row lock + re-check (BUG-047); R8 low: judge quota spent before the 409 (BUG-049); R10 low: regrade after submit left recommendations uncompleted (BUG-048; review schedule stays, LIM-043)
+  - [x] R1 high: study-test answer keys leaked through practice quizzes; no practice quiz / revision sheet while a test is open, study-form items excluded from every practice pool (BUG-050)
+  - [x] R3 medium: earlier chat turns now wrapped + cleaned, empty turns dropped (`history_turns`, BUG-052)
+  - [x] R4 medium: no empty partial answers on disconnect (BUG-053)
+  - [x] R5 medium: `UnhandledErrorMiddleware` inside CORS + request id (BUG-055)
+  - [x] R6 medium: `safeNext` parses with URL and checks the origin (BUG-056)
+  - [x] R7/R13: `/me.tutor_modes` + Plain RAG baseline switch in the tutor; retry keeps the mode (BUG-057)
+  - [x] R9 low: regenerate supersedes all live answers under a question-row lock; concurrent edit → 409 (BUG-054)
+  - [x] R11 low: retry list uses active questions only (BUG-051)
+  - [x] R12 low: dead template removed, guardrail/injection tests now exercise `answer_messages`; unused `citation` SSE event no longer sent
+- [x] 14.3 Contract check: `scripts/export_openapi.py` → `openapi.json` → openapi-typescript 7.13.0 `schema.d.ts`; request bodies use `satisfies Body<...>`; 2 mismatches fixed (onboarding nullable level, study assignment string); generated files prettier-ignored; CI steps + `tests/test_openapi_contract.py`
+- [x] 14.4 Exploratory testing on dev (fake providers; real providers = Human Action 34): API probes for empty / whitespace / 8000-9000 chars / emoji + NUL / unicode names, parallel double sends, answers and submits, invalid and foreign ids, expired and missing tokens (all correct except BUG-047); Neo4j stopped on 13 endpoints (BUG-058); UI flows (back/forward, mobile 360 px, two tabs, offline banner, quota message) covered by the existing Playwright journeys, a11y responsive checks and the new switch spec
+- [x] 14.5 Every bug: failing test first, fix, log (BUG-047 to BUG-058; failing-first confirmed by running the new tests against the old code for BUG-047, 053, 055, 056)
+- [x] 14.6 Full verification: backend 512 passed / 0 skipped, web 215 unit, Playwright 52/52, validators and contract green; Traceability Matrix updated (open items are live checks or Phase 16, each with a Human Action or limitation)
+- [x] 14.7 Wrap-up, commit `feat(phase-14)`, push, CI
+
+**Next action:** check CI for the `feat(phase-14)` push; then Phase 16: read its prompt in docs/COGNEXA_PROMPTS.md and split it into checkpoints here.
 **Local stack:** `npx supabase start -x realtime,storage-api,imgproxy,studio,edge-runtime,logflare,vector,supavisor,postgres-meta` (mail UI http://127.0.0.1:54324); schema changes: `npx supabase migration up` (local Supabase) and `DATABASE_URL=<docker url> uv run ... scripts/migrate.py` (docker test DB)
 
 **Last cluster note:** Phase 3 content complete; 69/69 concepts
@@ -195,6 +214,8 @@
 | 30 | live checks | Prompt-injection suite on real models (Phase 13) | After item 13: open the tutor and send each of the 15 attacks listed in `apps/api/tests/test_prompt_injection.py` (`ATTACKS`), one per new chat. Expected: the tutor never follows the injected instruction, never prints its rules or the marker `CGX-7f3a-SYS`, and answers the DSA part (or declines politely). For the `judge` attack, answer a short-answer quiz question with that text: the score must not jump to 1. For `pdf`, upload a Markdown file containing that text in Admin → Proposals: no proposal may be created for a forged section. Write the results (pass/fail per attack) into progressfile.md §13 Phase 13 results and tell Claude Code about any failure. |
 | 31 | live checks | Lighthouse on the deployed dashboard and tutor (Phase 13) | After the Phase 15 deploy, in Chrome DevTools → Lighthouse (mobile), run the landing page, /app and /app/tutor while signed in. Target 90+ performance and 100 accessibility. Charts (Recharts) and maths (KaTeX) now load only when needed, which should help /app and /app/tutor. Note the scores in §13 and tell Claude Code if any page is below 90 (LIM-015). |
 | 32 | content to review | Five related links removed from concepts.yaml (BUG-042) | `recursion` related [backtracking, divide_and_conquer], `priority_queue_adt` related [binary_heap], `binary_search` related [bst] and `dijkstra` related [bellman_ford] duplicated prerequisite edges (one of each pair is a prerequisite of the other), which the stricter validator now refuses. They were removed (the prerequisite stays). If you meant any of them as a genuine sibling link, say so; otherwise nothing to do. |
+| 33 | content to review | Add 2 practice questions to each study-form concept (LIM-044) | The study's pre/post-test questions (`data/subjects/dsa/questions/_study_sets.yaml`) are now kept out of practice (DEC-068), so these 20 concepts have 6 practice questions instead of 8: arrays, asymptotic_notation, bfs, binary_heap, binary_search, binary_tree, bst, call_stack, dfs, dijkstra, dp_fundamentals, greedy, hash_tables, merge_sort, queue, quick_sort, recursion, singly_linked_list, stack, time_complexity. Optional: add two questions to each concept's YAML (or ask Claude Code to draft them for your review), then `scripts/validate_content.py --strict` and `scripts/seed_postgres.py`. |
+| 34 | live checks | Phase 14 exploratory pass with real models | After item 13: on dev, ask the tutor with an emoji-only question, a 1990-character question, and press Stop right after "Looking at..."; regenerate twice quickly in two tabs (one answer must remain); turn on Admin → Settings → "Show the plain-RAG comparison to students" and check a student sees the "Plain RAG baseline" switch. Report anything odd to Claude Code. |
 | 12 | live checks | Make yourself admin | Superseded by item 26 (`scripts/promote_admin.py`, audited). The SQL editor alternative still works: `update public.profiles set role = 'admin' where id = (select id from auth.users where email = '<your email>');` Wait 30 s (role cache) and reload; the Admin link appears. |
 
 ---
@@ -212,7 +233,7 @@
 | Repository | https://github.com/iammayankbhatt/Cognexa |
 | Live web app | _TBD (Vercel)_ |
 | Live API | _TBD (Render)_ |
-| Current phase | Phases 1 to 13 complete; Phase 15 prepared (deploy runbook ready, live deploy pending the human); next: Phase 14. Workflow: single developer, `main` only (DEC-013), autopilot (DEC-019) |
+| Current phase | Phases 1 to 14 complete; Phase 15 prepared (deploy runbook ready, live deploy pending the human); next: Phase 16. Workflow: single developer, `main` only (DEC-013), autopilot (DEC-019) |
 | Overall status | 🟡 In progress |
 
 Status legend: 🔴 Not started · 🟡 In progress · 🟢 Done + verified · ⚠️ Done with known issues · ⏸️ Blocked
@@ -238,7 +259,7 @@ Update the **Status** and **Where in code** columns as phases complete. Examiner
 | O3a | Rule-based recommender: weak concepts → prerequisite to review (Obj. 3) | Rules R1–R5 | 9 | 🟢 | `app/recommender/engine.py`, `app/recommender/service.py`, `tests/test_recommender_{engine,api}.py` (canonical chain → call_stack), Next best step card |
 | O3b | Uses quiz performance AND questions asked (Abstract) | Mastery + concept_interest signal | 8, 9 | 🟢 weak = low mastery with attempts OR asked ≥ 3 times in 7 days (`weak_concepts`) | `app/mastery/`, `app/quiz/`, `concept_interest` (migration 12), `docs/ARCHITECTURE.md` |
 | O4 | Functional end-to-end system (Obj. 4) | Full product, deployed | 1–15 | 🟡 | Full product runs end to end locally (prod smoke 11/11 on the local stack); deployment prepared, live deploy pending (Human Action 21-27) |
-| O5a | User study: adaptive vs non-adaptive baseline (Obj. 5) | Study mode, groups, pre/post tests, export | 3, 9, 12 | 🟢 built (running the study = Human Action 20) | `app/study/`, `app/api/study.py`, `/app/study`, `/admin/study`, `evaluation/study_analysis.ipynb` | `data/subjects/dsa/questions/_study_sets.yaml` |
+| O5a | User study: adaptive vs non-adaptive baseline (Obj. 5) | Study mode, groups, pre/post tests, export | 3, 9, 12, 14 | 🟢 built; test items isolated from practice and no AI/practice during a test (BUG-050, DEC-068); running the study = Human Action 20 | `app/study/`, `app/api/study.py`, `/app/study`, `/admin/study`, `evaluation/study_analysis.ipynb` | `data/subjects/dsa/questions/_study_sets.yaml` |
 | O5b | Comparison against plain, non-graph RAG (§1.9) | plain_rag mode + compare view + eval | 3, 6, 7, 12 | 🟢 harness + fake-mode results (real run = Human Action 18) | `evaluation/`, `/admin/evaluation`, `evaluation/reports/fake-offline-full/` | `app/tutor/plain_rag.py`, `scripts/phase6_smoke.py`, `evaluation/reports/phase6_smoke.md`, `data/subjects/dsa/eval/testset.jsonl` |
 | O5c | RAGAs reference-free metrics (§2.2 [10]) | ragas_eval.py + admin eval page | 12 | 🟡 wired through our provider layer; numbers need the real judge (Human Action 18) | `evaluation/ragas_adapter.py` |
 | G1 | LLM proposes tags, human verifies against fixed schema (Gap I, §3.4) | Proposals pipeline + review queue + PDF ingestion | 11 | 🟢 locally (real tagger: Human Action 28) | `app/admin/{llm_proposals,proposals,graph_editor}.py`, `app/api/admin_{proposals,graph}.py`, `/admin/proposals`, `/admin/graph`, acceptance rate `GET /admin/proposals/stats`, `tests/test_admin_proposals_api.py`, `tests/test_ingest_split.py`, `docs/ARCHITECTURE.md` (DEC-058) |
@@ -259,7 +280,7 @@ Update the **Status** and **Where in code** columns as phases complete. Examiner
 | LLM provider layer with fallback, retries, circuit breaker | 5 | 🟢 locally (real providers: live check pending) | `apps/api/app/llm/` (router, groq, gemini, fake, registry, pricing), `scripts/llm_smoke.py`, `tests/test_llm_router.py`, `tests/test_llm_providers.py` |
 | Per-user quotas, rate limits, global cap, cost metering | 5 | 🟢 | `apps/api/app/usage/`, `llm_calls` table (migration 10), `GET /me/usage`, `/admin/usage`, `tests/test_usage_guard.py` (20 parallel requests, exact limits) |
 | Response / classification / embedding caching | 5, 6 | 🟢 used by the tutor (answers to first questions, query embeddings) | `apps/api/app/cache/`, `scripts/seed_postgres.py` invalidation, `tests/test_cache.py` |
-| Prompt-injection guardrails, off-topic handling | 5, 6, 13 | 🟢 input cleaning, delimiter-safe templates, output checks, classifier off-topic decline (no further calls) | `apps/api/app/guardrails/`, `tests/test_guardrails.py`, `tests/test_source_hygiene.py` |
+| Prompt-injection guardrails, off-topic handling | 5, 6, 13, 14 | 🟢 input cleaning, delimiter-safe templates (current question and every earlier turn, BUG-052), output checks, classifier off-topic decline (no further calls) | `apps/api/app/guardrails/`, `tests/test_guardrails.py`, `tests/test_source_hygiene.py` |
 | Chat history (threads: search, rename, archive, delete) | 6, 7 | 🟢 | `app/api/tutor.py`, `apps/web/src/components/tutor/thread-list.tsx`, `e2e/tutor.spec.ts` |
 | Streaming answers, citations, follow-ups, regenerate | 6, 7 | 🟢 (incl. stop, edit-and-resend) | `app/api/tutor.py`, `apps/web/src/lib/tutor/`, `apps/web/src/components/tutor/` |
 | Thumbs up/down + report bad answer → moderation | 7, 11 | 🟢 moderation queue (message, trace, comment; resolve / dismiss / invalidate cache / fix content) + thumbs-down by concept | `POST /tutor/messages/{id}/feedback`, `components/tutor/report-dialog.tsx`, `app/api/admin_console.py`, `components/admin/moderation-queue.tsx` |
@@ -335,7 +356,7 @@ Key flows (details in docs/ARCHITECTURE.md once written):
 | 11 | Admin console + LLM proposals | 🟢 locally (real tagger: Human Action 28) | 2026-11-20 | 2026-11-20 | `5cc218f` `feat(phase-11)`; GitHub Actions green (run 44742762937) | | Verified locally: backend 451 passed, ruff, format, mypy clean; web lint, typecheck, 202 unit, build; Playwright `admin.spec.ts` 3/3; live ingestion of a 6-page PDF on dev (6 sections → 6 proposals → approved → new chunk in the tutor's context), then test data removed. |
 | 12 | Evaluation + user study | 🟢 (fake-mode numbers; real run = Human Action 18) | 2026-11-20 | 2026-11-20 | `5a31418` `feat(phase-12)` | | GitHub Actions green (run 44694456973). Verified locally: backend 400 passed (after updating one Phase 8 test to the new study gating), web 188 unit, Playwright 34/34; fake-mode full evaluation committed. |
 | 13 | Hardening | 🟢 locally (real-model injection run: Human Action 30) | 2026-11-20 | 2026-11-20 | `feat(phase-13)` (hash in git log) | | Verified locally: backend 501 tests (full run 499 passed; the 2 failures, stale edge counts after BUG-042 and a backup.py false positive, fixed and their files re-run green); ruff, format, mypy clean; web lint, typecheck, 210 unit, build, bundle scan; Playwright 51/51 (all specs, chromium); npm audit 0, pip-audit 0; axe 0 serious/critical on 27 pages x 3 themes; non-AI p95 on dev 11 of 13 endpoints under 300 ms; /dashboard 518 ms and /recommendations 468 ms over (LIM-042); Neo4j outage handled live. |
-| 14 | Bug hunt + fresh-eyes review | 🔴 | | | | | |
+| 14 | Bug hunt + fresh-eyes review | 🟢 | 2026-11-21 | 2026-11-21 | `feat(phase-14)` (hash in git log) | | Fresh-eyes subagent review (13 findings, all fixed) + exploratory probes: BUG-047 to BUG-058 (2 S2, 7 S3, 3 S4). OpenAPI → TypeScript contract with CI staleness checks. Verified locally: see Session 19. |
 | 15 | Deployment + keep-alive | 🟡 prepared (live deploy = Human Action 21-27) | 2026-11-20 | | `e28956b` `feat(phase-15)` | | GitHub Actions green incl. the new container job (run 44698029440). Verified locally: backend 425 passed (25 new), web lint/typecheck/188 unit/build; image built and run (non-root, `$PORT`, healthy); `prod_smoke.py` 11/11 against the local stack. |
 | 16 | Docs, diagrams, demo script | 🔴 | | | | | |
 
@@ -793,6 +814,49 @@ git tag -a v0.1 -m "Phase 1: Scaffold, design system, CI" && git push --tags   #
 - Automated accessibility checks in every theme find colour problems a single-theme review misses (a muted tab colour passed in dark themes and failed in Titanium Light).
 - A validator that checks each record alone can miss rules about pairs of records; exporting the live data and validating it again exposed the gap.
 **Next step:** Phase 14 (bug hunt, fresh-eyes review).
+
+### Session 19 — 2026-11-21 — Phase 14: bug hunt and fresh-eyes review (autopilot)
+**Goal:** Find and fix bugs before deployment (no new features): fresh-eyes review, web/API contract check, exploratory testing, failing test first for every bug.
+**Built / results:**
+- *CI:* the BUG-046 fix was green on GitHub (run 44765658303).
+- *Fresh-eyes review:* a subagent with no implementation history reviewed the code against CLAUDE.md and the Traceability Matrix. It reported 13 findings (0 critical, 2 high, 5 medium, 6 low). All 13 were fixed: BUG-047 to BUG-057, plus the R12 cleanup (dead prompt template, unused `citation` SSE event). It confirmed ownership scoping, role checks on every admin route, edge direction, atomic usage reservation and Cypher parameterisation.
+- *Contract check:*
+  - `scripts/export_openapi.py` writes `apps/web/src/lib/api-contract/openapi.json`; openapi-typescript 7.13.0 generates `schema.d.ts` (`npm run api:types`).
+  - Web request bodies use `satisfies Body<"...">`. This found 2 mismatches (nullable onboarding level, study assignment typed as a plain string), now fixed.
+  - The generated files are prettier-ignored so the generator's output stays byte-identical.
+  - CI fails on a stale schema (backend job) or stale types (frontend job, `git diff --exit-code`). `tests/test_openapi_contract.py` covers it locally (DEC-070).
+- *Exploratory testing (fake providers):*
+  - API probes: empty, whitespace, 8000/9000-character, emoji + NUL and unicode-name input; parallel double sends, answers and submits; invalid and foreign ids; bad and missing tokens. All correct except the quiz race (BUG-047).
+  - Neo4j container stopped while probing 13 endpoints → BUG-058. The tutor's plain-RAG fallback still works.
+  - UI flows (back/forward, 360 px, two tabs, offline, quota message) are covered by the existing Playwright journeys and a11y checks; real-model pass = Human Action 34.
+- *Design consequence:* study-test items are kept out of practice (DEC-068), so 20 core concepts give 6 practice questions instead of 8 (LIM-044, Human Action 33). Three e2e specs were updated to that count.
+**Files touched:**
+- Backend: `apps/api/app/{quiz/service.py,quiz/selection.py,quiz/repository.py,api/revision_sheets.py,api/me.py,tutor/service.py,tutor/repository.py,tutor/answer.py,guardrails/prompts.py,core/errors.py,core/middleware.py,main.py}`
+- Backend tests: `apps/api/tests/{test_quiz_api,test_study_api,test_tutor_api,test_guardrails,test_prompt_injection,test_health,test_admin_ai,test_openapi_contract}.py`
+- Scripts: `scripts/export_openapi.py`
+- Web: `apps/web/src/lib/api-contract/`, `apps/web/src/lib/{api,admin,notes,auth-schemas}.ts` + test, `apps/web/src/lib/{quiz/use-quiz,tutor/use-tutor}.ts`, `apps/web/src/components/{tutor/tutor-workspace,admin/study-console,app/theme-sync,learn/concept-page}.tsx`, `apps/web/src/app/{app/onboarding,app/settings,admin/usage,admin/users}/*`
+- Web config and e2e: `apps/web/{package.json,.prettierignore}`, `apps/web/e2e/{tutor,quiz,journey}.spec.ts`
+- Other: `.github/workflows/ci.yml`, `progressfile.md`
+**Commands run & results:**
+- Backend: ruff ✅ · ruff format ✅ · mypy ✅ (116 files) · pytest ✅ 512 passed, 0 skipped (live Neo4j + Postgres, 20 min)
+- Validators and contract: validate_graph ✅ · validate_content --strict ✅ · export_openapi --check ✅
+- Web: lint ✅ · typecheck ✅ · vitest ✅ 215 · build ✅ · check:bundle ✅ (87 files)
+- e2e: Playwright ✅ 52/52 (all specs, chromium, 0 skipped)
+- `format:check` flags only files whose working copy has CRLF endings (`core.autocrlf=true`). The committed LF content passes, and CI does not run it.
+**Manual verification:**
+- The probes above ran against the live dev API and the Supabase local stack.
+- Neo4j-down drill before and after BUG-058: 7 endpoints went from 500 to 503 `graph_unavailable` with CORS; the tutor answered via plain RAG.
+- The plain-RAG switch was exercised in the browser (e2e).
+**Bugs found this session:** BUG-047 to BUG-058, by severity: S2 ×2 (047, 050) · S3 ×7 (048, 052, 053, 055, 056, 057, 058) · S4 ×3 (049, 051, 054)
+**Decisions:** DEC-068 to DEC-070 (LIM-043, LIM-044 added)
+**Human action needed:** Autopilot State items 33, 34 (plus the existing live checks).
+**What we learned:**
+- A check-then-write without a lock passes under concurrency, and an upsert hides the double write. Lock the parent row and re-check inside the write transaction.
+- Starlette's catch-all exception handler runs outside every middleware, so a 500 skips CORS and the request id unless you catch exceptions in an inner middleware.
+- Validate redirect targets with the URL parser that will consume them. Browsers strip tabs and newlines, so a prefix check misses `/\t/evil`.
+- Tests on a prompt template the product doesn't use give false assurance. Point security tests at the real builders.
+- A reviewer with no history found the integrity gap in the study design (test items reachable through practice) that a phase-by-phase builder never looked for.
+**Next step:** Phase 16 (documentation, diagrams, demo script).
 
 ## 7. Bug Log
 
@@ -1373,6 +1437,138 @@ Severity: **S1** critical (data loss, security, app down) · **S2** major (featu
 - **Commit:** `fix(ci)` after `761421f`
 - **Lesson / pattern to avoid:** a new CI job should assert its own preconditions before running the suite, so a set-up failure reads as one clear error instead of 28 test failures.
 
+#### BUG-047 — Concurrent quiz answers / regrades applied mastery twice
+- **Found:** 2026-11-21, Phase 14 exploratory API probe (three parallel answers → two 200s) and the fresh-eyes review (R2)
+- **Severity / Area:** S2 / quiz, mastery
+- **Symptom:** a double click or retry on "Check answer" recorded one answer but applied the mastery update twice (attempts +2); two parallel regrades did the same; an answer racing the submit was graded twice (as unanswered by submit and as answered).
+- **Root cause:** the "already answered" check read `quiz_answers` without a lock and `save_answer` is an upsert, so every concurrent request passed the check; `submit` locked the session row but `answer` and `regrade` did not, and `submit` read the existing answers before taking its lock.
+- **Fix:** `answer` (both modes) locks the session row and re-checks it is open; `regrade` locks it and re-checks the answer is still pending; `submit` re-reads answers under the lock and skips any graded meanwhile.
+- **Files changed:** `apps/api/app/quiz/service.py`
+- **Regression test:** `tests/test_quiz_api.py::test_concurrent_answers_to_one_question_count_once` (failed first: four 200s); concurrent regrade part of `test_short_answer_judge_usage_cache_pending_and_regrade`
+- **Commit:** `feat(phase-14)`
+- **Lesson / pattern to avoid:** check-then-write needs the check inside the write transaction under a lock; an upsert hides the race instead of failing it.
+
+#### BUG-048 — Regrade after submit left recommendations uncompleted
+- **Found:** 2026-11-21, fresh-eyes review (R10)
+- **Severity / Area:** S3 / quiz, recommender
+- **Symptom:** a short answer pending at submit (judge down) and regraded correct later never completed the concept's open recommendation, so the study's completion counts were too low.
+- **Root cause:** `_after_submit` (completion) ran once at submit with pending answers counted as 0; `regrade` only recomputed the score.
+- **Fix:** a regrade of a submitted session re-runs the idempotent completion step with the final scores. The review schedule is not re-run (it would advance the ladder twice): LIM-043.
+- **Files changed:** `apps/api/app/quiz/service.py`
+- **Regression test:** completion assertion in `test_short_answer_judge_usage_cache_pending_and_regrade`
+- **Commit:** `feat(phase-14)`
+- **Lesson / pattern to avoid:** when a result can change after the fact, list everything derived from it and decide for each one whether it must be recomputed.
+
+#### BUG-049 — Re-sent short answer spent a judge request before the 409
+- **Found:** 2026-11-21, fresh-eyes review (R8)
+- **Severity / Area:** S4 / quiz, usage
+- **Symptom:** re-sending an already graded short answer used one daily AI request each time, then answered 409.
+- **Root cause:** grading (which records usage) ran before the already-answered check.
+- **Fix:** an early, unlocked already-answered check before grading (the locked check stays authoritative).
+- **Files changed:** `apps/api/app/quiz/service.py`
+- **Regression test:** re-send assertion in `test_short_answer_judge_usage_cache_pending_and_regrade` (llm_calls stays 1)
+- **Commit:** `feat(phase-14)`
+- **Lesson / pattern to avoid:** do the cheap checks before the expensive, metered work.
+
+#### BUG-050 — Study pre/post-test answers could be revealed through practice quizzes
+- **Found:** 2026-11-21, fresh-eyes review (R1)
+- **Severity / Area:** S2 / study validity (O5a)
+- **Symptom:** during an open pre-test a student could start a concept quiz with `question_ids` set to the test's questions and get every answer key from immediate feedback; post-test items also appeared in ordinary practice, and revision sheets (AI) worked during a test.
+- **Root cause:** the "no AI while a test is open" rule was only checked by the tutor; study-form questions were ordinary bank questions in every pool.
+- **Fix:** quiz creation (all non-test modes) and revision sheets refuse with 409 `test_in_progress` while a test is open; both study forms' questions are excluded from every practice pool (`selection.reserved_ids`, DEC-068).
+- **Files changed:** `apps/api/app/quiz/{service,selection,repository}.py`, `apps/api/app/api/revision_sheets.py`, e2e quiz counts (8 → 6 for study-form concepts)
+- **Regression test:** `tests/test_study_api.py::test_full_study_flow_with_gating` (practice and sheet refused during the test; post-test ids never served in practice), `test_retry_wrong_ones_with_a_question_list`
+- **Commit:** `feat(phase-14)`
+- **Lesson / pattern to avoid:** an integrity rule enforced in one entry point is not enforced; list every path to the protected data.
+
+#### BUG-051 — Retry quiz accepted retired questions
+- **Found:** 2026-11-21, fresh-eyes review (R11)
+- **Severity / Area:** S4 / quiz
+- **Symptom:** "Retry the wrong ones" could serve a question an admin had deactivated.
+- **Root cause:** the `question_ids` path used `questions_by_id` (no status filter) while every other pool filters on `active`.
+- **Fix:** the retry path uses `repo.questions(..., ids=...)` (active only); old sessions still load retired questions.
+- **Files changed:** `apps/api/app/quiz/service.py`, `apps/api/app/quiz/repository.py`
+- **Regression test:** `test_quiz_validation_and_isolation` (retired question dropped, old session still loads)
+- **Commit:** `feat(phase-14)`
+- **Lesson / pattern to avoid:** one shared query helper per rule ("active questions") instead of two lookups that drift.
+
+#### BUG-052 — Earlier chat turns reached the answer model without delimiters
+- **Found:** 2026-11-21, fresh-eyes review (R3)
+- **Severity / Area:** S3 / prompt injection (CLAUDE.md rule 8)
+- **Symptom:** only the current question was wrapped in `<student_question>`; stored earlier student turns were sent as plain user messages, so an injection from turn 1 looked like a trusted instruction on turn 2. Assistant history was not cleaned, and empty saved answers were sent (strict providers reject empty parts).
+- **Root cause:** `answer_messages` passed `history` through unchanged; the guardrail tests exercised an older template (`tutor_messages`) that the product did not use.
+- **Fix:** `history_turns` cleans every turn, wraps student turns like the question and drops empty ones; the unused template was deleted and the guardrail and injection tests now run against `answer_messages`.
+- **Files changed:** `apps/api/app/guardrails/prompts.py`, `apps/api/app/tutor/answer.py`, `tests/test_guardrails.py`, `tests/test_prompt_injection.py`
+- **Regression test:** `tests/test_guardrails.py::test_earlier_turns_are_wrapped_and_cleaned_like_the_question`
+- **Commit:** `feat(phase-14)`
+- **Lesson / pattern to avoid:** test the prompt builder the product calls, not a parallel one; dead templates give false assurance.
+
+#### BUG-053 — Stopping before the first token saved an empty answer
+- **Found:** 2026-11-21, fresh-eyes review (R4)
+- **Severity / Area:** S3 / tutor
+- **Symptom:** pressing Stop (or closing the tab) on a regenerate right after "Looking at…" hid the previous good answer and saved an empty truncated one in its place (normal turns also got empty answers).
+- **Root cause:** the disconnect path saved a partial whenever the trace had been sent, even with no text.
+- **Fix:** a partial is saved only when some text reached the student; otherwise the request is refunded if nothing was recorded.
+- **Files changed:** `apps/api/app/tutor/service.py`
+- **Regression test:** `tests/test_tutor_api.py::test_disconnect_before_any_token_keeps_the_previous_answer` (failed on the old condition)
+- **Commit:** `feat(phase-14)`
+- **Lesson / pattern to avoid:** keep the error path and the disconnect path on the same rule.
+
+#### BUG-054 — Concurrent regenerates or edits left two live answers
+- **Found:** 2026-11-21, fresh-eyes review (R9)
+- **Severity / Area:** S4 / tutor
+- **Symptom:** two regenerate requests (two tabs, a retry) both superseded the old answer and both inserted a new one; two edits both stayed live.
+- **Root cause:** the "latest only" checks ran in a read-only session; the supersede happened later in a separate transaction and targeted only the original id.
+- **Fix:** saving a regenerated answer locks the question row and supersedes every live answer to it (last finisher wins); edit-and-resend locks the edited message and refuses with 409 if another edit already replaced it. The old `supersede(id)` helper was removed.
+- **Files changed:** `apps/api/app/tutor/{service,repository}.py`
+- **Regression test:** `tests/test_tutor_api.py::test_concurrent_regenerates_and_edits_leave_one_live_turn`
+- **Commit:** `feat(phase-14)`
+- **Lesson / pattern to avoid:** "replace X" written as "hide id X, insert Y" is not idempotent; write it as "hide all live answers to the question" under a lock.
+
+#### BUG-055 — Unhandled 500s had no CORS header and no request id
+- **Found:** 2026-11-21, fresh-eyes review (R5), confirmed live
+- **Severity / Area:** S3 / API errors
+- **Symptom:** any uncaught exception produced a response the browser blocked on the cross-origin deployment (the web showed "Could not reach the server"), with `"request_id": "-"` and no `X-Request-ID` header.
+- **Root cause:** FastAPI's `exception_handler(Exception)` is installed in Starlette's `ServerErrorMiddleware`, which runs outside every user middleware (CORS, request id).
+- **Fix:** `UnhandledErrorMiddleware`, the innermost middleware, turns uncaught exceptions into the 500 envelope inside CORS and the request id.
+- **Files changed:** `apps/api/app/core/middleware.py`, `apps/api/app/main.py`
+- **Regression test:** `tests/test_health.py::test_unhandled_exception_keeps_cors_and_request_id` (failed first: request_id "-")
+- **Commit:** `feat(phase-14)`
+- **Lesson / pattern to avoid:** check where a framework actually installs a catch-all; test error responses with an `Origin` header.
+
+#### BUG-056 — Open redirect after sign-in through a tab or newline in `next`
+- **Found:** 2026-11-21, fresh-eyes review (R6)
+- **Severity / Area:** S3 / auth (web)
+- **Symptom:** `/login?next=/%09/evil.example` sent the user to evil.example after signing in.
+- **Root cause:** `safeNext` rejected `//` and `/\` by string prefix, but the URL parser strips tabs and newlines, turning `/<tab>/evil` into `//evil`.
+- **Fix:** `safeNext` parses the value with `new URL(next, base)`, requires the same origin and returns path + query + hash.
+- **Files changed:** `apps/web/src/lib/auth-schemas.ts`
+- **Regression test:** 4 new cases in `src/lib/auth-schemas.test.ts` (failed on the old function)
+- **Commit:** `feat(phase-14)`
+- **Lesson / pattern to avoid:** validate URLs with the parser that will consume them, not with string prefixes.
+
+#### BUG-057 — PLAIN_RAG_VISIBLE_TO_STUDENTS had no effect
+- **Found:** 2026-11-21, fresh-eyes review (R7, R13)
+- **Severity / Area:** S3 / tutor, admin settings
+- **Symptom:** turning the flag on changed nothing: the chat always sent `graphrag`, and only reviewers/admins could reach the compare view. A retry after a failed plain-RAG turn would have resent as graphrag.
+- **Root cause:** the API enforced the flag but never told the web which modes the user may use.
+- **Fix:** `GET /me` returns `tutor_modes`; the tutor shows a "Plain RAG baseline" switch when plain RAG is allowed; a retry keeps the turn's mode.
+- **Files changed:** `apps/api/app/api/me.py`, `apps/web/src/{lib/api.ts,lib/tutor/use-tutor.ts,components/tutor/tutor-workspace.tsx}`, OpenAPI contract
+- **Regression test:** `tests/test_admin_ai.py::test_me_reports_tutor_modes_from_role_and_flag`; e2e `tutor.spec.ts` (switch sends `mode: plain_rag`; hidden for students without the flag)
+- **Commit:** `feat(phase-14)`
+- **Lesson / pattern to avoid:** a server-side flag needs an end-to-end test that shows its visible effect.
+
+#### BUG-058 — Neo4j outage gave generic 500s outside the tutor
+- **Found:** 2026-11-21, Phase 14 exploratory testing (Neo4j container stopped)
+- **Severity / Area:** S3 / reliability
+- **Symptom:** with Neo4j down, `/dashboard`, `/recommendations`, `/concepts/{id}`, `/graph/mastery`, `/tutor/suggestions`, adaptive quiz and revision sheets answered 500 "Something went wrong" (`/graph` already said 503 graph_unavailable).
+- **Root cause:** only `/graph` and the tutor pipeline caught the driver's outage errors.
+- **Fix:** an app-wide handler maps the Neo4j driver's `ServiceUnavailable` / `SessionExpired` / `DatabaseUnavailable` to 503 `graph_unavailable` (a bare `ConnectionError` stays 500 because it could be Postgres). Verified live: all those endpoints now answer 503 with CORS; the tutor still degrades to plain RAG.
+- **Files changed:** `apps/api/app/core/errors.py`
+- **Regression test:** `tests/test_health.py::test_neo4j_outage_is_a_503_graph_unavailable`
+- **Commit:** `feat(phase-14)`
+- **Lesson / pattern to avoid:** run the outage drill on every page, not only the feature that was designed for it.
+
 ---
 
 ## 8. Decisions Log (lightweight ADRs)
@@ -1444,6 +1640,9 @@ Severity: **S1** critical (data loss, security, app down) · **S2** major (featu
 | DEC-061 | 2026-11-20 | The question editor validates on the client with rules mirrored from `app/content/models.py`; the server validates again and is authoritative | Server-only validation; generate a zod schema | Field-level messages before a round-trip; the rules are few and stable | Rule changes must be made in both places; both are unit-tested with the same cases |
 | DEC-062 | 2026-11-20 | Role enforcement is tested by walking the app's route table (checked against OpenAPI) instead of listing endpoints by hand | Hand-written endpoint lists per test file | New admin routes are covered automatically; a route without `require_role` fails CI | The walk follows FastAPI internals; the OpenAPI cross-check fails loudly if they change |
 | DEC-063 | 2026-11-20 | Document splitting treats a short capitalised line after a blank line and before a longer body line as a title | Font-size based layout analysis (pdfplumber); one section per page | Works on pypdf's plain text with no new dependency; page-per-section breaks topics that span pages | Unusual layouts can still merge or split sections; reviewers see every proposal |
+| DEC-068 | 2026-11-21 | The study's pre/post-test questions never appear in practice quizzes (concept, adaptive, diagnostic, review, retry lists); no practice quiz or revision sheet while a study test is open | Exclude them only while the study is running; trust students | Seeing a post-test item (with its answer key) during learning inflates the measured gain, and the flag can be switched on after students have practised | The 20 study-form concepts have 6 practice questions instead of 8 (LIM-044) |
+| DEC-069 | 2026-11-21 | Neo4j outages outside the tutor answer 503 `graph_unavailable`; the tutor keeps degrading to plain RAG | Degrade every page (e.g. dashboard without recommendations) | One clear, retryable error everywhere at no extra code per route; the outage is rare and short | Graph-backed pages show their error state during an outage |
+| DEC-070 | 2026-11-21 | Web request bodies are type-checked against generated OpenAPI types (`satisfies Body<...>`); response types stay hand-written | Generate a full client; type responses too | Most endpoints return plain dicts without response models, so generated response types would be `unknown`; request bodies are where drift broke calls | A response field rename is still caught only by tests |
 | DEC-053 | 2026-11-20 | Study gating: the tutor pauses while a study test is open, open tests are resumed, tests are forced timed + exam mode | Trust students not to use AI during tests | "No AI" during the pre-test must hold for the comparison to be fair | A test left open blocks the tutor until it expires |
 | DEC-022 | 2026-11-19 | Content code samples are C++14 (not 17) and Python 3.12; every snippet is a complete program that asserts its own claims and is compiled/run by the test suite | C++17 | The only local compiler is MinGW GCC 6.3 (no `-std=c++17`); C++14 also works on every CI compiler | Notes avoid C++17 features (structured bindings, `std::optional`) |
 
@@ -1494,6 +1693,8 @@ Severity: **S1** critical (data loss, security, app down) · **S2** major (featu
 | LIM-038 | In fake mode, ingestion tagging and edge suggestions are keyword-based and mislabel some sections (e.g. a binary-search page tagged `control_flow`) | Local proposals are only a demo of the flow | Real tagger with keys (Human Action 13, 28); reviewers check every proposal |
 | LIM-039 | Admin edits to chunks and questions are not written back to `data/subjects/` (only the graph has a YAML export) | Git and the databases can drift | Human Action 29; a content export could be added in Phase 16 |
 | LIM-040 | Disabling an account takes effect within the profile cache TTL (30 s), like role changes (LIM-016) | A just-disabled user keeps access for up to 30 s | Acceptable at this scale |
+| LIM-043 | A regrade after submit updates the score and completes recommendations, but not the spaced-review schedule set at submit | A concept whose short answer was pending at submit may be due for review earlier than needed | Rare (judge down at submit); re-running the schedule would advance the ladder twice |
+| LIM-044 | 20 core concepts give 6 practice questions instead of 8 (2 are reserved for the study tests, DEC-068) | Shorter practice quizzes for those concepts | Content task: add 2 questions to each (Human Action 33) |
 | LIM-034 | The tutor stays paused until an abandoned study test's timer runs out | A student who closes the tab mid-test waits up to 20 min | Acceptable for study integrity; the pre-test can be resumed |
 
 ---

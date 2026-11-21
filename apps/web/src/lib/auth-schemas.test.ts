@@ -59,6 +59,12 @@ describe("safeNext (open-redirect guard)", () => {
     [undefined, "/app"],
     ["", "/app"],
     ["https://evil.example", "/app"],
+    // BUG-056: the browser strips tabs/newlines, turning these into //evil.example
+    ["/\t/evil.example", "/app"],
+    ["/\n/evil.example", "/app"],
+    ["/\r\n/evil.example", "/app"],
+    ["/\t\\evil.example", "/app"],
+    ["/app#section", "/app#section"],
     ["//evil.example", "/app"],
     ["/\\evil.example", "/app"],
     ["javascript:alert(1)", "/app"],

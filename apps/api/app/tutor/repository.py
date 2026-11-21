@@ -146,13 +146,6 @@ class ChatRepository:
         )
         return [dict(r._mapping) for r in rows]
 
-    async def supersede(self, message_id: uuid.UUID) -> None:
-        await self.session.execute(
-            update(chat_messages)
-            .where(chat_messages.c.id == message_id)
-            .values(superseded_at=_now())
-        )
-
     async def history(
         self, thread_id: uuid.UUID, turns: int, before: dt.datetime | None = None
     ) -> list[Message]:
@@ -196,6 +189,29 @@ class ChatRepository:
             )
         ).first()
         return dict(row._mapping) if row else None
+
+    async def lock_message(self, message_id: uuid.UUID) -> dict[str, Any] | None:
+        """Row-lock one message for this transaction (serialises regenerate / edit races)."""
+        row = (
+            await self.session.execute(
+                select(chat_messages).where(chat_messages.c.id == message_id).with_for_update()
+            )
+        ).first()
+        return dict(row._mapping) if row else None
+
+    async def supersede_answers_to(self, question_id: uuid.UUID) -> None:
+        """Hide every live answer to a question (the caller then adds the new one). The question
+        row is locked first so two concurrent regenerates cannot both stay live (BUG-054)."""
+        await self.lock_message(question_id)
+        await self.session.execute(
+            update(chat_messages)
+            .where(
+                chat_messages.c.reply_to == question_id,
+                chat_messages.c.role == "assistant",
+                chat_messages.c.superseded_at.is_(None),
+            )
+            .values(superseded_at=_now())
+        )
 
     async def supersede_turn(self, user_message_id: uuid.UUID) -> None:
         """Hide a user message and every answer to it (edit-and-resend)."""

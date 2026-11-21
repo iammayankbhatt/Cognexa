@@ -1,7 +1,8 @@
 """Tutor API: chat threads, streamed answers (Server-Sent Events), regenerate, compare.
 
 SSE events, in order: `trace` (classification + traversal, before any token), `token`*,
-`citation`*, `followups`, then `done` (message id, usage) or `error`.
+`followups`, then `done` (message id, usage, content) or `error`. Citations are `[[concept_id]]`
+markers in the text (and stored on the message).
 """
 
 from __future__ import annotations

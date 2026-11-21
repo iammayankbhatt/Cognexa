@@ -222,6 +222,8 @@ export interface Me {
   experience_level: string | null;
   created_at: string | null;
   usage: Usage;
+  /** Tutor modes this user may chat in; more than one shows the mode switch. */
+  tutor_modes: ("graphrag" | "plain_rag")[];
 }
 
 export interface UsageDay {

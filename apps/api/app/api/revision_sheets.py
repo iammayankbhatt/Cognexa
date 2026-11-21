@@ -30,6 +30,7 @@ from app.llm.types import Message
 from app.mastery.model import MasteryParams
 from app.recommender.engine import weak_concepts
 from app.recommender.service import build_graph, learner_state
+from app.study.service import open_test
 from app.tutor.answer import citations
 from app.tutor.gather import fill_budget
 from app.tutor.trace import ConceptMatch
@@ -87,6 +88,12 @@ async def create_sheet(
     graph = await build_graph(repo, body.subject_id)
     params = MasteryParams.from_settings(settings)
     async with db.sessions()() as session:
+        if await open_test(session, user.id):  # no AI help during a study test (BUG-050)
+            raise AppError(
+                "test_in_progress",
+                "Finish your study test first: AI help is paused while it is open.",
+                409,
+            )
         state = await learner_state(
             session, user.id, body.subject_id, params, dt.datetime.now(dt.UTC)
         )

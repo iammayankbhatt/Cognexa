@@ -3,6 +3,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 
+import type { Body } from "@/lib/api-contract";
 import { ME_KEY, useMe } from "@/components/app/me-provider";
 import { useTheme } from "@/components/theme/theme-provider";
 import { api, type Me } from "@/lib/api";
@@ -29,7 +30,7 @@ export function ThemeSync() {
   useEffect(() => {
     if (!applied.current || saved.current === theme) return;
     saved.current = theme;
-    void api<Me>("/me", { method: "PATCH", body: { theme } })
+    void api<Me>("/me", { method: "PATCH", body: { theme } satisfies Body<"MePatch"> })
       .then((next) => qc.setQueryData(ME_KEY, next))
       .catch(() => undefined); // offline: the theme still applies locally
   }, [theme, qc]);

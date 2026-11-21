@@ -27,10 +27,14 @@ class QuizRepository:
         concept_ids: Iterable[str] | None = None,
         ids: Iterable[str] | None = None,
         types: Iterable[str] | None = None,
+        exclude: Iterable[str] = (),
     ) -> list[QuestionData]:
+        """Active questions only (retired ones stay readable through `questions_by_id`)."""
         q = select(questions).where(
             questions.c.subject_id == subject_id, questions.c.status == "active"
         )
+        if excluded := list(exclude):
+            q = q.where(questions.c.id.not_in(excluded))
         if concept_ids is not None:
             q = q.where(questions.c.concept_id.in_(list(concept_ids)))
         if ids is not None:

@@ -13,6 +13,7 @@ from app.auth.admin import AuthAdminError, admin_api_configured, delete_auth_use
 from app.auth.deps import CurrentUser, ProfileCache, get_current_user
 from app.core.config import Settings, get_settings
 from app.core.errors import AppError
+from app.core.flags import get_flags
 from app.core.ratelimit import limit_by_user
 from app.db.profiles import ProfileRepository
 from app.db.repositories import AppSettingsRepository
@@ -71,6 +72,9 @@ class MeOut(BaseModel):
     experience_level: str | None
     created_at: dt.datetime | None
     usage: Usage
+    # tutor modes this user may chat in (plain_rag: reviewers/admins, or students when the
+    # PLAIN_RAG_VISIBLE_TO_STUDENTS flag is on); the web shows a mode switch only if > 1 (BUG-057)
+    tutor_modes: list[Literal["graphrag", "plain_rag"]]
 
 
 class MePatch(BaseModel):
@@ -96,23 +100,30 @@ def _utc_today() -> dt.date:
     return dt.datetime.now(dt.UTC).date()
 
 
-async def build_me(session: AsyncSession, user: CurrentUser, profile: dict[str, Any]) -> MeOut:
+async def build_me(
+    session: AsyncSession, user: CurrentUser, profile: dict[str, Any], settings: Settings
+) -> MeOut:
     repo = ProfileRepository(session)
     today = _utc_today()
     usage = await repo.usage_today(user.id, today)
     fresh = CurrentUser(id=user.id, email=user.email, role=str(profile["role"]), profile=profile)
     quota = (await load_limits(AppSettingsRepository(session), fresh)).daily
+    role = str(profile["role"])
+    plain = (
+        role != "student" or (await get_flags(session, settings))["PLAIN_RAG_VISIBLE_TO_STUDENTS"]
+    )
     return MeOut(
         id=str(user.id),
         email=user.email,
         display_name=profile.get("display_name"),
-        role=str(profile["role"]),
+        role=role,
         theme=str(profile["theme"]),
         study_group=str(profile["study_group"]),
         onboarding_completed=bool(profile["onboarding_completed"]),
         experience_level=profile.get("experience_level"),
         created_at=profile.get("created_at"),
         usage=Usage(date=today, daily_quota=quota, **usage),
+        tutor_modes=["graphrag", "plain_rag"] if plain else ["graphrag"],
     )
 
 
@@ -134,9 +145,10 @@ async def get_my_usage(
 async def get_me(
     user: Annotated[CurrentUser, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_session)],
+    settings: Annotated[Settings, Depends(get_settings)],
 ) -> MeOut:
     profile = await ProfileRepository(session).get(user.id) or user.profile
-    return await build_me(session, user, profile)
+    return await build_me(session, user, profile, settings)
 
 
 @router.patch("/me", response_model=MeOut)
@@ -145,6 +157,7 @@ async def patch_me(
     request: Request,
     user: Annotated[CurrentUser, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_session)],
+    settings: Annotated[Settings, Depends(get_settings)],
 ) -> MeOut:
     changes = body.model_dump(exclude_none=True)
     if "display_name" in changes:
@@ -156,7 +169,7 @@ async def patch_me(
     await session.commit()
     _cache(request).invalidate(user.id)
     profile = await repo.get(user.id) or user.profile
-    return await build_me(session, user, profile)
+    return await build_me(session, user, profile, settings)
 
 
 @router.post("/me/onboarding-complete", response_model=MeOut)
@@ -165,6 +178,7 @@ async def complete_onboarding(
     request: Request,
     user: Annotated[CurrentUser, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_session)],
+    settings: Annotated[Settings, Depends(get_settings)],
 ) -> MeOut:
     repo = ProfileRepository(session)
     await repo.update_self(
@@ -173,7 +187,7 @@ async def complete_onboarding(
     await session.commit()
     _cache(request).invalidate(user.id)
     profile = await repo.get(user.id) or user.profile
-    return await build_me(session, user, profile)
+    return await build_me(session, user, profile, settings)
 
 
 @router.get("/me/export", dependencies=[Depends(limit_by_user("me_export"))])

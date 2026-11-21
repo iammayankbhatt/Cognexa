@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import type { Body } from "@/lib/api-contract";
 import { api } from "@/lib/api";
 import type {
   AnswerView,
@@ -50,7 +51,10 @@ export function useQuizSession(id: string) {
 export function useCreateQuiz() {
   return useMutation({
     mutationFn: (body: CreateQuizBody) =>
-      api<QuizSession>("/quiz/sessions", { method: "POST", body }),
+      api<QuizSession>("/quiz/sessions", {
+        method: "POST",
+        body: body satisfies Body<"SessionIn">,
+      }),
   });
 }
 
@@ -74,7 +78,10 @@ export function useAnswer(sessionId: string) {
   const refresh = useRefreshLearning();
   return useMutation({
     mutationFn: (body: { question_id: string; response: ResponseValue; time_ms?: number }) =>
-      api<AnswerView>(`/quiz/sessions/${sessionId}/answers`, { method: "POST", body }),
+      api<AnswerView>(`/quiz/sessions/${sessionId}/answers`, {
+        method: "POST",
+        body: body satisfies Body<"AnswerIn">,
+      }),
     onSuccess: (a) => {
       if (!a.saved) refresh();
     },
@@ -88,7 +95,7 @@ export function useSubmit(sessionId: string) {
     mutationFn: (responses: Record<string, ResponseValue>) =>
       api<QuizSession>(`/quiz/sessions/${sessionId}/submit`, {
         method: "POST",
-        body: { responses },
+        body: { responses } satisfies Body<"SubmitIn">,
       }),
     onSuccess: (s) => {
       qc.setQueryData(quizKey(sessionId), s);

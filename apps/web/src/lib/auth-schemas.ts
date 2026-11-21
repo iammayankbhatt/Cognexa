@@ -44,11 +44,22 @@ export type SignupValues = z.infer<typeof signupSchema>;
 export type ForgotValues = z.infer<typeof forgotSchema>;
 export type ResetValues = z.infer<typeof resetSchema>;
 
-/** Only allow same-site relative redirects after sign-in (prevents open redirects). */
+const BASE = "https://cognexa.invalid";
+
+/**
+ * Only allow same-site relative redirects after sign-in (prevents open redirects). The value is
+ * parsed the way the browser will parse it, so tricks like `/%09/evil.com` (tabs and newlines are
+ * stripped, leaving `//evil.com`) are caught too (BUG-056).
+ */
 export function safeNext(next: string | null | undefined, fallback = "/app"): string {
-  if (!next || !next.startsWith("/") || next.startsWith("//") || next.startsWith("/\\"))
+  if (!next || !next.startsWith("/")) return fallback;
+  try {
+    const url = new URL(next, BASE);
+    if (url.origin !== BASE) return fallback;
+    return url.pathname + url.search + url.hash;
+  } catch {
     return fallback;
-  return next;
+  }
 }
 
 /** Turn Supabase auth error codes into friendly sentences. */

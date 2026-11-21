@@ -4,6 +4,7 @@ in-memory graph, FakeProvider as the judge)."""
 
 from __future__ import annotations
 
+import asyncio
 import json
 import uuid
 from typing import Any
@@ -94,6 +95,38 @@ async def test_concept_quiz_immediate_feedback_updates_mastery(tenv: TEnv) -> No
     assert hist["total"] == 1 and hist["items"][0]["concept_name"]
     view = (await tenv.client.get(f"/quiz/sessions/{s['id']}", headers=h)).json()
     assert view["score"] == done["score"]
+
+
+async def test_concurrent_answers_to_one_question_count_once(tenv: TEnv) -> None:
+    """BUG-047: two answers racing for the same question both passed the unlocked
+    'already answered' check and applied the mastery update twice."""
+    uid, h = await tenv.env.user("race@example.com")
+    s = await start(tenv, h, mode="concept", concept_id="stack", count=5)
+    q0 = next(q for q in s["questions"] if q["type"] != "short_answer")
+    key = await answer_key(tenv, q0["id"])
+    url = f"/quiz/sessions/{s['id']}/answers"
+    rs = await asyncio.gather(
+        *[tenv.client.post(url, headers=h, json={"question_id": q0["id"], "response": key})
+          for _ in range(4)]
+    )  # fmt: skip
+    assert sorted(r.status_code for r in rs) == [200, 409, 409, 409], [r.text for r in rs]
+    m = await mastery_of(tenv, uid, "stack")
+    assert m is not None and m["attempts"] == 1 and m["correct"] == 1
+
+    # an answer racing the submit is either graded before it or refused after it, never both
+    q1 = next(q for q in s["questions"] if q["type"] != "short_answer" and q["id"] != q0["id"])
+    key1 = await answer_key(tenv, q1["id"])
+    ans, sub = await asyncio.gather(
+        tenv.client.post(url, headers=h, json={"question_id": q1["id"], "response": key1}),
+        tenv.client.post(f"/quiz/sessions/{s['id']}/submit", headers=h, json={}),
+    )
+    assert sub.status_code == 200 and ans.status_code in (200, 409), ans.text
+    rows = await tenv.env.db.fetch(
+        "select question_id from quiz_answers where session_id = $1", uuid.UUID(s["id"])
+    )
+    assert len(rows) == len({r["question_id"] for r in rows}) == 5
+    m = await mastery_of(tenv, uid, "stack")
+    assert m is not None and m["attempts"] == 5
 
 
 async def test_exam_mode_grades_on_submit_and_reveals_nothing_before(tenv: TEnv) -> None:
@@ -187,6 +220,11 @@ async def test_short_answer_judge_usage_cache_pending_and_regrade(tenv: TEnv) ->
         "select graded_by from quiz_answers where session_id = $1", uuid.UUID(sid)
     )
     assert graded_by == "llm"
+    # re-sending a graded answer is refused before the judge runs (BUG-049: no request spent)
+    again = await tenv.client.post(f"/quiz/sessions/{sid}/answers", headers=h,
+                                   json={"question_id": qid, "response": good + " again"})  # fmt: skip
+    assert again.status_code == 409
+    assert await tenv.env.db.fetchval("select count(*) from llm_calls where user_id = $1", uid) == 1
 
     # same answer again: served from the grading cache (still one request, no tokens)
     sid2 = await session_with(qid)
@@ -201,15 +239,33 @@ async def test_short_answer_judge_usage_cache_pending_and_regrade(tenv: TEnv) ->
     set_judge(tenv, FakeProvider(script=[FatalLLMError("down", status=500)] * 6))
     sid3 = await session_with(qid)
     p = (await tenv.client.post(f"/quiz/sessions/{sid3}/answers", headers=h,
-                                json={"question_id": qid, "response": "a new answer"})).json()  # fmt: skip
+                                json={"question_id": qid, "response": "Recap: " + good})).json()  # fmt: skip
     assert p["pending"] is True and p["score"] is None
     done = (await tenv.client.post(f"/quiz/sessions/{sid3}/submit", headers=h, json={})).json()
     assert done["submitted_at"] and done["pending"] == 1
-    # judge back: regrade fills the score in
+    rec = await tenv.env.db.fetchval(
+        "insert into recommendations_log (user_id, subject_id, concept_id, reason_code, reason_text,"
+        " shown_at) values ($1, 'dsa', 'call_stack', 'R1', 'test', now() - interval '1 hour')"
+        " returning id",
+        uid,
+    )
+    before = await mastery_of(tenv, uid, "call_stack")
+    assert before is not None
+    # judge back: two regrades at once grade the pending answer exactly once (BUG-047)
     set_judge(tenv, FakeProvider())
-    after = (await tenv.client.post(f"/quiz/sessions/{sid3}/regrade", headers=h)).json()
+    url = f"/quiz/sessions/{sid3}/regrade"
+    r1, r2 = await asyncio.gather(*[tenv.client.post(url, headers=h) for _ in range(2)])
+    assert r1.status_code == r2.status_code == 200
+    after = (await tenv.client.get(f"/quiz/sessions/{sid3}", headers=h)).json()
     assert after["pending"] == 0
-    assert after["questions"][0]["answer"]["score"] is not None
+    assert after["questions"][0]["answer"]["score"] >= 0.6
+    m = await mastery_of(tenv, uid, "call_stack")
+    assert m is not None and m["attempts"] == before["attempts"] + 1
+    # the now-passed concept completes its open recommendation (BUG-048)
+    completed = await tenv.env.db.fetchval(
+        "select completed_at from recommendations_log where id = $1", rec
+    )
+    assert completed is not None
 
 
 async def test_timed_quiz_refuses_late_answers_but_allows_submit(tenv: TEnv) -> None:
@@ -313,6 +369,15 @@ async def test_quiz_validation_and_isolation(tenv: TEnv) -> None:
     assert (await tenv.client.get("/quiz/history", headers=bob)).json()["items"] == []
     assert (await tenv.client.get("/quiz/history")).status_code == 401
 
+    # BUG-051: a retry list never brings back a retired question
+    ids = [q["id"] for q in s["questions"]]
+    await tenv.env.db.execute("update questions set status = 'inactive' where id = $1", ids[0])
+    r = await tenv.client.post("/quiz/sessions", headers=h,
+                               json={"mode": "concept", "question_ids": ids})  # fmt: skip
+    assert r.status_code == 201 and ids[0] not in [q["id"] for q in r.json()["questions"]]
+    # ...while the old session that contains it still loads
+    assert (await tenv.client.get(f"/quiz/sessions/{s['id']}", headers=h)).status_code == 200
+
 
 async def test_concept_page_and_interest_logging(tenv: TEnv) -> None:
     uid, h = await tenv.env.user("ada@example.com")
@@ -344,9 +409,11 @@ async def test_concept_page_and_interest_logging(tenv: TEnv) -> None:
 async def test_retry_wrong_ones_with_a_question_list(tenv: TEnv) -> None:
     _, h = await tenv.env.user("ada@example.com")
     s = await start(
-        tenv, h, mode="concept", question_ids=["bst-q01", "stack-q02", "bst-q01", "nope"]
-    )
-    assert [q["id"] for q in s["questions"]] == ["bst-q01", "stack-q02"]
+        tenv, h, mode="concept",
+        question_ids=["bst-q01", "stack-q03", "bst-q01", "nope", "stack-q02"],
+    )  # fmt: skip
+    # duplicates and unknown ids dropped; stack-q02 is a study-test item (BUG-050)
+    assert [q["id"] for q in s["questions"]] == ["bst-q01", "stack-q03"]
     r = await tenv.client.post(
         "/quiz/sessions", headers=h, json={"mode": "adaptive", "question_ids": ["bst-q01"]}
     )

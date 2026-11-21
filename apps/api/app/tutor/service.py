@@ -202,6 +202,12 @@ class TutorService:
                 repo = ChatRepository(session)
                 if regenerate_of is None:
                     if replaces is not None:
+                        locked = await repo.lock_message(replaces)
+                        if locked is None or locked["superseded_at"] is not None:
+                            # a concurrent edit replaced it first (BUG-054)
+                            raise AppError(
+                                "conflict", "Only the latest question can be edited.", 409
+                            )
                         await repo.supersede_turn(replaces)
                     row = await repo.add_message(
                         thread_id=thread_id, user_id=user.id, role="user", content=question,
@@ -249,7 +255,9 @@ class TutorService:
                     parts.append(event.text)
                     yield "token", {"text": event.text}
                 elif isinstance(event, CitationEvent):
-                    yield "citation", {"concept_id": event.concept_id, "name": event.name}
+                    # not streamed: the web renders [[id]] chips from the text and the saved
+                    # message carries the citations (an unused SSE event was dead contract)
+                    continue
                 elif isinstance(event, FollowupsEvent):
                     yield "followups", {"items": event.items}
                 elif isinstance(event, DoneEvent):
@@ -289,7 +297,9 @@ class TutorService:
                 with anyio.CancelScope(shield=True):
                     try:
                         await self._meter(prep, turn.calls, metered, False)
-                        if parts or trace is not None:
+                        if parts:
+                            # only text the student saw is kept: an empty "answer" would replace
+                            # a regenerated one and poison later prompts (BUG-053)
                             await self._save_partial(prep, "".join(parts), trace)
                         elif not prep.ticket.recorded:
                             await self.guard.refund(prep.ticket)  # nothing happened yet
@@ -332,7 +342,7 @@ class TutorService:
         async with self.db.sessions()() as session, session.begin():
             repo = ChatRepository(session)
             if prep.regenerate_of is not None:
-                await repo.supersede(prep.regenerate_of)
+                await repo.supersede_answers_to(prep.user_message_id)
             row = await repo.add_message(**values)
             await repo.touch_thread(prep.thread_id)
             if trace.mode == "graphrag" and trace.classification_path in ("llm", "hybrid"):
@@ -383,7 +393,7 @@ class TutorService:
         async with self.db.sessions()() as session, session.begin():
             repo = ChatRepository(session)
             if prep.regenerate_of is not None:
-                await repo.supersede(prep.regenerate_of)
+                await repo.supersede_answers_to(prep.user_message_id)
             row = await repo.add_message(**values)
         message_id: uuid.UUID = row["id"]
         return message_id

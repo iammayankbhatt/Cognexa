@@ -6,6 +6,7 @@ from typing import Any
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from neo4j import exceptions as neo4j_exceptions
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.core.logging import request_id_ctx
@@ -80,6 +81,22 @@ def register_error_handlers(app: FastAPI) -> None:
         return error_response(
             422, "validation_error", f"{loc}: {first.get('msg', 'invalid input')}"
         )
+
+    async def _graph_down(_: Request, exc: Exception) -> JSONResponse:
+        # Neo4j outage outside the tutor (which degrades to plain RAG): a clear, retryable 503
+        # instead of a generic 500 (BUG-058). Only the driver's own outage errors are mapped:
+        # a bare ConnectionError could just as well be Postgres.
+        logger.warning("graph_unavailable: %s", type(exc).__name__)
+        return error_response(
+            503, "graph_unavailable", "The knowledge graph is unavailable. Try again in a minute."
+        )
+
+    for cls in (
+        neo4j_exceptions.ServiceUnavailable,
+        neo4j_exceptions.SessionExpired,
+        neo4j_exceptions.DatabaseUnavailable,
+    ):
+        app.add_exception_handler(cls, _graph_down)
 
     @app.exception_handler(Exception)
     async def _unhandled(_: Request, exc: Exception) -> JSONResponse:

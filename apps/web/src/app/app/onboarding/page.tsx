@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import type { Body } from "@/lib/api-contract";
 import { ME_KEY, useMe } from "@/components/app/me-provider";
 import { FormMessage } from "@/components/auth/auth-shell";
 import { QuizPlayer } from "@/components/quiz/quiz-player";
@@ -122,10 +123,11 @@ export default function OnboardingPage() {
   const [level, setLevel] = useState<Level | null>(null);
 
   const finish = useMutation({
-    mutationFn: () =>
+    // Step 2 (which calls this) is only reachable once a level is chosen.
+    mutationFn: (experienceLevel: Level) =>
       api<Me>("/me/onboarding-complete", {
         method: "POST",
-        body: { experience_level: level },
+        body: { experience_level: experienceLevel } satisfies Body<"OnboardingIn">,
       }),
     onSuccess: (next) => {
       qc.setQueryData(ME_KEY, next);
@@ -229,7 +231,7 @@ export default function OnboardingPage() {
           busy={finish.isPending}
           error={finish.error}
           onBack={() => setStep(1)}
-          onDone={() => finish.mutate()}
+          onDone={() => level && finish.mutate(level)}
         />
       )}
     </div>

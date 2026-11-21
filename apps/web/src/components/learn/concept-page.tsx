@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import type { Body } from "@/lib/api-contract";
 import { tutorLink } from "@/components/quiz/feedback-panel";
 import { clusterLabel } from "@/components/quiz/quiz-home";
 import { ConceptChip } from "@/components/shared/concept-chip";
@@ -65,7 +66,7 @@ function NoteBox({ conceptId }: { conceptId: string }) {
   const [draft, setDraft] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const save = useMutation({
-    mutationFn: (body: Partial<Pick<Note, "body" | "bookmarked">>) =>
+    mutationFn: (body: Partial<Pick<Note, "body" | "bookmarked">> & Body<"NoteIn">) =>
       api<Note>(`/notes/${conceptId}`, { method: "PUT", body }),
     onSuccess: (n) => qc.setQueryData(key, n),
     onError: (e) => toast.error(e instanceof ApiError ? e.message : "Could not save."),

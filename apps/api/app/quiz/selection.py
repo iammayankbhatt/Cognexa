@@ -11,6 +11,7 @@ Questions answered in the last N days are avoided when enough others exist.
 
 from __future__ import annotations
 
+import functools
 import random
 from collections.abc import Mapping, Sequence
 from typing import Any
@@ -125,3 +126,13 @@ def study_set(subject_id: str, mode: str) -> list[str]:
     path = subject_dir(subject_id) / "questions" / "_study_sets.yaml"
     sets = StudySets.model_validate(yaml.safe_load(path.read_text(encoding="utf-8")))
     return list(sets.pretest_A if mode == "pretest" else sets.posttest_B)
+
+
+@functools.cache
+def reserved_ids(subject_id: str) -> frozenset[str]:
+    """Questions of the study's pre/post-test forms. They never appear in practice quizzes, so a
+    student cannot see a test item (or its answer key) before taking the test (BUG-050)."""
+    path = subject_dir(subject_id) / "questions" / "_study_sets.yaml"
+    if not path.exists():
+        return frozenset()
+    return frozenset(study_set(subject_id, "pretest") + study_set(subject_id, "posttest"))

@@ -31,6 +31,7 @@ from app.quiz.judge import judge_short_answer, pending_grade, to_grade
 from app.quiz.repository import QuizRepository
 from app.recommender.engine import recommend
 from app.recommender.service import build_graph, learner_state, mark_completed
+from app.study.service import TEST_MODES, open_test
 from app.tutor.suggest import SyllabusGraph
 from app.usage.guard import UsageGuard
 
@@ -80,8 +81,14 @@ class QuizService:
         question_ids: list[str] | None = None,
     ) -> dict[str, Any]:
         n = max(MIN_COUNT, min(MAX_COUNT, count or self.settings.quiz_default_count))
+        reserved = selection.reserved_ids(subject_id) if mode not in TEST_MODES else frozenset()
         async with self.db.sessions()() as session:
             repo = QuizRepository(session)
+            if mode not in TEST_MODES and await open_test(session, user.id):
+                # practice answers would reveal keys while a study test is open (BUG-050)
+                raise AppError(
+                    "test_in_progress", "Finish your study test first, then practise.", 409
+                )
             seen = await repo.recently_seen(user.id, self.settings.quiz_no_repeat_days)
             effective = await MasteryRepository(session, self.params).effective_map(
                 user.id, subject_id
@@ -90,17 +97,16 @@ class QuizService:
             if question_ids:
                 if mode != "concept":
                     raise AppError("validation_error", "A question list needs concept mode.", 422)
-                found = await repo.questions_by_id(question_ids)
-                allowed = await self._subject_concepts(repo, subject_id)
-                picked = [
-                    found[i]
-                    for i in dict.fromkeys(question_ids)
-                    if i in found and found[i].concept_id in allowed
-                ]
+                # active, in-subject, non-reserved questions only (BUG-050, BUG-051)
+                found = {
+                    q.id: q
+                    for q in await repo.questions(subject_id, ids=question_ids, exclude=reserved)
+                }
+                picked = [found[i] for i in dict.fromkeys(question_ids) if i in found]
             elif mode == "concept":
                 if not concept_id:
                     raise AppError("validation_error", "Choose a concept for this quiz.", 422)
-                pool = await repo.questions(subject_id, concept_ids=[concept_id])
+                pool = await repo.questions(subject_id, concept_ids=[concept_id], exclude=reserved)
                 if not pool:
                     raise AppError("not_found", "No questions for this concept yet.", 404)
                 picked = selection.for_concept(pool, seen, n, self.rng)
@@ -114,10 +120,12 @@ class QuizService:
                     top = recommend(graph, state, 1)
                     nxt = top[0].concept_id if top else None
                 targets = selection.adaptive_concepts(effective, nxt, order)
-                pool = await repo.questions(subject_id, concept_ids=targets)
+                pool = await repo.questions(subject_id, concept_ids=targets, exclude=reserved)
                 picked = selection.for_adaptive(pool, targets, effective, seen, n, self.rng)
             elif mode == "diagnostic":
-                pool = await repo.questions(subject_id, types=selection.AUTO_TYPES)
+                pool = await repo.questions(
+                    subject_id, types=selection.AUTO_TYPES, exclude=reserved
+                )
                 picked = selection.for_diagnostic(
                     pool, await repo.concept_rows(subject_id), self.rng
                 )
@@ -125,7 +133,7 @@ class QuizService:
                 due = await repo.due_concepts(user.id, subject_id, _now())
                 if not due:
                     raise AppError("nothing_due", "Nothing is due for review right now.", 409)
-                pool = await repo.questions(subject_id, concept_ids=due[:n])
+                pool = await repo.questions(subject_id, concept_ids=due[:n], exclude=reserved)
                 picked = selection.prefer_unseen(pool, seen, n, self.rng)
             else:  # pretest / posttest: fixed forms, in file order
                 ids = selection.study_set(subject_id, mode)
@@ -163,15 +171,24 @@ class QuizService:
             raise AppError("validation_error", str(e), 422) from e
         if sess["feedback_mode"] == "exam":
             async with self.db.sessions()() as session, session.begin():
+                await self._lock_open(QuizRepository(session), user, session_id)
                 await QuizRepository(session).save_answer(
                     session_id=session_id, user_id=user.id, question_id=q.id,
                     response={"value": value}, time_ms=time_ms, is_correct=None, score=None,
                     feedback=None, pending=False,
                 )  # fmt: skip
             return {"question_id": q.id, "saved": True}
+        async with self.db.sessions()() as session:
+            prior = {a["question_id"]: a for a in await QuizRepository(session).answers(session_id)}
+        if q.id in prior and prior[q.id]["score"] is not None:
+            # checked again under the lock below; this early check saves a judge request (BUG-049)
+            raise AppError("already_answered", "You already answered this question.", 409)
         grade = await self._grade(user, q, value)
         async with self.db.sessions()() as session, session.begin():
             repo = QuizRepository(session)
+            # Serialise answers per session (BUG-047): without the row lock, concurrent answers to
+            # one question all passed the check below and applied the mastery update twice.
+            await self._lock_open(repo, user, session_id)
             previous = {a["question_id"]: a for a in await repo.answers(session_id)}
             if q.id in previous and previous[q.id]["score"] is not None:
                 raise AppError("already_answered", "You already answered this question.", 409)
@@ -230,6 +247,18 @@ class QuizService:
             if locked is None or locked["submitted_at"] is not None:
                 pass  # submitted concurrently: the other request already finished it
             else:
+                # An immediate-mode answer may have been graded after `existing` was read (it
+                # waited on this row lock); keep that grade, never grade a question twice (BUG-047).
+                fresh = {a["question_id"]: a for a in await repo.answers(session_id)}
+                graded = [
+                    item
+                    for item in graded
+                    if not (
+                        (f := fresh.get(item[0].id)) is not None
+                        and f["score"] is not None
+                        and not f["pending"]
+                    )
+                ]
                 for q, value, grade, t in graded:
                     await repo.save_answer(
                         **self._answer_values(user, session_id, q, value, grade, t)
@@ -262,17 +291,24 @@ class QuizService:
                 continue
             async with self.db.sessions()() as session, session.begin():
                 repo = QuizRepository(session)
+                locked = await repo.get_session(user.id, session_id, lock=True)
+                current = {x["question_id"]: x for x in await repo.answers(session_id)}
+                if locked is None or not (c := current.get(q.id)) or not c["pending"]:
+                    continue  # a concurrent regrade (or submit) graded it already (BUG-047)
                 await repo.save_answer(
                     **self._answer_values(user, session_id, q, value, grade, a["time_ms"])
                 )
                 await MasteryRepository(session, self.params).apply(
                     user.id, sess["subject_id"], [self._event(q, grade)]
                 )
-                if sess["submitted_at"] is not None:
+                if locked["submitted_at"] is not None:
                     answers = await repo.answers(session_id)
                     await repo.set_score(
                         session_id, round(sum(float(x["score"] or 0) for x in answers), 3)
                     )
+                    # completion depends on the final scores (BUG-048); the review schedule is
+                    # left as set at submit (LIM-043)
+                    await self._complete_passed(session, user, sess, questions, answers)
         return await self.get(user, session_id)
 
     # ---------------------------------------------------------------- read
@@ -322,6 +358,28 @@ class QuizService:
     ) -> None:
         """Spaced review for every concept in the quiz (not on study tests) and completion of
         recommendations for concepts passed with >= 60 %."""
+        ratios = self._concept_ratios(sess, questions, answers)
+        if str(sess["mode"]) not in ("pretest", "posttest"):
+            await MasteryRepository(session, self.params).schedule_reviews(user.id, ratios, now)
+        await mark_completed(session, user.id, [c for c, r in ratios.items() if r >= 0.6], now)
+
+    async def _complete_passed(
+        self,
+        session: Any,
+        user: CurrentUser,
+        sess: dict[str, Any],
+        questions: dict[str, QuestionData],
+        answers: list[dict[str, Any]],
+    ) -> None:
+        """Mark recommendations completed for concepts now passed with >= 60 % (idempotent)."""
+        ratios = self._concept_ratios(sess, questions, answers)
+        await mark_completed(session, user.id, [c for c, r in ratios.items() if r >= 0.6], _now())
+
+    @staticmethod
+    def _concept_ratios(
+        sess: dict[str, Any], questions: dict[str, QuestionData], answers: list[dict[str, Any]]
+    ) -> dict[str, float]:
+        """Score / question count per concept; unanswered questions count as 0."""
         totals: dict[str, list[float]] = {}
         by_q = {a["question_id"]: a for a in answers}
         for qid in sess["question_ids"]:
@@ -332,14 +390,7 @@ class QuizService:
             t = totals.setdefault(q.concept_id, [0.0, 0.0])
             t[0] += float(a["score"] or 0) if a else 0.0
             t[1] += 1
-        ratios = {c: got / n for c, (got, n) in totals.items() if n}
-        if str(sess["mode"]) not in ("pretest", "posttest"):
-            await MasteryRepository(session, self.params).schedule_reviews(user.id, ratios, now)
-        await mark_completed(session, user.id, [c for c, r in ratios.items() if r >= 0.6], now)
-
-    @staticmethod
-    async def _subject_concepts(repo: QuizRepository, subject_id: str) -> set[str]:
-        return {str(c["id"]) for c in await repo.concept_rows(subject_id)}
+        return {c: got / n for c, (got, n) in totals.items() if n}
 
     async def _load(
         self, user: CurrentUser, session_id: uuid.UUID
@@ -363,6 +414,17 @@ class QuizService:
                 "time_up", "Time is up for this quiz. Submit it to see your results.", 409
             )
         return sess, questions
+
+    async def _lock_open(
+        self, repo: QuizRepository, user: CurrentUser, session_id: uuid.UUID
+    ) -> None:
+        """Lock the session row for this transaction and re-check that it is still open (a submit
+        may have finished it since `_open` read it)."""
+        locked = await repo.get_session(user.id, session_id, lock=True)
+        if locked is None:
+            raise AppError("not_found", "Quiz not found.", 404)
+        if locked["submitted_at"] is not None:
+            raise AppError("quiz_closed", "This quiz has already been submitted.", 409)
 
     def _is_late(self, sess: dict[str, Any]) -> bool:
         limit = sess["time_limit_s"]

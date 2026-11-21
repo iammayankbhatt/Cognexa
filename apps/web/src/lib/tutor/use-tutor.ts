@@ -3,6 +3,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo, useRef, useState } from "react";
 
+import type { Body } from "@/lib/api-contract";
 import { api, apiStream, ApiError } from "@/lib/api";
 import { readSSE } from "@/lib/tutor/sse";
 import { stripTrailer } from "@/lib/tutor/text";
@@ -56,7 +57,10 @@ export function useThreadMutations() {
   const refresh = () => qc.invalidateQueries({ queryKey: THREADS_KEY });
   const patch = useMutation({
     mutationFn: ({ id, ...body }: { id: string; title?: string; archived?: boolean }) =>
-      api<Thread>(`/tutor/threads/${id}`, { method: "PATCH", body }),
+      api<Thread>(`/tutor/threads/${id}`, {
+        method: "PATCH",
+        body: body satisfies Body<"ThreadPatch">,
+      }),
     onSuccess: (t) => {
       void refresh();
       void qc.invalidateQueries({ queryKey: threadKey(t.id) });
@@ -93,7 +97,10 @@ export function useFeedback(threadId: string | null) {
 export function useCompare() {
   return useMutation({
     mutationFn: (question: string) =>
-      api<CompareResult>("/tutor/compare", { method: "POST", body: { question } }),
+      api<CompareResult>("/tutor/compare", {
+        method: "POST",
+        body: { question } satisfies Body<"CompareIn">,
+      }),
   });
 }
 
@@ -115,7 +122,8 @@ export interface TurnError {
   error: ApiError | StreamErrorData;
   /** What "Try again" does. */
   retry:
-    { kind: "regenerate"; messageId: string } | { kind: "resend"; text: string; replaces?: string };
+    | { kind: "regenerate"; messageId: string }
+    | { kind: "resend"; text: string; replaces?: string; mode?: Mode };
 }
 
 let localSeq = 0;
@@ -289,7 +297,10 @@ export function useTutorChat({ threadId, onThreadCreated }: Options) {
       let id = threadId;
       if (!id) {
         try {
-          const created = await api<Thread>("/tutor/threads", { method: "POST", body: {} });
+          const created = await api<Thread>("/tutor/threads", {
+            method: "POST",
+            body: {} satisfies Body<"ThreadIn">,
+          });
           id = created.id;
           qc.setQueryData(threadKey(id), { thread: created, messages: [] } satisfies ThreadDetail);
           onThreadCreated(id);
@@ -297,7 +308,7 @@ export function useTutorChat({ threadId, onThreadCreated }: Options) {
           setTurnError({
             messageId: null,
             error: err instanceof ApiError ? err : new ApiError(0, "network_error", String(err)),
-            retry: { kind: "resend", text },
+            retry: { kind: "resend", text, mode },
           });
           return false;
         }
@@ -307,7 +318,7 @@ export function useTutorChat({ threadId, onThreadCreated }: Options) {
         `/tutor/threads/${id}/messages`,
         { content: text, mode },
         { base: messages, items: [userMessage(text, mode), blankAssistant(mode)] },
-        { kind: "resend", text },
+        { kind: "resend", text, mode }, // a retry keeps the mode (BUG-057)
       );
     },
     [threadId, run, messages, qc, onThreadCreated],
@@ -358,7 +369,7 @@ export function useTutorChat({ threadId, onThreadCreated }: Options) {
       const lastUser = [...serverMessages].reverse().find((m) => m.role === "user");
       const unanswered = lastUser && serverMessages[serverMessages.length - 1]?.id === lastUser.id;
       if (unanswered && lastUser.content === r.text) await edit(lastUser.id, r.text);
-      else await send(r.text);
+      else await send(r.text, r.mode);
     }
   }, [turnError, regenerate, edit, send, serverMessages]);
 

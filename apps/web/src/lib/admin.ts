@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import type { Body } from "@/lib/api-contract";
 import { api } from "@/lib/api";
 
 // ---------------------------------------------------------------- graph editor
@@ -71,13 +72,16 @@ export function useGraphMutations() {
   const refresh = () => void qc.invalidateQueries({ queryKey: ADMIN_GRAPH_KEY });
   return {
     createConcept: useMutation({
-      mutationFn: (body: ConceptInput & { id: string }) =>
+      mutationFn: (body: ConceptInput & { id: string } & Body<"ConceptCreate">) =>
         api<AdminConcept>("/admin/graph/concepts", { method: "POST", body }),
       onSuccess: refresh,
     }),
     updateConcept: useMutation({
       mutationFn: ({ id, ...body }: ConceptInput & { id: string }) =>
-        api<AdminConcept>(`/admin/graph/concepts/${id}`, { method: "PUT", body }),
+        api<AdminConcept>(`/admin/graph/concepts/${id}`, {
+          method: "PUT",
+          body: body satisfies Body<"ConceptIn">,
+        }),
       onSuccess: refresh,
     }),
     addEdge: useMutation({
@@ -86,7 +90,11 @@ export function useGraphMutations() {
         target: string;
         type: EdgeType;
         rationale: string | null;
-      }) => api<AdminEdge>("/admin/graph/edges", { method: "POST", body }),
+      }) =>
+        api<AdminEdge>("/admin/graph/edges", {
+          method: "POST",
+          body: body satisfies Body<"EdgeIn">,
+        }),
       onSuccess: refresh,
     }),
     removeEdge: useMutation({
@@ -188,7 +196,10 @@ export function useProposalDecisions() {
       mutationFn: (v: { id: string; note?: string; edits?: Record<string, unknown> }) =>
         api<{ proposal: Proposal; applied: Record<string, unknown> }>(
           `/admin/proposals/${v.id}/approve`,
-          { method: "POST", body: { note: v.note || null, edits: v.edits ?? null } },
+          {
+            method: "POST",
+            body: { note: v.note || null, edits: v.edits ?? null } satisfies Body<"DecisionIn">,
+          },
         ),
       onSuccess: refresh,
     }),
@@ -196,7 +207,7 @@ export function useProposalDecisions() {
       mutationFn: (v: { id: string; note?: string }) =>
         api<{ proposal: Proposal }>(`/admin/proposals/${v.id}/reject`, {
           method: "POST",
-          body: { note: v.note || null },
+          body: { note: v.note || null } satisfies Body<"DecisionIn">,
         }),
       onSuccess: refresh,
     }),
@@ -209,7 +220,7 @@ export function useProposalDecisions() {
       }) =>
         api<{ approved: string[]; failed: { id: string; code: string; message: string }[] }>(
           "/admin/proposals/bulk-approve",
-          { method: "POST", body },
+          { method: "POST", body: body satisfies Body<"BulkIn"> },
         ),
       onSuccess: refresh,
     }),
@@ -388,16 +399,23 @@ export function useContentMutations(conceptId: string | null) {
         text: string;
         kind: string;
         reviewed?: boolean;
-      }) => api<AdminChunk & { warning: string | null }>(chunkPath(id), { method: "PUT", body }),
+      }) =>
+        api<AdminChunk & { warning: string | null }>(chunkPath(id), {
+          method: "PUT",
+          body: body satisfies Body<"ChunkEdit">,
+        }),
       onSuccess: refresh,
     }),
     reviewChunk: useMutation({
       mutationFn: (v: { id: string; reviewed: boolean }) =>
-        api<AdminChunk>(chunkPath(v.id), { method: "PATCH", body: { reviewed: v.reviewed } }),
+        api<AdminChunk>(chunkPath(v.id), {
+          method: "PATCH",
+          body: { reviewed: v.reviewed } satisfies Body<"Flags">,
+        }),
       onSuccess: refresh,
     }),
     editQuestion: useMutation({
-      mutationFn: ({ id, body }: { id: string; body: Record<string, unknown> }) =>
+      mutationFn: ({ id, body }: { id: string; body: Body<"QuestionEdit"> }) =>
         api<AdminQuestion>(`/admin/content/questions/${encodeURIComponent(id)}`, {
           method: "PUT",
           body,
@@ -437,7 +455,7 @@ export function useModerationActions() {
       }) =>
         api<{ id: string; status: string }>(`/admin/reports/${v.id}`, {
           method: "POST",
-          body: { status: v.status, note: v.note?.trim() || null },
+          body: { status: v.status, note: v.note?.trim() || null } satisfies Body<"ReportAction">,
         }),
       onSuccess: refresh,
     }),

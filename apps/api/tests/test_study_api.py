@@ -13,6 +13,7 @@ from typing import Any
 import asyncpg
 import pytest
 
+from app.quiz import selection
 from app.study.service import gain, participant_id, pick_group
 from tests.conftest import requires_postgres
 from tests.test_auth_api import Env, env  # noqa: F401
@@ -109,6 +110,18 @@ async def test_full_study_flow_with_gating(tenv: TEnv) -> None:
         f"/tutor/threads/{thread}/messages", headers=h, json={"content": "what is a stack"}
     )
     assert r.status_code == 409 and r.json()["error"]["code"] == "test_in_progress"
+    # BUG-050: no practice quiz (whose immediate feedback reveals answer keys) and no AI revision
+    # sheet while the test is open
+    pre_ids = [q["id"] for q in pre["questions"]]
+    for body in (
+        {"mode": "concept", "question_ids": pre_ids[:5]},
+        {"mode": "concept", "concept_id": "stack"},
+        {"mode": "diagnostic"},
+    ):
+        r = await tenv.client.post("/quiz/sessions", headers=h, json=body)
+        assert r.status_code == 409 and r.json()["error"]["code"] == "test_in_progress", body
+    r = await tenv.client.post("/revision-sheets", headers=h, json={"concept_ids": ["stack"]})
+    assert r.status_code == 409 and r.json()["error"]["code"] == "test_in_progress"
 
     await answer_all(tenv, h, pre, correct=8)
     state = await me(tenv, h)
@@ -127,6 +140,19 @@ async def test_full_study_flow_with_gating(tenv: TEnv) -> None:
     )
     assert r.status_code == 200
     assert (await me(tenv, h))["step"] == "posttest"
+    # BUG-050: posttest items never appear in practice, even when asked for by id
+    post_ids = selection.study_set("dsa", "posttest")
+    r = await tenv.client.post(
+        "/quiz/sessions", headers=h, json={"mode": "concept", "question_ids": post_ids[:5]}
+    )
+    assert r.status_code == 404, r.text
+    for concept in ("call_stack", "recursion", "stack"):
+        practice = (
+            await tenv.client.post(
+                "/quiz/sessions", headers=h, json={"mode": "concept", "concept_id": concept}
+            )
+        ).json()
+        assert not {q["id"] for q in practice["questions"]} & selection.reserved_ids("dsa")
     post = (await tenv.client.post("/quiz/sessions", headers=h, json={"mode": "posttest"})).json()
     assert {q["id"] for q in post["questions"]}.isdisjoint({q["id"] for q in pre["questions"]})
     await answer_all(tenv, h, post, correct=14)

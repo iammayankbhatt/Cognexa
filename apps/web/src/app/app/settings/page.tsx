@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import type { Body } from "@/lib/api-contract";
 import { ME_KEY, useMe } from "@/components/app/me-provider";
 import { UsageCard } from "@/components/app/usage-card";
 import { FormMessage } from "@/components/auth/auth-shell";
@@ -79,7 +80,11 @@ function ProfileCard({ me }: { me: Me }) {
   const qc = useQueryClient();
   const [name, setName] = useState(me.display_name ?? "");
   const save = useMutation({
-    mutationFn: () => api<Me>("/me", { method: "PATCH", body: { display_name: name.trim() } }),
+    mutationFn: () =>
+      api<Me>("/me", {
+        method: "PATCH",
+        body: { display_name: name.trim() } satisfies Body<"MePatch">,
+      }),
     onSuccess: (next) => {
       qc.setQueryData(ME_KEY, next);
       toast.success("Profile saved.");
@@ -155,7 +160,8 @@ function DataCard() {
   }
 
   const del = useMutation({
-    mutationFn: () => api("/me", { method: "DELETE", body: { confirm: "DELETE" } }),
+    mutationFn: () =>
+      api("/me", { method: "DELETE", body: { confirm: "DELETE" } satisfies Body<"DeleteIn"> }),
     onSuccess: async () => {
       await getSupabase().auth.signOut();
       qc.clear();

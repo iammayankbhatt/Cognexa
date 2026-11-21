@@ -5,6 +5,7 @@ import { Activity, CircleCheck, CircleX, Download, Loader2, Zap } from "lucide-r
 import { useState } from "react";
 import { toast } from "sonner";
 
+import type { Body } from "@/lib/api-contract";
 import { ME_KEY } from "@/components/app/me-provider";
 import { USAGE_KEY } from "@/components/app/usage-card";
 import { UsageChart } from "@/components/dashboard/lazy-charts";
@@ -82,7 +83,11 @@ function Stat({ label, value, hint }: { label: string; value: string; hint?: str
 function Providers({ providers }: { providers: ProviderStatus[] }) {
   const qc = useQueryClient();
   const check = useMutation({
-    mutationFn: () => api<CheckResult>("/admin/llm/check", { method: "POST", body: {} }),
+    mutationFn: () =>
+      api<CheckResult>("/admin/llm/check", {
+        method: "POST",
+        body: {} satisfies Body<"LLMCheckIn">,
+      }),
     onSuccess: (r) => {
       toast.success(`${r.provider} / ${r.model} answered in ${r.latency_ms} ms`, {
         description: r.fallback_used ? "The primary failed; the fallback answered." : r.text,

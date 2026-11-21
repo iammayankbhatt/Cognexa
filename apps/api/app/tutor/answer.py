@@ -12,7 +12,13 @@ import json
 import re
 from collections.abc import Sequence
 
-from app.guardrails.prompts import GUARD_RULES, ContextBlock, render_context, wrap_question
+from app.guardrails.prompts import (
+    GUARD_RULES,
+    ContextBlock,
+    history_turns,
+    render_context,
+    wrap_question,
+)
 from app.llm.types import Message
 from app.tutor.trace import TraceConcept
 
@@ -101,7 +107,7 @@ def answer_messages(
             "Briefly say whether their reply is right (gently correct it if not), then answer "
             "the original question."
         )
-    return [Message("system", system), *history, Message("user", user)]
+    return [Message("system", system), *history_turns(history), Message("user", user)]
 
 
 class TrailerFilter:

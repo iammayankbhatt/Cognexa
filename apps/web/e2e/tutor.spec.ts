@@ -149,6 +149,30 @@ test("an admin compares GraphRAG with plain RAG side by side", async ({ page }) 
   await expect(page.getByText(/Plain RAG: \d+ chunks by similarity/)).toBeVisible();
 });
 
+test("the plain-RAG switch sends plain_rag turns, and students without the flag never see it (BUG-057)", async ({
+  page,
+  browser,
+}) => {
+  await signInAs(page, "admin");
+  await page.goto("/app/tutor");
+  const toggle = page.getByRole("button", { name: "Plain RAG baseline" });
+  await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-pressed", "true");
+  const sent = page.waitForRequest((r) => /\/tutor\/threads\/[^/]+\/messages$/.test(r.url()));
+  await ask(page, "explain binary search");
+  expect((await sent).postDataJSON()).toMatchObject({ mode: "plain_rag" });
+  await expect(page.getByText(/Plain RAG: \d+ chunks by similarity/)).toBeVisible({
+    timeout: NAV_TIMEOUT,
+  });
+
+  const other = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  await signInAs(other, "student");
+  await other.goto("/app/tutor");
+  await expect(other.getByLabel("Your question")).toBeVisible({ timeout: NAV_TIMEOUT });
+  await expect(other.getByRole("button", { name: "Plain RAG baseline" })).toHaveCount(0);
+  await other.close();
+});
+
 test("threads can be renamed and deleted with undo", async ({ page }) => {
   await signInAs(page);
   await page.goto("/app/tutor");

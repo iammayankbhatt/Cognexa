@@ -102,11 +102,12 @@ test("a student goes from sign-up to a revision sheet", async ({ page }) => {
   await page.getByRole("button", { name: "Practice this concept" }).click({ timeout: NAV_TIMEOUT });
   await expect(page).toHaveURL(/\/app\/quizzes\/[0-9a-f-]+/, { timeout: NAV_TIMEOUT });
   const nav = page.getByRole("navigation", { name: "Questions" }).getByRole("button");
-  await expect(nav).toHaveCount(8, { timeout: NAV_TIMEOUT });
-  for (let i = 0; i < 8; i++) {
+  // 8 questions per concept, minus the 2 kept for the study's pre/post-tests (BUG-050)
+  await expect(nav).toHaveCount(6, { timeout: NAV_TIMEOUT });
+  for (let i = 0; i < 6; i++) {
     await answerCurrent(page);
     await page.getByRole("button", { name: "Check answer" }).click();
-    await page.getByRole("button", { name: i === 7 ? "See results" : "Next question" }).click();
+    await page.getByRole("button", { name: i === 5 ? "See results" : "Next question" }).click();
   }
   await expect(page.getByRole("heading", { name: "Concept quiz results" })).toBeVisible({
     timeout: NAV_TIMEOUT,
