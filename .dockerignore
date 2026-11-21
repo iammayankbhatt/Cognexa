@@ -18,3 +18,4 @@ supabase
 scripts
 .github
 data/subjects/*/eval
+data/subjects/_*

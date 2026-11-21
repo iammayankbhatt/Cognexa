@@ -14,10 +14,10 @@ import argparse
 import asyncio
 import sys
 
+from app.content.loader import load_chunks
 from app.core.config import Settings
 from app.graph.driver import GraphNotConfiguredError, create_driver
-from app.content.loader import load_chunks
-from app.graph.loader import load_subject
+from app.graph.loader import is_demo_subject, load_subject
 from app.graph.repository import GraphRepository
 from app.graph.seed import InvalidGraphError, seed_chunks, seed_subject
 
@@ -25,8 +25,12 @@ from app.graph.seed import InvalidGraphError, seed_chunks, seed_subject
 async def run(args: argparse.Namespace) -> int:
     settings = Settings()
     uri = settings.neo4j_uri or ""
-    if uri.startswith(("neo4j+s://", "neo4j+ssc://", "bolt+s://")) and not args.allow_remote:
+    remote = uri.startswith(("neo4j+s://", "neo4j+ssc://", "bolt+s://"))
+    if remote and not args.allow_remote:
         print("Refusing to touch a remote Neo4j instance without --allow-remote.")
+        return 2
+    if (remote or args.allow_remote) and is_demo_subject(args.subject):
+        print(f"Refusing to seed demo subject '{args.subject}' remotely: demo packs are dev-only.")
         return 2
     try:
         driver = create_driver(settings)
@@ -62,7 +66,9 @@ async def run(args: argparse.Namespace) -> int:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawTextHelpFormatter
+    )
     parser.add_argument("--subject", default="dsa")
     parser.add_argument("--prune", action="store_true")
     parser.add_argument("--wipe", action="store_true")

@@ -1,0 +1,110 @@
+concept_id: binary_numbers
+questions:
+  - id: binary_numbers-q01
+    type: mcq
+    difficulty: 1
+    prompt: "What is binary 1101 in decimal?"
+    options:
+      - {id: a, text: "11", why_wrong: "That is binary 1011 (8 + 2 + 1); 1101 has the 4s bit set, not the 2s."}
+      - {id: b, text: "13"}
+      - {id: c, text: "1101", why_wrong: "The digits are base 2, so 1101 is not one thousand one hundred and one."}
+      - {id: d, text: "14", why_wrong: "14 is 1110; the last digit of 1101 is a 1, so the number is odd."}
+    answer: b
+    explanation: "Add the place values of the 1 bits: 1101 = 8 + 4 + 0 + 1 = 13."
+    misconception_tag: place_values
+    diagnoses_prereq: bits_bytes
+
+  - id: binary_numbers-q02
+    type: mcq
+    difficulty: 1
+    prompt: "What is decimal 45 in binary?"
+    options:
+      - {id: a, text: "101101"}
+      - {id: b, text: "101011", why_wrong: "That is 43 (32 + 8 + 2 + 1); reading the remainders in the wrong order is a common cause."}
+      - {id: c, text: "110101", why_wrong: "That is 53 (32 + 16 + 4 + 1)."}
+      - {id: d, text: "100101", why_wrong: "That is 37 (32 + 4 + 1); the 8s bit is missing."}
+    answer: a
+    explanation: "45 = 32 + 8 + 4 + 1, so the 32s, 8s, 4s and 1s bits are set: 101101."
+    misconception_tag: remainder_order
+    diagnoses_prereq: bits_bytes
+
+  - id: binary_numbers-q03
+    type: mcq
+    difficulty: 2
+    prompt: "When converting decimal to binary by repeated division by 2, which remainder is the rightmost binary digit?"
+    options:
+      - {id: a, text: "The first remainder computed."}
+      - {id: b, text: "The last remainder computed.", why_wrong: "The last remainder is the most significant (leftmost) digit."}
+      - {id: c, text: "The largest remainder.", why_wrong: "Remainders are only 0 or 1; their order, not their size, decides the position."}
+      - {id: d, text: "Any of them; the order does not matter.", why_wrong: "Order matters: 110 and 011 are different numbers."}
+    answer: a
+    explanation: "The first remainder is n mod 2, the lowest bit. Reading the remainders from last to first gives the number."
+    misconception_tag: remainder_order
+    diagnoses_prereq: null
+
+  - id: binary_numbers-q04
+    type: mcq
+    difficulty: 2
+    prompt: "How many binary digits does the number 100 have?"
+    options:
+      - {id: a, text: "3", why_wrong: "That is the number of decimal digits."}
+      - {id: b, text: "6", why_wrong: "6 binary digits reach at most 63."}
+      - {id: c, text: "7"}
+      - {id: d, text: "100", why_wrong: "The digit count grows with log2 of the number, not with the number itself."}
+    answer: c
+    explanation: "100 is 1100100, seven digits, because 64 <= 100 < 128: floor(log2 100) + 1 = 7."
+    misconception_tag: digit_count
+    diagnoses_prereq: bits_bytes
+
+  - id: binary_numbers-q05
+    type: multi_select
+    difficulty: 2
+    prompt: "Select every correct statement about binary numbers."
+    options:
+      - {id: a, text: "The rightmost position is worth 1."}
+      - {id: b, text: "Binary 10 equals decimal 2."}
+      - {id: c, text: "Every odd number ends in 1 in binary."}
+      - {id: d, text: "Binary 1000 equals decimal 1000.", why_wrong: "Binary 1000 is 8; the place values are powers of two."}
+    answer: [a, b, c]
+    explanation: "Positions are worth 1, 2, 4, 8, ...; 10 is one 2; odd numbers have the 1s bit set; 1000 is 8."
+    misconception_tag: place_values
+    diagnoses_prereq: null
+
+  - id: binary_numbers-q06
+    type: true_false
+    difficulty: 1
+    prompt: "True or false: in Python, int(\"1010\", 2) evaluates to 10."
+    answer: true
+    explanation: "int with base 2 parses binary: 1010 is 8 + 2 = 10."
+    misconception_tag: parsing_binary
+    diagnoses_prereq: null
+
+  - id: binary_numbers-q07
+    type: code_output
+    difficulty: 2
+    prompt: "What does this program print?"
+    code: |
+      total = 0
+      for ch in "10110":
+          total = total * 2 + int(ch)
+      print(total, bin(total))
+    answer: "22 0b10110"
+    explanation: "Horner's rule gives running totals 1, 2, 5, 11, 22; bin(22) is the string 0b10110."
+    misconception_tag: place_values
+    diagnoses_prereq: null
+
+  - id: binary_numbers-q08
+    type: short_answer
+    difficulty: 2
+    prompt: "Describe how to convert a positive decimal number to binary by repeated division, and say how to read off the answer."
+    answer: "Divide the number by 2 repeatedly, writing down each remainder (0 or 1), until the quotient is 0. The binary digits are the remainders read from the last one to the first one."
+    explanation: "A good answer mentions repeated division by 2, recording remainders, stopping at 0, and reading the remainders in reverse order."
+    rubric:
+      key_points:
+        - "divide by 2 repeatedly until the quotient is 0"
+        - "record each remainder, which is 0 or 1"
+        - "read the remainders from last to first"
+      max_score: 1
+      partial_credit: true
+    misconception_tag: remainder_order
+    diagnoses_prereq: null

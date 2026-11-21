@@ -1,0 +1,109 @@
+concept_id: twos_complement
+questions:
+  - id: twos_complement-q01
+    type: mcq
+    difficulty: 1
+    prompt: "What range of values does an 8-bit two's-complement integer cover?"
+    options:
+      - {id: a, text: "-128 to 127"}
+      - {id: b, text: "-127 to 127", why_wrong: "That is sign-magnitude or one's complement; two's complement has one extra negative value."}
+      - {id: c, text: "0 to 255", why_wrong: "That is the unsigned range of 8 bits."}
+      - {id: d, text: "-256 to 255", why_wrong: "8 bits have only 256 patterns, so the range spans 256 values in total."}
+    answer: a
+    explanation: "With n bits the range is -2^(n-1) to 2^(n-1) - 1, so 8 bits give -128 to 127."
+    misconception_tag: asymmetric_range
+    diagnoses_prereq: bits_bytes
+
+  - id: twos_complement-q02
+    type: mcq
+    difficulty: 2
+    prompt: "In 8-bit two's complement, what number does 11111011 represent?"
+    options:
+      - {id: a, text: "-5"}
+      - {id: b, text: "251", why_wrong: "251 is the unsigned reading; in two's complement the top bit is worth -128."}
+      - {id: c, text: "-123", why_wrong: "That reads the top bit as a minus sign on 1111011 (sign-magnitude)."}
+      - {id: d, text: "-4", why_wrong: "Inverting gives 00000100 = 4, but you must add one: the value is -5."}
+    answer: a
+    explanation: "-128 + 64 + 32 + 16 + 8 + 2 + 1 = -5. Equivalently, invert to 00000100 and add one to get 5."
+    misconception_tag: sign_bit_as_minus
+    diagnoses_prereq: binary_numbers
+
+  - id: twos_complement-q03
+    type: mcq
+    difficulty: 2
+    prompt: "How do you compute -x from x in two's complement?"
+    options:
+      - {id: a, text: "Invert every bit, then add 1."}
+      - {id: b, text: "Invert every bit.", why_wrong: "Inverting alone gives one's complement, which equals -x - 1."}
+      - {id: c, text: "Flip only the top bit.", why_wrong: "That is how sign-magnitude negates; in two's complement the other bits change too."}
+      - {id: d, text: "Subtract x from 255.", why_wrong: "255 - x is the bit inversion (one's complement) in 8 bits, still one short."}
+    answer: a
+    explanation: "x plus its inversion is all ones, which is -1, so the inversion is -x - 1 and adding 1 gives -x."
+    misconception_tag: invert_without_plus_one
+    diagnoses_prereq: binary_numbers
+
+  - id: twos_complement-q04
+    type: mcq
+    difficulty: 3
+    prompt: "An 8-bit signed variable holds 127 and the program adds 1 using wrap-around arithmetic. What value results?"
+    options:
+      - {id: a, text: "-128"}
+      - {id: b, text: "128", why_wrong: "128 does not fit in an 8-bit signed integer; the pattern 10000000 reads as -128."}
+      - {id: c, text: "0", why_wrong: "Wrapping to 0 happens after 255 in unsigned arithmetic, not after 127."}
+      - {id: d, text: "-127", why_wrong: "10000000 is -128; -127 is 10000001."}
+    answer: a
+    explanation: "127 is 01111111; adding 1 gives 10000000, whose top bit is worth -128 and the others are 0."
+    misconception_tag: overflow
+    diagnoses_prereq: binary_numbers
+
+  - id: twos_complement-q05
+    type: multi_select
+    difficulty: 2
+    prompt: "Select every correct statement about two's complement."
+    options:
+      - {id: a, text: "Negative numbers have the top bit set to 1."}
+      - {id: b, text: "-1 is represented by all ones."}
+      - {id: c, text: "The same adder circuit works for signed and unsigned addition."}
+      - {id: d, text: "Zero has two representations, +0 and -0.", why_wrong: "That is a flaw of sign-magnitude and one's complement; two's complement has a single zero."}
+    answer: [a, b, c]
+    explanation: "The top bit marks negatives, all ones is -1, and addition is identical for both readings. There is only one zero."
+    misconception_tag: twos_complement_properties
+    diagnoses_prereq: null
+
+  - id: twos_complement-q06
+    type: true_false
+    difficulty: 2
+    prompt: "True or false: in 8-bit two's complement, negating -128 gives 128."
+    answer: false
+    explanation: "128 does not fit in 8 signed bits; inverting 10000000 and adding one gives 10000000 again, so the result is -128."
+    misconception_tag: asymmetric_range
+    diagnoses_prereq: null
+
+  - id: twos_complement-q07
+    type: code_output
+    difficulty: 2
+    prompt: "What does this program print?"
+    code: |
+      def encode(x):
+          return x & 0xFF
+      print(format(encode(-1), "08b"), format(encode(-6), "08b"), encode(-128))
+    answer: "11111111 11111010 128"
+    explanation: "Masking with 0xFF gives the 8-bit pattern: -1 is all ones, -6 is the inversion of 00000110 plus one (11111010), and -128 is 10000000, which is 128 as an unsigned number."
+    misconception_tag: invert_without_plus_one
+    diagnoses_prereq: null
+
+  - id: twos_complement-q08
+    type: short_answer
+    difficulty: 3
+    prompt: "Explain why adding a number and its two's-complement negation gives zero in n bits."
+    answer: "The negation is the bit inversion plus one. A number plus its inversion is all ones, so adding the extra one gives a 1 followed by n zeros. The carry out of the top bit is dropped in n-bit arithmetic, leaving n zeros, which is 0."
+    explanation: "A good answer notes that x + inverted x is all ones, that adding one more carries through every bit, and that the final carry is discarded in n bits."
+    rubric:
+      key_points:
+        - "the negation is the inversion of x plus one"
+        - "x plus its inversion is all ones"
+        - "adding one more overflows to 2^n, and the carry out is discarded, leaving 0"
+      max_score: 1
+      partial_credit: true
+    misconception_tag: invert_without_plus_one
+    diagnoses_prereq: binary_numbers

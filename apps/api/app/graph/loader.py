@@ -14,7 +14,16 @@ SUBJECTS_DIR = REPO_ROOT / "data" / "subjects"
 
 
 def subject_dir(subject_id: str) -> Path:
-    return SUBJECTS_DIR / subject_id
+    """`data/subjects/<id>/`, or `data/subjects/_<id>/` for a demo pack (a leading underscore marks
+    a dev-only subject: seed scripts refuse to send it to a remote database and the API image
+    leaves it out; see docs/ADDING_A_SUBJECT.md)."""
+    real = SUBJECTS_DIR / subject_id
+    demo = SUBJECTS_DIR / f"_{subject_id}"
+    return demo if not real.exists() and demo.exists() else real
+
+
+def is_demo_subject(subject_id: str) -> bool:
+    return subject_dir(subject_id).name.startswith("_")
 
 
 def concepts_path(subject_id: str) -> Path:

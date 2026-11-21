@@ -1,0 +1,108 @@
+concept_id: hexadecimal
+questions:
+  - id: hexadecimal-q01
+    type: mcq
+    difficulty: 1
+    prompt: "What is hex 2F in decimal?"
+    options:
+      - {id: a, text: "47"}
+      - {id: b, text: "32", why_wrong: "That is hex 20; the F adds 15 more."}
+      - {id: c, text: "215", why_wrong: "The digits are base 16: 2 x 16 + 15, not 2 followed by 15."}
+      - {id: d, text: "31", why_wrong: "That is hex 1F (16 + 15)."}
+    answer: a
+    explanation: "Hex places are powers of 16: 2F = 2 x 16 + 15 = 47."
+    misconception_tag: hex_place_values
+    diagnoses_prereq: binary_numbers
+
+  - id: hexadecimal-q02
+    type: mcq
+    difficulty: 1
+    prompt: "Write binary 10111100 in hex."
+    options:
+      - {id: a, text: "BC"}
+      - {id: b, text: "CB", why_wrong: "The nibbles are in the wrong order: 1011 comes first and is B."}
+      - {id: c, text: "188", why_wrong: "188 is the decimal value, not the hex digits."}
+      - {id: d, text: "B12", why_wrong: "Each nibble is one hex digit; 1100 is C, not 12."}
+    answer: a
+    explanation: "Split into nibbles 1011 and 1100, which are B and C."
+    misconception_tag: nibble_grouping
+    diagnoses_prereq: binary_numbers
+
+  - id: hexadecimal-q03
+    type: mcq
+    difficulty: 2
+    prompt: "Why is each hex digit exactly four bits?"
+    options:
+      - {id: a, text: "Because 16 = 2^4, so the 16 hex digits match the 16 patterns of four bits."}
+      - {id: b, text: "Because a byte has four halves.", why_wrong: "A byte has two nibbles of four bits; the reason is 16 = 2^4."}
+      - {id: c, text: "It is a convention with no mathematical reason.", why_wrong: "It follows directly from 16 being a power of two."}
+      - {id: d, text: "Because decimal digits are also four bits.", why_wrong: "Ten is not a power of two, so decimal digits do not map to whole bits."}
+    answer: a
+    explanation: "Four bits have 2^4 = 16 patterns, one per hex digit, so conversion works nibble by nibble."
+    misconception_tag: nibble_grouping
+    diagnoses_prereq: binary_numbers
+
+  - id: hexadecimal-q04
+    type: mcq
+    difficulty: 2
+    prompt: "The web colour #FF8000 has which red, green and blue values?"
+    options:
+      - {id: a, text: "(255, 128, 0)"}
+      - {id: b, text: "(255, 80, 0)", why_wrong: "Hex 80 is 8 x 16 = 128, not eighty."}
+      - {id: c, text: "(15, 8, 0)", why_wrong: "Each colour uses two hex digits, so FF is 255."}
+      - {id: d, text: "(0, 128, 255)", why_wrong: "The order is red, green, blue from the left."}
+    answer: a
+    explanation: "FF = 255, 80 = 128 and 00 = 0, read as red, green and blue."
+    misconception_tag: hex_place_values
+    diagnoses_prereq: null
+
+  - id: hexadecimal-q05
+    type: multi_select
+    difficulty: 2
+    prompt: "Select every correct statement about hexadecimal."
+    options:
+      - {id: a, text: "One byte is always exactly two hex digits."}
+      - {id: b, text: "Hex A means ten."}
+      - {id: c, text: "0x10 equals sixteen."}
+      - {id: d, text: "Hex digits above 9 are invalid.", why_wrong: "A to F are ordinary hex digits worth 10 to 15."}
+    answer: [a, b, c]
+    explanation: "Two nibbles make a byte, A is ten and hex 10 is one sixteen. Letters A-F are valid digits."
+    misconception_tag: hex_digits
+    diagnoses_prereq: null
+
+  - id: hexadecimal-q06
+    type: true_false
+    difficulty: 1
+    prompt: "True or false: 0xff and 0xFF are the same number."
+    answer: true
+    explanation: "Hex digits are case-insensitive; both are 255."
+    misconception_tag: hex_digits
+    diagnoses_prereq: null
+
+  - id: hexadecimal-q07
+    type: code_output
+    difficulty: 2
+    prompt: "What does this program print?"
+    code: |
+      n = 500
+      print(hex(n), format(n, "X"), int("1F4", 16) == n)
+    answer: "0x1f4 1F4 True"
+    explanation: "500 = 1 x 256 + 15 x 16 + 4, so it is 1F4; hex() uses lowercase with the 0x prefix and format with X uses uppercase digits."
+    misconception_tag: hex_place_values
+    diagnoses_prereq: null
+
+  - id: hexadecimal-q08
+    type: short_answer
+    difficulty: 2
+    prompt: "Explain how to convert a binary number to hex without first converting it to decimal."
+    answer: "Split the binary digits into groups of four starting from the right, padding the leftmost group with zeros if needed, then replace each group with the hex digit for its value (0000 is 0 up to 1111 is F)."
+    explanation: "A good answer mentions grouping into nibbles from the right, padding, and replacing each group with one hex digit."
+    rubric:
+      key_points:
+        - "group the bits into fours (nibbles) starting from the right"
+        - "pad the leftmost group with zeros if it is short"
+        - "replace each group of four with one hex digit 0-F"
+      max_score: 1
+      partial_credit: true
+    misconception_tag: nibble_grouping
+    diagnoses_prereq: binary_numbers

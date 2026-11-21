@@ -5,7 +5,14 @@ from pathlib import Path
 
 import pytest
 
-from app.graph.loader import REPO_ROOT, concepts_path, load_concept_file, load_subject
+from app.graph.loader import (
+    REPO_ROOT,
+    concepts_path,
+    is_demo_subject,
+    load_concept_file,
+    load_subject,
+    subject_dir,
+)
 from app.graph.models import ConceptDef, ConceptFile, SubjectDef
 from app.graph.validation import (
     find_cycle,
@@ -227,6 +234,24 @@ def test_script_missing_file_is_a_clear_error() -> None:
     result = run_script(str(FIXTURES / "nope.yaml"))
     assert result.returncode == 2
     assert "file not found" in result.stdout
+
+
+def test_script_malformed_yaml_is_a_clear_error(tmp_path: Path) -> None:
+    """BUG-059: an unquoted `&` (a YAML anchor) crashed the validator with a traceback."""
+    bad = tmp_path / "concepts.yaml"
+    bad.write_text("subject: {id: x, name: X}\nconcepts:\n  - keywords: [&, |]\n", encoding="utf-8")
+    result = run_script(str(bad))
+    assert result.returncode == 1
+    assert "is not valid YAML" in result.stdout and "Traceback" not in result.stderr
+
+
+def test_demo_pack_resolves_from_underscore_folder() -> None:
+    """data/subjects/_example is served as subject 'example' and flagged dev-only."""
+    assert subject_dir("example").name == "_example" and is_demo_subject("example")
+    assert subject_dir("dsa").name == "dsa" and not is_demo_subject("dsa")
+    result = run_script("example")
+    assert result.returncode == 0, result.stdout
+    assert "Nodes: 5" in result.stdout
 
 
 def test_cyclic_fixture_loads_but_does_not_validate() -> None:

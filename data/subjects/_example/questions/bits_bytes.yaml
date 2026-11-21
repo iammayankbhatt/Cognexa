@@ -1,0 +1,109 @@
+concept_id: bits_bytes
+questions:
+  - id: bits_bytes-q01
+    type: mcq
+    difficulty: 1
+    prompt: "How many different values can be represented with 8 bits?"
+    options:
+      - {id: a, text: "8", why_wrong: "That is the number of bits, not the number of patterns they can form."}
+      - {id: b, text: "255", why_wrong: "255 is the largest unsigned value; counting zero there are 256 values."}
+      - {id: c, text: "256"}
+      - {id: d, text: "64", why_wrong: "64 is 2^6, the count for 6 bits."}
+    answer: c
+    explanation: "Each bit doubles the number of patterns, so 8 bits give 2^8 = 256 values (0 to 255)."
+    misconception_tag: n_bits_n_values
+    diagnoses_prereq: null
+
+  - id: bits_bytes-q02
+    type: mcq
+    difficulty: 1
+    prompt: "What is the largest unsigned number that fits in one byte?"
+    options:
+      - {id: a, text: "256", why_wrong: "There are 256 values, but they start at 0, so the largest is 255."}
+      - {id: b, text: "255"}
+      - {id: c, text: "128", why_wrong: "128 is only the value of the top bit on its own."}
+      - {id: d, text: "100", why_wrong: "Byte limits come from powers of two, not powers of ten."}
+    answer: b
+    explanation: "A byte has 2^8 = 256 patterns, numbered 0 through 255, so the largest is 2^8 - 1 = 255."
+    misconception_tag: forgetting_zero
+    diagnoses_prereq: null
+
+  - id: bits_bytes-q03
+    type: mcq
+    difficulty: 2
+    prompt: "What is the smallest number of bits that can give each of 100 students a different code?"
+    options:
+      - {id: a, text: "6", why_wrong: "6 bits give only 2^6 = 64 patterns, fewer than 100."}
+      - {id: b, text: "7"}
+      - {id: c, text: "10", why_wrong: "10 bits work, but 7 already give 128 patterns, so 10 is not the smallest."}
+      - {id: d, text: "100", why_wrong: "One bit per student wastes space; bits combine, so far fewer are needed."}
+    answer: b
+    explanation: "We need the smallest n with 2^n >= 100. 2^6 = 64 is too few and 2^7 = 128 is enough, so 7 bits."
+    misconception_tag: rounding_bits_down
+    diagnoses_prereq: null
+
+  - id: bits_bytes-q04
+    type: mcq
+    difficulty: 2
+    prompt: "How many bytes is one kibibyte (KiB)?"
+    options:
+      - {id: a, text: "1000", why_wrong: "1000 bytes is a kilobyte (kB) in SI units; the kibibyte is a power of two."}
+      - {id: b, text: "1024"}
+      - {id: c, text: "8", why_wrong: "8 is the number of bits in a byte, not bytes in a kibibyte."}
+      - {id: d, text: "1048576", why_wrong: "That is a mebibyte, 2^20 bytes."}
+    answer: b
+    explanation: "A kibibyte is exactly 2^10 = 1024 bytes, while an SI kilobyte is 1000 bytes."
+    misconception_tag: kilo_vs_kibi
+    diagnoses_prereq: null
+
+  - id: bits_bytes-q05
+    type: multi_select
+    difficulty: 2
+    prompt: "Select every true statement."
+    options:
+      - {id: a, text: "A byte has 8 bits."}
+      - {id: b, text: "Adding one bit doubles the number of representable values."}
+      - {id: c, text: "16 bits can represent 32 different values.", why_wrong: "16 bits give 2^16 = 65,536 values; 32 would be 5 bits."}
+      - {id: d, text: "24-bit colour can show about 16.7 million colours."}
+    answer: [a, b, d]
+    explanation: "A byte is 8 bits, each extra bit doubles the patterns, and 2^24 = 16,777,216. 16 bits give 65,536 values."
+    misconception_tag: bit_counting
+    diagnoses_prereq: null
+
+  - id: bits_bytes-q06
+    type: true_false
+    difficulty: 1
+    prompt: "True or false: 4 bits can represent 16 different values."
+    answer: true
+    explanation: "2^4 = 16, so 4 bits give the values 0 to 15."
+    misconception_tag: n_bits_n_values
+    diagnoses_prereq: null
+
+  - id: bits_bytes-q07
+    type: code_output
+    difficulty: 2
+    prompt: "What does this program print?"
+    code: |
+      for bits in (1, 4, 8, 10):
+          print(bits, 2 ** bits, end="; ")
+      print()
+    answer: "1 2; 4 16; 8 256; 10 1024;"
+    explanation: "Each line pairs the bit count with 2^bits: 2, 16, 256 and 1024 values."
+    misconception_tag: n_bits_n_values
+    diagnoses_prereq: null
+
+  - id: bits_bytes-q08
+    type: short_answer
+    difficulty: 2
+    prompt: "Explain why n bits can represent 2^n different values."
+    answer: "Each bit has two states, and every state of one bit can be combined with every state of the others, so each extra bit doubles the number of combinations: 2 x 2 x ... x 2 (n times) = 2^n."
+    explanation: "A good answer says each bit has two states and that combining bits multiplies the counts, doubling per bit."
+    rubric:
+      key_points:
+        - "each bit has two possible states (0 or 1)"
+        - "every added bit doubles the number of combinations"
+        - "so n bits give 2 multiplied by itself n times, 2^n"
+      max_score: 1
+      partial_credit: true
+    misconception_tag: n_bits_n_values
+    diagnoses_prereq: null

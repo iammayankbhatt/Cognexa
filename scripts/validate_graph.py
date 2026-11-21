@@ -8,6 +8,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+import yaml
 from pydantic import ValidationError
 
 from app.graph.loader import concepts_path, load_concept_file
@@ -28,6 +29,9 @@ def main(argv: list[str]) -> int:
     except FileNotFoundError:
         print(f"ERROR: file not found: {path}")
         return 2
+    except yaml.YAMLError as exc:  # BUG-059: was an unhandled traceback
+        print(f"ERROR: {path} is not valid YAML (quote values starting with & * ! | > @):\n{exc}")
+        return 1
     except (ValidationError, ValueError) as exc:
         print(f"ERROR: {path} failed schema validation:\n{exc}")
         return 1

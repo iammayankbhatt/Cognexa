@@ -1,0 +1,68 @@
+# Demo subject pack (dev only). A leading underscore on the folder marks a demo pack: the loader
+# serves it as subject id "example", seed scripts refuse to send it to a remote database and the
+# API image leaves it out. It shows the smallest complete subject: concepts, notes, questions.
+# Walkthrough: docs/ADDING_A_SUBJECT.md.
+# Edge convention (CLAUDE.md rule 4): `prerequisites: [A]` on concept B means A -[:PREREQUISITE_OF]-> B.
+subject:
+  id: example
+  name: "Number Systems (demo pack)"
+
+roots: [bits_bytes]
+
+concepts:
+  # ------------------------------------------------------------------ representation
+  - id: bits_bytes
+    name: "Bits & Bytes"
+    cluster: representation
+    order_index: 0
+    difficulty: 1
+    description: "A bit is a single 0 or 1; eight bits make a byte, and n bits can represent 2^n different values."
+    aliases: [bit, byte, bits, bytes, binary digit, octet]
+    keywords: [0 and 1, 8 bits, 256 values, 2 to the n, kilobyte, how many values]
+    prerequisites: []
+    related: []
+
+  - id: binary_numbers
+    name: "Binary Numbers"
+    cluster: representation
+    order_index: 1
+    difficulty: 1
+    description: "Writing whole numbers in base 2, where each position is worth a power of two, and converting between binary and decimal."
+    aliases: [binary, base 2, binary number, binary to decimal, decimal to binary]
+    keywords: [place value, powers of two, repeated division by 2, 0b prefix, bin()]
+    prerequisites: [bits_bytes]
+    related: []
+
+  - id: hexadecimal
+    name: "Hexadecimal"
+    cluster: representation
+    order_index: 2
+    difficulty: 1
+    description: "Base 16, using digits 0-9 and A-F; each hex digit stands for exactly four bits, which makes it a compact way to write binary."
+    aliases: [hex, base 16, hexadecimal number, 0x]
+    keywords: [nibble, A to F, colour code, memory address, hex digit, ff]
+    prerequisites: [binary_numbers]
+    related: []
+
+  - id: twos_complement
+    name: "Two's Complement"
+    cluster: representation
+    order_index: 3
+    difficulty: 2
+    description: "The standard way computers store negative integers: the top bit has a negative weight, so -x is found by inverting the bits of x and adding one."
+    aliases: [twos complement, two's complement, signed integers, negative binary]
+    keywords: [sign bit, invert and add one, -128 to 127, "-128", "127", overflow, wraps around, negative number, goes negative, signed overflow]
+    prerequisites: [binary_numbers]
+    related: []
+
+  # ------------------------------------------------------------------ operations
+  - id: bitwise_operations
+    name: "Bitwise Operations"
+    cluster: operations
+    order_index: 4
+    difficulty: 2
+    description: "AND, OR, XOR, NOT and shifts act on each bit of a number independently; they test, set and clear individual bits and multiply or divide by powers of two."
+    aliases: [bitwise, bit manipulation, and or xor, bit shift, bit mask]
+    keywords: ["&", "|", "^", "~", "<<", ">>", mask, set a bit, clear a bit, check if a bit is set]
+    prerequisites: [binary_numbers]
+    related: [hexadecimal]

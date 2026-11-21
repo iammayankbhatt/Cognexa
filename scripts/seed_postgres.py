@@ -23,7 +23,7 @@ from app.db.repositories import (
     ConceptMirrorRepository,
     ContentRepository,
 )
-from app.graph.loader import load_subject
+from app.graph.loader import is_demo_subject, load_subject
 from app.graph.validation import validate_concept_file
 
 LOCAL_HOSTS = {"localhost", "127.0.0.1", "::1", "postgres"}
@@ -38,6 +38,9 @@ async def run(args: argparse.Namespace) -> int:
         return 2
     if host not in LOCAL_HOSTS and not args.allow_remote:
         print(f"Refusing to seed non-local host '{host}' without --allow-remote.")
+        return 2
+    if (host not in LOCAL_HOSTS or args.allow_remote) and is_demo_subject(args.subject):
+        print(f"Refusing to seed demo subject '{args.subject}' remotely: demo packs are dev-only.")
         return 2
 
     doc = load_subject(args.subject)

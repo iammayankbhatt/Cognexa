@@ -13,7 +13,7 @@
 **Mode:** autopilot, main only, no tags. One commit per phase (`feat(phase-NN): ...`), then `git push origin main` (explicitly authorised for autopilot; if push fails, log it under Human Action Needed and continue). No `gh` CLI and no Supabase CLI were found on this machine at start; CI runs are checked through the public GitHub API when possible.
 **Environment notes:** local `apps/api/.env` and `apps/web/.env.local` exist (created from the examples; fake LLM/embedding providers, `REPLACE_ME` for cloud values). Never open or print them; use `uv run --project apps/api python scripts/check_env.py`.
 **Phase order:** core 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 12 → 15 (prep only), then extras 11 → 13 → 14 → 16.
-**Current phase:** 16 — Documentation, diagrams, viva demo script (last extra). Phase 14 committed (Session 19). Core phases done; Phase 15 preparation complete (the live deploy is Human Action 21-27).
+**Current phase:** all autopilot phases done (1-14, 16; Phase 15 prepared). What remains needs the human: keys, dashboards, the live deploy, real-model runs, the user study and content review (Human Action Needed below).
 
 **Phase 2 checkpoints (done)**
 - [x] 2.1 Env files, `scripts/check_env.py`, `.env.example` for all phases
@@ -174,7 +174,16 @@
 - [x] 14.6 Full verification: backend 512 passed / 0 skipped, web 215 unit, Playwright 52/52, validators and contract green; Traceability Matrix updated (open items are live checks or Phase 16, each with a Human Action or limitation)
 - [x] 14.7 Wrap-up, commit `feat(phase-14)`, push, CI
 
-**Next action:** check CI for the `feat(phase-14)` push; then Phase 16: read its prompt in docs/COGNEXA_PROMPTS.md and split it into checkpoints here.
+**Phase 16 checkpoints**
+- [x] 16.1 `data/subjects/_example/` (Number Systems: 5 concepts, 5 notes, 40 questions, 5 test items; 10 snippets + 5 code_output keys verified); loader serves `_example` as `example`; seeds refuse demo packs remotely; image excludes `data/subjects/_*`; tests; BUG-059 (validator traceback on bad YAML)
+- [x] 16.2 docs/ADDING_A_SUBJECT.md, proven on dev: seeded, `/graph` 5 nodes, tutor matched twos_complement + prerequisite binary_numbers, concept quiz 201; DSA-specific parts listed (LIM-045)
+- [x] 16.3 docs/API.md: hand-written conventions, error codes, SSE events + generated reference of 88 operations with Access from the route dependencies (`scripts/gen_api_docs.py`, CI step + test); route walk moved to `app/core/route_walk.py`
+- [x] 16.4 docs/ARCHITECTURE.md: 7 Mermaid diagrams (context, containers, GraphRAG sequence, R1-R5 flowchart, ER, Neo4j schema, seeding flow) + design-decision table linked to DEC ids; rendering check = Human Action 35
+- [x] 16.5 docs/DEMO_SCRIPT.md: pre-demo checklist, minute-by-minute script, failure playbook, 9 examiner questions
+- [x] 16.6 README.md: screenshots grid, features, Mermaid architecture, stack, accurate local quick start (Supabase stack env values), checks, deployment, evaluation headline, docs index, team, licence status (Human Action 36); `TEST_DATABASE_URL` added to apps/api/.env.example
+- [x] 16.7 Final progressfile pass + "Project Summary for the Final Report" (§15); full verification; wrap-up; commit `feat(phase-16)`
+
+**Next action:** check CI for the `feat(phase-16)` push. After that, autopilot has nothing left that does not depend on the human; resume with the Human Action items (start with 7, 13, 21-27).
 **Local stack:** `npx supabase start -x realtime,storage-api,imgproxy,studio,edge-runtime,logflare,vector,supavisor,postgres-meta` (mail UI http://127.0.0.1:54324); schema changes: `npx supabase migration up` (local Supabase) and `DATABASE_URL=<docker url> uv run ... scripts/migrate.py` (docker test DB)
 
 **Last cluster note:** Phase 3 content complete; 69/69 concepts
@@ -216,6 +225,8 @@
 | 32 | content to review | Five related links removed from concepts.yaml (BUG-042) | `recursion` related [backtracking, divide_and_conquer], `priority_queue_adt` related [binary_heap], `binary_search` related [bst] and `dijkstra` related [bellman_ford] duplicated prerequisite edges (one of each pair is a prerequisite of the other), which the stricter validator now refuses. They were removed (the prerequisite stays). If you meant any of them as a genuine sibling link, say so; otherwise nothing to do. |
 | 33 | content to review | Add 2 practice questions to each study-form concept (LIM-044) | The study's pre/post-test questions (`data/subjects/dsa/questions/_study_sets.yaml`) are now kept out of practice (DEC-068), so these 20 concepts have 6 practice questions instead of 8: arrays, asymptotic_notation, bfs, binary_heap, binary_search, binary_tree, bst, call_stack, dfs, dijkstra, dp_fundamentals, greedy, hash_tables, merge_sort, queue, quick_sort, recursion, singly_linked_list, stack, time_complexity. Optional: add two questions to each concept's YAML (or ask Claude Code to draft them for your review), then `scripts/validate_content.py --strict` and `scripts/seed_postgres.py`. |
 | 34 | live checks | Phase 14 exploratory pass with real models | After item 13: on dev, ask the tutor with an emoji-only question, a 1990-character question, and press Stop right after "Looking at..."; regenerate twice quickly in two tabs (one answer must remain); turn on Admin → Settings → "Show the plain-RAG comparison to students" and check a student sees the "Plain RAG baseline" switch. Report anything odd to Claude Code. |
+| 35 | live checks | Diagrams render on GitHub (Phase 16) | After the push, open docs/ARCHITECTURE.md and docs/ADDING_A_SUBJECT.md on GitHub and check that all 8 Mermaid diagrams draw (no "Unable to render" box). A local parse check was blocked by a permission prompt, so this was not verified automatically. If one fails, tell Claude Code which. |
+| 36 | dashboards | Choose a licence | The repository has no LICENSE file, so all rights are reserved (README says so). If the team wants others to reuse the code, pick one (MIT is the common choice for student projects; check with your guide/university first) and add `LICENSE` at the repo root, then update the README's Licence section. |
 | 12 | live checks | Make yourself admin | Superseded by item 26 (`scripts/promote_admin.py`, audited). The SQL editor alternative still works: `update public.profiles set role = 'admin' where id = (select id from auth.users where email = '<your email>');` Wait 30 s (role cache) and reload; the Admin link appears. |
 
 ---
@@ -233,7 +244,7 @@
 | Repository | https://github.com/iammayankbhatt/Cognexa |
 | Live web app | _TBD (Vercel)_ |
 | Live API | _TBD (Render)_ |
-| Current phase | Phases 1 to 14 complete; Phase 15 prepared (deploy runbook ready, live deploy pending the human); next: Phase 16. Workflow: single developer, `main` only (DEC-013), autopilot (DEC-019) |
+| Current phase | Phases 1 to 14 and 16 complete; Phase 15 prepared (deploy runbook ready, live deploy pending the human). Remaining work is the Human Action Needed list. Workflow: single developer, `main` only (DEC-013), autopilot (DEC-019) |
 | Overall status | 🟡 In progress |
 
 Status legend: 🔴 Not started · 🟡 In progress · 🟢 Done + verified · ⚠️ Done with known issues · ⏸️ Blocked
@@ -267,7 +278,7 @@ Update the **Status** and **Where in code** columns as phases complete. Examiner
 | G3 | One graph powers both tutor and recommender (Gap III) | Shared GraphRepository | 6, 9 | 🟢 both read the same `GraphRepository` (`app/recommender/service.py::build_graph`) | `app/graph/repository.py`, `app/tutor/graph_source.py` |
 | T | "Agentic" (title) | Bounded agentic controller (answer / diagnostic check / expand) | 6 | 🟢 locally | `app/tutor/controller.py`; tests `test_controller_never_exceeds_two_steps`, `test_controller_diagnostic_ends_turn_and_reply_resumes_it`, `test_diagnostic_question_then_reply_continues_turn` |
 | X | Explainability: show the edge responsible for a retrieval (§2.3) | Trace + mini-graph in UI | 7 | 🟢 | `app/tutor/trace.py`, `apps/web/src/components/tutor/why-panel.tsx` (mini graph with edge titles, exact paths), `docs/screenshots/phase7/` |
-| F | Future scope designed for: multi-subject, ML mastery, diagram parsing (§1.7) | subject_id everywhere, ADDING_A_SUBJECT.md | 2, 16 | 🟡 schema + seeds are subject-agnostic; guide in Phase 16 | `supabase/migrations/*`, `app/graph/loader.py` (`data/subjects/<id>/`), `scripts/seed_*.py --subject` |
+| F | Future scope designed for: multi-subject, ML mastery, diagram parsing (§1.7) | subject_id everywhere, ADDING_A_SUBJECT.md | 2, 16 | 🟢 multi-subject proven with the `_example` pack (seeded on dev, tutor + quiz work); remaining DSA-specific parts are LIM-045; ML mastery and diagram parsing are future work (§15.4) | `supabase/migrations/*`, `app/graph/loader.py` (`data/subjects/<id>/`), `scripts/seed_*.py --subject` |
 
 ### Product features (beyond the report)
 
@@ -358,7 +369,7 @@ Key flows (details in docs/ARCHITECTURE.md once written):
 | 13 | Hardening | 🟢 locally (real-model injection run: Human Action 30) | 2026-11-20 | 2026-11-20 | `feat(phase-13)` (hash in git log) | | Verified locally: backend 501 tests (full run 499 passed; the 2 failures, stale edge counts after BUG-042 and a backup.py false positive, fixed and their files re-run green); ruff, format, mypy clean; web lint, typecheck, 210 unit, build, bundle scan; Playwright 51/51 (all specs, chromium); npm audit 0, pip-audit 0; axe 0 serious/critical on 27 pages x 3 themes; non-AI p95 on dev 11 of 13 endpoints under 300 ms; /dashboard 518 ms and /recommendations 468 ms over (LIM-042); Neo4j outage handled live. |
 | 14 | Bug hunt + fresh-eyes review | 🟢 | 2026-11-21 | 2026-11-21 | `feat(phase-14)` (hash in git log) | | Fresh-eyes subagent review (13 findings, all fixed) + exploratory probes: BUG-047 to BUG-058 (2 S2, 7 S3, 3 S4). OpenAPI → TypeScript contract with CI staleness checks. Verified locally: see Session 19. |
 | 15 | Deployment + keep-alive | 🟡 prepared (live deploy = Human Action 21-27) | 2026-11-20 | | `e28956b` `feat(phase-15)` | | GitHub Actions green incl. the new container job (run 44698029440). Verified locally: backend 425 passed (25 new), web lint/typecheck/188 unit/build; image built and run (non-root, `$PORT`, healthy); `prod_smoke.py` 11/11 against the local stack. |
-| 16 | Docs, diagrams, demo script | 🔴 | | | | | |
+| 16 | Docs, diagrams, demo script | 🟢 | 2026-11-21 | 2026-11-21 | `feat(phase-16)` (hash in git log) | | README, ARCHITECTURE (7 diagrams), API (generated + notes), DEMO_SCRIPT, ADDING_A_SUBJECT proven with the `_example` pack on dev; Project Summary §15. Diagram rendering = Human Action 35. |
 
 ### Phase 0 checklist (human)
 
@@ -857,6 +868,41 @@ git tag -a v0.1 -m "Phase 1: Scaffold, design system, CI" && git push --tags   #
 - Tests on a prompt template the product doesn't use give false assurance. Point security tests at the real builders.
 - A reviewer with no history found the integrity gap in the study design (test items reachable through practice) that a phase-by-phase builder never looked for.
 **Next step:** Phase 16 (documentation, diagrams, demo script).
+
+### Session 20 — 2026-11-21 — Phase 16: documentation, diagrams, demo script (autopilot)
+**Goal:** Documentation for the final report, the viva and future maintainers; prove the subject-agnostic design with a demo pack. No feature changes.
+**Built:**
+- *Demo subject pack* `data/subjects/_example/` (Number Systems): 5 concepts, 5 full notes (664-715 words, 10 sections, runnable Python + C++14), 40 questions, 5 test items. 10 snippets and 5 code_output answer keys are verified, with a pytest guard.
+  - The loader serves `_example` as subject `example` (DEC-071).
+  - `seed_neo4j.py` / `seed_postgres.py` refuse demo packs remotely, and `.dockerignore` excludes `data/subjects/_*`.
+  - Proven on dev: seeded, `/graph` 5 nodes, the tutor matched Two's Complement and added the prerequisite Binary Numbers, concept quiz 201. A keyword gap found on the way was fixed in the pack.
+- *docs/ADDING_A_SUBJECT.md:* step by step with real command output from the demo pack; DSA-specific parts listed honestly (LIM-045).
+- *docs/API.md:* hand-written conventions, a 25-code error table, SSE events and payloads, plus a reference of 88 operations generated from the app (`scripts/gen_api_docs.py`, DEC-072). The Access column comes from the route dependencies (the route walk moved to `app/core/route_walk.py`, used by the role tests and the generator). CI step + test keep it current.
+- *docs/ARCHITECTURE.md:* system context, containers, GraphRAG sequence, R1-R5 flowchart, Postgres ER, Neo4j schema, content and seeding flow (7 Mermaid diagrams), and a design-decision table linked to DEC ids. The existing mastery, grading and admin sections are kept below.
+- *docs/DEMO_SCRIPT.md:* pre-demo checklist (warm-up, projector theme, fallbacks), a 10-minute script, a failure playbook and 9 examiner questions with answers.
+- *README.md:* screenshots, features, architecture diagram, stack, a corrected local quick start (the old one pointed the API at the docker Postgres, where sign-up cannot work), checks, deployment, evaluation headline, docs index, team, licence status.
+- *progressfile.md §15:* Project Summary for the Final Report (what was built, results, limitations, future work).
+- `TEST_DATABASE_URL` added to `apps/api/.env.example` (it was read by the tests but undocumented).
+**Files touched:**
+- Data and docs: `data/subjects/_example/**`, `docs/{ADDING_A_SUBJECT,API,ARCHITECTURE,DEMO_SCRIPT}.md`, `README.md`
+- Backend: `apps/api/app/graph/loader.py`, `apps/api/app/core/route_walk.py`, `apps/api/.env.example`
+- Backend tests: `apps/api/tests/{route_walk,test_graph_validation,test_content_real,test_openapi_contract}.py`
+- Scripts: `scripts/{gen_api_docs,validate_graph,seed_neo4j,seed_postgres}.py`
+- Config and logs: `.dockerignore`, `.github/workflows/ci.yml`, `progressfile.md`
+**Commands run & results:**
+- Backend: ruff ✅ · format ✅ · mypy ✅ (117 files) · pytest ✅ 516 passed, 0 skipped
+- Validators: validate_graph (dsa, example) ✅ · validate_content --strict ✅ · validate_content --subject example ✅ · run_content_snippets --subject example ✅ (10/10, 5/5 keys)
+- Contract and docs: export_openapi --check ✅ · gen_api_docs --check ✅
+- Web: lint ✅ · typecheck ✅ · vitest ✅ 215 · build ✅ · check:bundle ✅ (no web source changes this phase; Playwright last run 52/52 in Session 19)
+**Not verified:** Mermaid rendering. A local parse with the Mermaid library was blocked by a permission prompt, so the diagrams use conservative syntax and GitHub rendering is Human Action 35.
+**Bugs found this session:** BUG-059
+**Decisions:** DEC-071, DEC-072 (LIM-045 added)
+**Human action needed:** Autopilot State items 35 (diagrams render), 36 (licence).
+**What we learned:**
+- A worked example is the best test of a guide: writing the demo pack found a validator crash (BUG-059), a keyword-coverage gap and a quick start that could not work.
+- Generated documentation needs a hand-written half: the endpoint list comes from code, but error semantics and the streaming protocol need prose.
+- Reusing the role-test route walk for the docs' Access column means the documentation and the security tests can't disagree.
+**Next step:** all phases done except the live deployment and real-model runs (Human Action Needed).
 
 ## 7. Bug Log
 
@@ -1569,6 +1615,17 @@ Severity: **S1** critical (data loss, security, app down) · **S2** major (featu
 - **Commit:** `feat(phase-14)`
 - **Lesson / pattern to avoid:** run the outage drill on every page, not only the feature that was designed for it.
 
+#### BUG-059 — validate_graph.py crashed with a traceback on malformed YAML
+- **Found:** 2026-11-21, Phase 16 while writing the demo subject pack (an unquoted `&` keyword is a YAML anchor)
+- **Severity / Area:** S4 / content tooling
+- **Symptom:** `scripts/validate_graph.py` printed a Python traceback instead of a clear error when `concepts.yaml` was not valid YAML.
+- **Root cause:** the script caught schema errors (`ValidationError`, `ValueError`) but not `yaml.YAMLError`.
+- **Fix:** a clear "is not valid YAML" message with a hint to quote values starting with `& * ! | > @`, exit code 1; the guide documents the quoting rule.
+- **Files changed:** `scripts/validate_graph.py`
+- **Regression test:** `tests/test_graph_validation.py::test_script_malformed_yaml_is_a_clear_error`
+- **Commit:** `feat(phase-16)`
+- **Lesson / pattern to avoid:** a validator's own input parsing is part of what it must report cleanly; test it with a broken file, not only with invalid content.
+
 ---
 
 ## 8. Decisions Log (lightweight ADRs)
@@ -1643,6 +1700,8 @@ Severity: **S1** critical (data loss, security, app down) · **S2** major (featu
 | DEC-068 | 2026-11-21 | The study's pre/post-test questions never appear in practice quizzes (concept, adaptive, diagnostic, review, retry lists); no practice quiz or revision sheet while a study test is open | Exclude them only while the study is running; trust students | Seeing a post-test item (with its answer key) during learning inflates the measured gain, and the flag can be switched on after students have practised | The 20 study-form concepts have 6 practice questions instead of 8 (LIM-044) |
 | DEC-069 | 2026-11-21 | Neo4j outages outside the tutor answer 503 `graph_unavailable`; the tutor keeps degrading to plain RAG | Degrade every page (e.g. dashboard without recommendations) | One clear, retryable error everywhere at no extra code per route; the outage is rare and short | Graph-backed pages show their error state during an outage |
 | DEC-070 | 2026-11-21 | Web request bodies are type-checked against generated OpenAPI types (`satisfies Body<...>`); response types stay hand-written | Generate a full client; type responses too | Most endpoints return plain dicts without response models, so generated response types would be `unknown`; request bodies are where drift broke calls | A response field rename is still caught only by tests |
+| DEC-071 | 2026-11-21 | Demo subject packs live in `data/subjects/_<id>/`; the loader serves them as `<id>`, seeds refuse them remotely, the API image excludes them | A flag in concepts.yaml; a separate examples folder outside `data/` | The prefix is visible in the file tree, needs no extra field, and lets the same scripts and validators run on the demo | A real subject can never start with `_` (API ids must start with a letter anyway) |
+| DEC-072 | 2026-11-21 | docs/API.md = hand-written conventions above a marker + an endpoint reference generated from the app (Access from route dependencies), checked in CI | Fully hand-written; only `/docs` (Swagger) | The reference cannot drift from the code and the access column comes from the same walk the role tests use; the SSE and error notes need prose | Summaries are FastAPI's function-name titles; richer text needs docstrings |
 | DEC-053 | 2026-11-20 | Study gating: the tutor pauses while a study test is open, open tests are resumed, tests are forced timed + exam mode | Trust students not to use AI during tests | "No AI" during the pre-test must hold for the comparison to be fair | A test left open blocks the tutor until it expires |
 | DEC-022 | 2026-11-19 | Content code samples are C++14 (not 17) and Python 3.12; every snippet is a complete program that asserts its own claims and is compiled/run by the test suite | C++17 | The only local compiler is MinGW GCC 6.3 (no `-std=c++17`); C++14 also works on every CI compiler | Notes avoid C++17 features (structured bindings, `std::optional`) |
 
@@ -1695,6 +1754,7 @@ Severity: **S1** critical (data loss, security, app down) · **S2** major (featu
 | LIM-040 | Disabling an account takes effect within the profile cache TTL (30 s), like role changes (LIM-016) | A just-disabled user keeps access for up to 30 s | Acceptable at this scale |
 | LIM-043 | A regrade after submit updates the score and completes recommendations, but not the spaced-review schedule set at submit | A concept whose short answer was pending at submit may be due for review earlier than needed | Rare (judge down at submit); re-running the schedule would advance the ladder twice |
 | LIM-044 | 20 core concepts give 6 practice questions instead of 8 (2 are reserved for the study tests, DEC-068) | Shorter practice quizzes for those concepts | Content task: add 2 questions to each (Human Action 33) |
+| LIM-045 | Prompt wording, the web app (no subject picker) and the onboarding diagnostic's cluster list are DSA-specific | A second real subject needs those three generalised before students can use it in the web app | Documented in docs/ADDING_A_SUBJECT.md §10; data, seeds, graph, tutor pipeline, quizzes and recommender are already subject-agnostic |
 | LIM-034 | The tutor stays paused until an abandoned study test's timer runs out | A student who closes the tab mid-test waits up to 20 min | Acceptable for study integrity; the pre-test can be resumed |
 
 ---
@@ -1919,4 +1979,41 @@ Run ID / date / models used: `fake-offline-full`, 2026-11-20, FakeProvider + fak
 
 ## 15. Project Summary for the Final Report
 
-_(Written in Phase 16: what was built, key results, limitations, future work.)_
+> Written for the final report and the viva. Numbers are as of 2026-11-21 (Phase 16). Items marked "pending" depend on the real API keys, the live deployment or the user study (Autopilot State, Human Action Needed).
+
+### 15.1 What was built
+
+Cognexa is a deployable, knowledge-graph-grounded AI tutor for Data Structures & Algorithms. It implements every objective of the report as a working product:
+
+| Objective | What exists | Evidence |
+|---|---|---|
+| O1 knowledge graph | 69 DSA concepts in 8 clusters, 111 prerequisite and 15 related edges, a validated DAG in Neo4j; 690 content chunks (10 sections × 69 notes, about 73,000 words), 552 questions | `data/subjects/dsa/`, `scripts/validate_graph.py`, `validate_content.py --strict`, 138 code snippets run in CI |
+| O2 GraphRAG tutor | LLM classifier with a hybrid fallback (fulltext + embeddings, RRF) → personalised prerequisite traversal → token-budgeted context → streamed, cited answer; bounded agentic controller (≤ 2 steps, quick-check questions) | `apps/api/app/tutor/`, canonical failure-case test, "Why this answer?" panel |
+| O3 adaptive recommender | Rules R1-R5 over the same graph (root-cause repair by walking prerequisites backwards), mastery model with decay, spaced review, non-adaptive baseline | `apps/api/app/recommender/`, `app/mastery/` |
+| O4 end-to-end system | Auth and roles, tutor, quizzes (6 modes, 5 types, LLM judge), dashboard, knowledge map, notes, revision sheets, admin console (graph editor, LLM proposals with human review, ingestion, moderation, quotas, cost), three themes | 88 API operations (docs/API.md), web app; live deployment pending |
+| O5 evaluation | RAGAs + custom metrics harness on an 85-item test set (27 unnamed-prerequisite questions), compare view, user-study mode with random assignment, matched pre/post-tests, anonymised export and an analysis notebook | `evaluation/`, `/admin/evaluation`, `/admin/study` |
+
+Engineering: FastAPI + Next.js on free tiers (Render, Vercel, Supabase, Neo4j Aura, Groq, Gemini); every LLM call goes through one provider layer (retries, fallback, circuit breaker, metering) and a usage guard (per-user quota, per-minute limit, global cap). Quality gates: 516 backend tests, 215 frontend unit tests, 52 end-to-end tests including axe accessibility checks in all three themes, a 15-attack prompt-injection suite, OpenAPI-generated request types, and CI that also builds and boots the production container. 59 bugs were found and logged with root cause, fix and regression test (§7), and 72 design decisions are recorded (§8).
+
+### 15.2 Key results
+
+- **Retrieval (offline, deterministic fake models):** on the 27 questions that describe a symptom without naming the prerequisite, the prerequisite hit rate was **0.74 for GraphRAG vs 0.30 for plain RAG** (+0.44, 95 % CI +0.19 to +0.67, Wilcoxon p = 0.0027, rank-biserial r = 0.75). GraphRAG also declined 7 of 8 off-topic questions (plain RAG: 0). This measures retrieval only; it is the mechanism the report claims.
+- **Answer quality (RAGAs) with real models:** pending (Human Action 18). The harness, judge adapter and report generation are complete and tested.
+- **User study:** pending (Human Action 20). The design: random balanced assignment to adaptive vs baseline groups, 20-question matched pre/post-tests with no AI during tests and no test items in practice, normalized gain compared with Welch's t-test / Mann-Whitney U and Cohen's d; about 64 completers per group are needed for a medium effect at 80 % power.
+- **Subject-agnostic design proven:** a 5-concept Number Systems pack was added as content only and worked end to end on dev (the tutor matched Two's Complement and the graph walk added Binary Numbers as its prerequisite).
+
+### 15.3 Limitations
+
+- **Content review:** all 69 notes and 552 questions were AI-assisted and machine-checked (code runs, answer keys verified), but none is yet marked reviewed by a subject expert (Human Action 4).
+- **Evaluation numbers:** the headline result above comes from deterministic fake models; the real-model run and the user study are still to be done.
+- **Free tiers:** Render sleeps after 15 minutes idle (first request about a minute), Aura pauses after 72 hours idle (the keep-alive workflow prevents it), and LLM free tiers rate-limit. Mobile Lighthouse performance on a laptop lab run was 74-80 (LIM-015).
+- **Partly DSA-specific:** prompt wording, the absence of a subject picker in the web app and the diagnostic's cluster list (LIM-045).
+- Smaller known limitations are listed in §9 (for example LIM-043, LIM-044).
+
+### 15.4 Future work (report §1.7 and what we learned)
+
+1. **ML mastery predictor:** replace or blend the rule-based mastery update with a knowledge-tracing model (for example BKT or DKT) once study data exists; the rule-based recommender can then rank with predicted mastery.
+2. **Multi-subject:** generalise the prompts, add a subject picker and per-subject diagnostics (LIM-045); the data model, seeds and pipeline already support it (docs/ADDING_A_SUBJECT.md).
+3. **Diagram parsing:** extend document ingestion to figures and diagrams (today text-based PDFs and Markdown only; scanned PDFs are refused).
+4. **Learning from moderation:** turn thumbs-down reports and proposal decisions into suggested content fixes and edge changes, still approved by a human.
+5. **Scale:** paid tiers remove cold starts; a streaming-capable cache and a per-course token budget would bound cost for larger classes.

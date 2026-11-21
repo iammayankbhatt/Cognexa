@@ -60,3 +60,16 @@ def test_concept_names_in_notes_match_the_graph() -> None:
     names = {c.id: c.name for c in load_subject("dsa").concepts}
     for path in (subject_dir("dsa") / "content").glob("*.md"):
         assert path.stem in names
+
+
+def test_demo_subject_pack_is_complete_and_correct(tmp_path: Path) -> None:
+    """data/subjects/_example (docs/ADDING_A_SUBJECT.md) stays a valid, working subject pack:
+    5 concepts, every note and question file, Python snippets run and code_output keys match."""
+    rep = validate_subject_content("example")
+    assert rep.errors == [], "\n".join(rep.errors)
+    assert len(load_subject("example").concepts) == 5
+    assert len(load_chunks("example")) == 5 * len(REQUIRED_SECTIONS)
+    snippets = [s for s in collect_snippets("example") if s.language == "python"]
+    assert snippets and all(r.status == "passed" for r in run_all(snippets, tmp_path))
+    checks = verify_code_questions("example", tmp_path)
+    assert len(checks) == 5 and all(r.status == "passed" for r in checks)

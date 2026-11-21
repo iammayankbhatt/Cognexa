@@ -38,3 +38,15 @@ def test_request_bodies_reject_unknown_fields() -> None:
     used_by_web = ["MePatch", "OnboardingIn", "SessionIn", "AnswerIn", "EdgeIn", "DecisionIn"]
     for name in used_by_web:
         assert schema["components"]["schemas"][name].get("additionalProperties") is False, name
+
+
+def test_api_docs_reference_is_current() -> None:
+    """docs/API.md's generated half matches the app (scripts/gen_api_docs.py)."""
+    script = SCRIPT.parent / "gen_api_docs.py"
+    spec = importlib.util.spec_from_file_location("gen_api_docs", script)
+    assert spec and spec.loader
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    current = mod.DOC.read_text(encoding="utf-8").replace("\r\n", "\n")
+    expected = current.split(mod.MARKER, 1)[0] + mod.render()
+    assert expected == current, "docs/API.md is stale: run scripts/gen_api_docs.py"
